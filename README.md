@@ -35,5 +35,5 @@ Cache（I-Cache、D-Cache、TLB）：董佳鹏
 合并冲突时，先更新上游代码：  
 `git fetch upstream`  
 再合并上游代码至本地：  
-`git merge upstream/main`  
+`git merge upstream/master`  
 无冲突再进行 push 和 pull request 操作  
