@@ -1,0 +1,208 @@
+`include "define.v"
+
+module LA_cpu (
+    input wire clk,
+    input wire rst,
+
+    input wire[`InstWidth] rom_inst_i,
+
+    output wire[`InstAddrWidth] rom_inst_addr_o,
+    output wire rom_inst_en_o
+);
+
+    // if_id and id
+    wire[`InstAddrWidth] pc;
+    wire[`InstAddrWidth] id_pc_i;
+    wire[`InstWidth] id_inst_i;
+
+    // id and id_ex
+    wire[`ALUOpWidth] id_aluop_o;
+    wire[`ALUSelWidth] id_alusel_o;
+    wire[`RegWidth] id_reg1_o;
+    wire[`RegWidth] id_reg2_o;
+    wire[`RegAddrWidth] id_reg_write_addr_o;
+    wire id_reg_write_en_o;
+
+    // id_ex and ex
+    wire[`ALUOpWidth] ex_aluop_i;
+    wire[`ALUSelWidth] ex_alusel_i;
+    wire[`RegWidth] ex_reg1_i;
+    wire[`RegWidth] ex_reg2_i;
+    wire[`RegAddrWidth] ex_reg_write_addr_i;
+    wire ex_reg_write_en_i;
+
+    // ex and ex_mem
+    wire[`RegAddrWidth] ex_reg_write_addr_o;
+    wire[`RegWidth] ex_reg_write_data_o;
+    wire ex_reg_write_en_o;
+
+    // ex_mem and mem
+    wire[`RegAddrWidth] mem_reg_write_addr_i;
+    wire[`RegWidth] mem_reg_write_data_i;
+    wire mem_reg_write_en_i;
+
+    // mem and mem_wb
+    wire[`RegAddrWidth] mem_reg_write_addr_o;
+    wire[`RegWidth] mem_reg_write_data_o;
+    wire mem_reg_write_en_o;
+
+    // mem_wb and wb
+    wire[`RegAddrWidth] wb_reg_write_addr_i;
+    wire[`RegWidth] wb_reg_write_data_i;
+    wire wb_reg_write_en_i;
+
+    // id and regfile
+    wire reg1_read_en;
+    wire reg2_read_en;
+    wire[`RegAddrWidth] reg1_read_addr;
+    wire[`RegAddrWidth] reg2_read_addr;
+    wire[`RegWidth] reg1_data;
+    wire[`RegWidth] reg2_data;
+
+
+    pc u_pc (
+        .clk(clk),
+        .rst(rst),
+        .pc_o(pc),
+        .inst_en_o(rom_inst_en_o)
+    );
+
+    assign rom_inst_addr_o = pc;
+
+    if_id u_if_id (
+        .clk(clk),
+        .rst(rst),
+
+        .if_pc(pc),
+        .if_inst(rom_inst_i),
+
+        .id_pc(id_pc_i),
+        .id_inst(id_inst_i)
+    );
+
+    id u_id (
+        .rst(rst),
+
+        .pc_i(id_pc_i),
+        .inst_i(id_inst_i),
+
+        // from regfile
+        .reg1_data_i(reg1_data),
+        .reg2_data_i(reg2_data),
+
+        // to regfile
+        .reg1_read_en_o(reg1_read_en),
+        .reg2_read_en_o(reg2_read_en),
+        .reg1_read_addr_o(reg1_read_addr),
+        .reg2_read_addr_o(reg2_read_addr),
+
+        // to ex
+        .aluop_o(id_aluop_o),
+        .alusel_o(id_alusel_o),
+        .reg1_o(id_reg1_o),
+        .reg2_o(id_reg2_o),
+        .reg_write_addr_o(id_reg_write_addr_o),
+        .reg_write_en_o(id_reg_write_en_o)
+    );
+
+    regfile u_regfile (
+        .clk(clk),
+        .rst(rst),
+
+        // from wb
+        .write_en(wb_reg_write_en_i),
+        .write_addr(wb_reg_write_addr_i),
+        .write_data(wb_reg_write_data_i),
+
+        // with id
+        .read1_en(reg1_read_en),
+        .read1_addr(reg1_read_addr),
+        .read1_data(reg1_data),
+        .read2_en(reg2_read_en),
+        .read2_addr(reg2_read_addr),
+        .read2_data(reg2_data)
+    );
+
+    id_ex u_id_ex (
+        .clk(clk),
+        .rst(rst),
+
+        // from id
+        .id_alusel(id_alusel_o),
+        .id_aluop(id_aluop_o),
+        .id_reg1(id_reg1_o),
+        .id_reg2(id_reg2_o),
+        .id_reg_write_addr(id_reg_write_addr_o),
+        .id_reg_write_en(id_reg_write_en_o),
+
+        // to ex
+        .ex_alusel(ex_alusel_i),
+        .ex_aluop(ex_aluop_i),
+        .ex_reg1(ex_reg1_i),
+        .ex_reg2(ex_reg2_i),
+        .ex_reg_write_addr(ex_reg_write_addr_i),
+        .ex_reg_write_en(ex_reg_write_en_i)
+    );
+
+    ex u_ex (
+        .rst(rst),
+
+        // from id_ex
+        .alusel_i(ex_alusel_i),
+        .aluop_i(ex_aluop_i),
+        .reg1_i(ex_reg1_i),
+        .reg2_i(ex_reg2_i),
+        .reg_write_addr_i(ex_reg_write_addr_i),
+        .reg_write_en_i(ex_reg_write_en_i),
+
+        // to ex_mem
+        .reg_write_addr_o(ex_reg_write_addr_o),
+        .reg_write_en_o(ex_reg_write_en_o),
+        .reg_write_data_o(ex_reg_write_data_o)
+    );
+
+    ex_mem u_ex_mem (
+        .clk(clk),
+        .rst(rst),
+
+        // from ex
+        .ex_reg_write_data(ex_reg_write_data_o),
+        .ex_reg_write_addr(ex_reg_write_addr_o),
+        .ex_reg_write_en(ex_reg_write_en_o),
+
+        // to mem
+        .mem_reg_write_data(mem_reg_write_data_i),
+        .mem_reg_write_addr(mem_reg_write_addr_i),
+        .mem_reg_write_en(mem_reg_write_en_i)
+    );
+
+    mem u_mem (
+        .rst(rst),
+
+        // from ex_mem
+        .reg_write_data_i(ex_reg_write_data_o),
+        .reg_write_addr_i(ex_reg_write_addr_o),
+        .reg_write_en_i(ex_reg_write_en_o),
+
+        // to mem_wb
+        .reg_write_data_o(mem_reg_write_data_o),
+        .reg_write_addr_o(mem_reg_write_addr_o),
+        .reg_write_en_o(mem_reg_write_en_o)
+    );
+
+    mem_wb u_mem_wb (
+        .clk(clk),
+        .rst(rst),
+
+        // from mem
+        .mem_reg_write_data(mem_reg_write_data_o),
+        .mem_reg_write_addr(mem_reg_write_addr_o),
+        .mem_reg_write_en(mem_reg_write_en_o),
+
+        // to wb
+        .wb_reg_write_data(wb_reg_write_data_i),
+        .wb_reg_write_addr(wb_reg_write_addr_i),
+        .wb_reg_write_en(wb_reg_write_en_i)
+    );
+
+endmodule
