@@ -102,7 +102,15 @@ module LA_cpu (
         .reg1_o(id_reg1_o),
         .reg2_o(id_reg2_o),
         .reg_write_addr_o(id_reg_write_addr_o),
-        .reg_write_en_o(id_reg_write_en_o)
+        .reg_write_en_o(id_reg_write_en_o),
+
+        // data pushed forward
+        .ex_reg_write_en_i(ex_reg_write_en_o),
+        .ex_reg_write_addr_i(ex_reg_write_addr_o),
+        .ex_reg_write_data_i(ex_reg_write_data_o),
+        .mem_reg_write_en_i(mem_reg_write_en_o),
+        .mem_reg_write_addr_i(mem_reg_write_addr_o),
+        .mem_reg_write_data_i(mem_reg_write_data_o)
     );
 
     regfile u_regfile (
