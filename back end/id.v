@@ -36,6 +36,7 @@ module id (
 
     // Instruction fields
     wire[9: 0] opcode1 = inst_i[31: 22];
+    wire[16: 0] opcode2 = inst_i[31: 15];
     wire[11: 0] i12 = inst_i[21: 10];
     wire[4: 0] rk = inst_i[14: 10];
     wire[4: 0] rj = inst_i[9: 5];
@@ -83,6 +84,83 @@ module id (
                 end
                 default: begin
                 end
+            endcase
+
+            case (opcode2)
+                `ADDW_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_ADDW;
+                    alusel_o = `ALU_SEL_ARITHMETIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `SUBW_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_SUBW;
+                    alusel_o = `ALU_SEL_ARITHMETIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `SLT_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_SLT;
+                    alusel_o = `ALU_SEL_ARITHMETIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `SLTU_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_SLTU;
+                    alusel_o = `ALU_SEL_ARITHMETIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `NOR_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_NOR;
+                    alusel_o = `ALU_SEL_LOGIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `AND_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_AND;
+                    alusel_o = `ALU_SEL_LOGIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `OR_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_OR;
+                    alusel_o = `ALU_SEL_LOGIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `XOR_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_XOR;
+                    alusel_o = `ALU_SEL_LOGIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                default:begin
+                end 
             endcase
         end
     end
