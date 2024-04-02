@@ -7,7 +7,7 @@ module testbench (
     reg rst;
 
     LA_spoc u_LA_spoc (
-        .CLOCK_50(CLOCK_50),
+        .clk(CLOCK_50),
         .rst(rst)
     );
 

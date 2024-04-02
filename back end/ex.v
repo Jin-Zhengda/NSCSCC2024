@@ -39,7 +39,7 @@ module ex (
         reg_write_en_o = reg_write_en_i;
 
         case (alusel_i)
-            `ALU_SEL_NOP: begin
+            `ALU_SEL_LOGIC: begin
                 reg_write_data_o = logic_res;
             end 
             default: begin

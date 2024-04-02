@@ -18,6 +18,6 @@
 
 // ALU sel operations 
 `define ALU_SEL_NOP 3'b000
-`define ALU_RES_LOGIC 3'b001
+`define ALU_SEL_LOGIC 3'b001
 
 
