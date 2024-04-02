@@ -20,7 +20,7 @@ Cache（I-Cache、D-Cache、TLB）：董佳鹏
 首先拉取仓库至本地  
 `git clone https://github.com/<your name>/NSCSCC2024.git .`  
 
-添加上游代码库，上游代码库名称为 upstream  
+添加上游代码库，设置上游代码库名称为 upstream  
 `git remote add upstream https://github.com/Jin-Zhengda/NSCSCC2024.git`  
 
 开发时自己创建分支  
