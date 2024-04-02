@@ -23,7 +23,15 @@ module id (
     output reg[`RegWidth] reg1_o,
     output reg[`RegWidth] reg2_o,
     output reg[`RegAddrWidth] reg_write_addr_o,
-    output reg reg_write_en_o
+    output reg reg_write_en_o,
+
+    // ex and mem data pushed forward
+    input ex_reg_write_en_i,
+    input[`RegAddrWidth] ex_reg_write_addr_i,
+    input[`RegWidth] ex_reg_write_data_i,
+    input mem_reg_write_en_i,
+    input[`RegAddrWidth] mem_reg_write_addr_i,
+    input[`RegWidth] mem_reg_write_data_i
 );
 
     // Instruction fields
@@ -84,6 +92,12 @@ module id (
         if (rst) begin
             reg1_o = 32'b0;
         end
+        else if (reg1_read_en_o && ex_reg_write_en_i && (ex_reg_write_addr_i == reg1_read_addr_o)) begin
+            reg1_o = ex_reg_write_data_i;
+        end
+        else if (reg1_read_en_o && mem_reg_write_en_i && (mem_reg_write_addr_i == reg1_read_addr_o)) begin
+            reg1_o = mem_reg_write_data_i;
+        end
         else if (reg1_read_en_o) begin
             reg1_o = reg1_data_i;
         end 
@@ -98,6 +112,12 @@ module id (
     always @(*) begin
         if (rst) begin
             reg2_o = 32'b0;
+        end
+        else if (reg2_read_en_o && ex_reg_write_en_i && (ex_reg_write_addr_i == reg2_read_addr_o)) begin
+            reg2_o = ex_reg_write_data_i;
+        end
+        else if (reg2_read_en_o && mem_reg_write_en_i && (mem_reg_write_addr_i == reg2_read_addr_o)) begin
+            reg2_o = mem_reg_write_data_i;
         end
         else if (reg2_read_en_o) begin
             reg2_o = reg2_data_i;
