@@ -23,7 +23,7 @@ module regfile (
     reg[`RegWidth] regs[0: 31];
 
     always @(posedge clk) begin 
-        if (rst) begin
+        if (~rst) begin
             if (write_en && (write_addr != 5'b0)) begin
                 regs[write_addr] <= write_data;
             end

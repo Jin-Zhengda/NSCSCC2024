@@ -7,18 +7,18 @@ module inst_rom (
     output reg[`InstWidth] rom_inst
 );
 
-    reg[`InstWidth] rom[0: 1023];
+    reg[`InstWidth] rom[0: 131070];
 
     initial begin
-        $readmemh("inst_rom.mem", rom);
+        $readmemh("C:/Documents/Code/NSCSCC2024/back end/inst_rom.mem", rom);
     end
 
     always @(*) begin
-        if (rom_inst_en) begin
-            rom_inst = rom[rom_inst_addr[11: 2]];
+        if (!rom_inst_en) begin
+            rom_inst <= 32'b0;
         end
         else begin
-            rom_inst = 32'b0;
+            rom_inst <= rom[rom_inst_addr[18: 2]];
         end
     end
     

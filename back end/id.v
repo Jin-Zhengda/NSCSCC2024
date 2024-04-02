@@ -27,11 +27,11 @@ module id (
 );
 
     // Instruction fields
-    wire opcode1 = inst_i[31: 22];
-    wire i12 = inst_i[21: 10];
-    wire rk = inst_i[14: 10];
-    wire rj = inst_i[9: 5];
-    wire rd = inst_i[4: 0];
+    wire[9: 0] opcode1 = inst_i[31: 22];
+    wire[11: 0] i12 = inst_i[21: 10];
+    wire[4: 0] rk = inst_i[14: 10];
+    wire[4: 0] rj = inst_i[9: 5];
+    wire[4: 0] rd = inst_i[4: 0];
 
     reg[`RegWidth] imm;
     reg inst_valid;
@@ -67,7 +67,7 @@ module id (
                     reg_write_en_o = 1'b1;
                     reg_write_addr_o = rd;
                     aluop_o = `ALU_ORI;
-                    alusel_o = `ALU_RES_LOGIC;
+                    alusel_o = `ALU_SEL_LOGIC;
                     reg1_read_en_o = 1'b1;
                     reg2_read_en_o = 1'b0;
                     imm = {20'b0, i12};
