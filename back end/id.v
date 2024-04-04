@@ -3,6 +3,8 @@
 module id (
     input wire rst,
 
+    output reg pause_id,
+
     // Instruction memory
     input wire[`InstAddrWidth] pc_i,
     input wire[`InstWidth] inst_i,
@@ -155,6 +157,96 @@ module id (
                     reg_write_addr_o = rd;
                     aluop_o = `ALU_XOR;
                     alusel_o = `ALU_SEL_LOGIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `SLLW_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_SLLW;
+                    alusel_o = `ALU_SEL_SHIFT;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `SRLW_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_SRLW;
+                    alusel_o = `ALU_SEL_SHIFT;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `SRAW_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_SRAW;
+                    alusel_o = `ALU_SEL_SHIFT;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `MULW_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_MULW;
+                    alusel_o = `ALU_SEL_ARITHMETIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `MULHW_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_MULHW;
+                    alusel_o = `ALU_SEL_ARITHMETIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `MULHWU_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_MULHWU;
+                    alusel_o = `ALU_SEL_ARITHMETIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `DIVW_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_DIVW;
+                    alusel_o = `ALU_SEL_ARITHMETIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `MODW_OPCODE:begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_MODW;
+                    alusel_o = `ALU_SEL_ARITHMETIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `DIVWU_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_DIVWU;
+                    alusel_o = `ALU_SEL_ARITHMETIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `MODWU_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_MODWU;
+                    alusel_o = `ALU_SEL_ARITHMETIC;
                     reg1_read_en_o = 1'b1;
                     reg2_read_en_o = 1'b1;
                     inst_valid = 1'b1;
