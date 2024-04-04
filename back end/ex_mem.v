@@ -3,6 +3,7 @@
 module ex_mem (
     input wire clk,
     input wire rst,
+    input wire[5: 0] pause,
 
     input wire[`RegWidth] ex_reg_write_data,
     input wire[`RegAddrWidth] ex_reg_write_addr,
@@ -19,10 +20,20 @@ module ex_mem (
             mem_reg_write_addr <= 5'b0;
             mem_reg_write_en <= 1'b0;
         end
-        else begin
+        else if (pause[3] && ~pause[4]) begin
+            mem_reg_write_data <= 32'b0;
+            mem_reg_write_addr <= 5'b0;
+            mem_reg_write_en <= 1'b0;
+        end 
+        else if (~pause[3]) begin
             mem_reg_write_data <= ex_reg_write_data;
             mem_reg_write_addr <= ex_reg_write_addr;
             mem_reg_write_en <= ex_reg_write_en;
+        end
+        else begin
+            mem_reg_write_data <= mem_reg_write_data;
+            mem_reg_write_addr <= mem_reg_write_addr;
+            mem_reg_write_en <= mem_reg_write_en;
         end
     end
     

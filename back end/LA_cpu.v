@@ -59,10 +59,14 @@ module LA_cpu (
     wire[`RegWidth] reg1_data;
     wire[`RegWidth] reg2_data;
 
+    wire[5: 0] pause;
+    wire pause_id;
+    wire pause_ex;
 
     pc u_pc (
         .clk(clk),
         .rst(rst),
+        .pause(pause),
         .pc_o(pc),
         .inst_en_o(rom_inst_en_o)
     );
@@ -72,6 +76,7 @@ module LA_cpu (
     if_id u_if_id (
         .clk(clk),
         .rst(rst),
+        .pause(pause),
 
         .if_pc(pc),
         .if_inst(rom_inst_i),
@@ -82,6 +87,7 @@ module LA_cpu (
 
     id u_id (
         .rst(rst),
+        .pause_id(pause_id),
 
         .pc_i(id_pc_i),
         .inst_i(id_inst_i),
@@ -134,6 +140,7 @@ module LA_cpu (
     id_ex u_id_ex (
         .clk(clk),
         .rst(rst),
+        .pause(pause),
 
         // from id
         .id_alusel(id_alusel_o),
@@ -154,6 +161,7 @@ module LA_cpu (
 
     ex u_ex (
         .rst(rst),
+        .pause_ex(pause_ex),
 
         // from id_ex
         .alusel_i(ex_alusel_i),
@@ -172,6 +180,7 @@ module LA_cpu (
     ex_mem u_ex_mem (
         .clk(clk),
         .rst(rst),
+        .pause(pause),
 
         // from ex
         .ex_reg_write_data(ex_reg_write_data_o),
@@ -201,6 +210,7 @@ module LA_cpu (
     mem_wb u_mem_wb (
         .clk(clk),
         .rst(rst),
+        .pause(pause),
 
         // from mem
         .mem_reg_write_data(mem_reg_write_data_o),
@@ -211,6 +221,15 @@ module LA_cpu (
         .wb_reg_write_data(wb_reg_write_data_i),
         .wb_reg_write_addr(wb_reg_write_addr_i),
         .wb_reg_write_en(wb_reg_write_en_i)
+    );
+
+    ctrl u_ctrl (
+        .rst(rst),
+
+        .pause_id(pause_id),
+        .pause_ex(pause_ex),
+
+        .pause(pause)
     );
 
 endmodule
