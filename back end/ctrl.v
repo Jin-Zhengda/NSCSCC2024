@@ -17,10 +17,10 @@ module ctrl (
             pause = 0;
         end
         else if (pause_id) begin
-            pause = 6'b001111;
+            pause = 6'b000111;
         end
         else if (pause_ex) begin
-            pause = 6'b000111;
+            pause = 6'b001111;
         end
         else begin
             pause = 0;

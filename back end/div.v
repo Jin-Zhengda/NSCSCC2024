@@ -11,7 +11,7 @@ module div (
     input wire[`RegWidth] reg1_i,
     input wire[`RegWidth] reg2_i,
 
-    output reg[`DoubleRegWidth] result,
+    output reg[`DoubleRegWidth] result_o,
     output reg done
 
 );
@@ -23,48 +23,49 @@ module div (
 
     wire[32: 0] div_temp;
     reg[5: 0] cnt;
-    reg[`DoubleRegWidth] dividend;
+    reg[64: 0] dividend;
     reg[`RegWidth] divisor;
     
     reg[1: 0] state;
     reg[`RegWidth] temp_op1;
     reg[`RegWidth] temp_op2;
+    reg[`DoubleRegWidth] result;
 
-    assign div_temp =  {1'b0, dividend[63: 32]} - {1'b0, divisor};
+    assign div_temp = {1'b0, dividend[63: 32]} - {1'b0, divisor};
 
     always @(posedge clk) begin
         if (rst) begin
             state <= DivFree;
             done <= 1'b0;
-            result <= 64'b0;
+            result <= 0;
         end 
         else begin
             case (state)
-                DivFree: begin
-                    if (start && ~cancel) begin
-                        if (~reg2_i) begin
+                    DivFree: begin
+                    if (start && cancel == 1'b0) begin
+                        if (reg2_i == 32'b0) begin
                             state <= DivByZero;
-                        end
+                        end 
                         else begin
                             state <= DivOn;
-                            cnt <= 6'b0;
+                            cnt <= 6'b000000;
                             if (signed_op && reg1_i[31]) begin
-                                temp_op1 <= ~reg1_i + 1;
+                                temp_op1 = ~reg1_i + 1;
                             end
                             else begin
-                                temp_op1 <= reg1_i;
+                                temp_op1 = reg1_i;
                             end
                             if (signed_op && reg2_i[31]) begin
-                                temp_op2 <= ~reg2_i + 1;
+                                temp_op2 = ~reg2_i + 1;
                             end
                             else begin
-                                temp_op2 <= reg2_i;
+                                temp_op2 = reg2_i;
                             end
                             dividend <= 0;
                             dividend[32: 1] <= temp_op1;
                             divisor <= temp_op2;
                         end    
-                    end
+                    end 
                     else begin
                         done <= 1'b0;
                         result <= 0;
@@ -75,7 +76,7 @@ module div (
                     state <= DivEnd;
                 end 
                 DivOn: begin
-                    if (~cancel) begin
+                    if (cancel == 1'b0) begin
                         if (cnt != 6'b100000) begin
                             if (div_temp[32]) begin
                                 dividend <= {dividend[63: 0], 1'b0};
@@ -86,11 +87,11 @@ module div (
                             cnt <= cnt + 1;
                         end
                         else begin
-                            if (signed_op && (reg1_i[31] ^ reg2_i[31])) begin
-                                dividend[31: 0] <= (~dividend[31: 0] + 1);
+                            if (signed_op && ((reg1_i[31] ^ reg2_i[31]) == 1'b1)) begin
+                                dividend[31: 0] <= ~dividend[31: 0] + 1;
                             end
-                            if (signed_op && (reg1_i[31] ^ dividend[64])) begin
-                                dividend[64: 33] <= (~dividend[64: 33] + 1);
+                            if (signed_op && ((reg1_i[31] ^ dividend[64]) == 1'b1)) begin
+                                dividend[64: 33] <= ~dividend[64: 33] + 1;
                             end
                             state <= DivEnd;
                             cnt <= 0;
@@ -102,17 +103,25 @@ module div (
                 end
                 DivEnd: begin
                     result <= {dividend[64: 33], dividend[31: 0]};
-                    done <= 1'b0;
-                    if (~start) begin
+                    done <= 1'b1;
+                    if (start == 1'b0) begin
                         state <= DivFree;
                         done <= 1'b0;
                         result <= 0;
                     end
                 end
                 default: begin
-                    
                 end
             endcase
+        end
+    end
+
+    always @(*) begin
+        if (rst) begin
+            result_o = 0;
+        end
+        else if (done) begin
+            result_o = result;
         end
     end
 
