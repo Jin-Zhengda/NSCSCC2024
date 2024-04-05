@@ -39,10 +39,12 @@ module id (
     // Instruction fields
     wire[9: 0] opcode1 = inst_i[31: 22];
     wire[16: 0] opcode2 = inst_i[31: 15];
-    wire[11: 0] i12 = inst_i[21: 10];
+    wire[11: 0] ui12 = inst_i[21: 10];
+    wire[4: 0] ui5 = inst_i[14: 10];
     wire[4: 0] rk = inst_i[14: 10];
     wire[4: 0] rj = inst_i[9: 5];
     wire[4: 0] rd = inst_i[4: 0];
+    wire[14: 0] code = inst_i[14: 0];
 
     reg[`RegWidth] imm;
     reg inst_valid;
@@ -81,7 +83,7 @@ module id (
                     alusel_o = `ALU_SEL_LOGIC;
                     reg1_read_en_o = 1'b1;
                     reg2_read_en_o = 1'b0;
-                    imm = {20'b0, i12};
+                    imm = {20'b0, ui12};
                     inst_valid = 1'b1;
                 end
                 default: begin
@@ -249,6 +251,36 @@ module id (
                     alusel_o = `ALU_SEL_ARITHMETIC;
                     reg1_read_en_o = 1'b1;
                     reg2_read_en_o = 1'b1;
+                    inst_valid = 1'b1;
+                end
+                `SLLIW_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_SLLIW;
+                    alusel_o = `ALU_SEL_SHIFT;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b0;
+                    imm = {27'b0, ui5};
+                    inst_valid = 1'b1;
+                end
+                `SRLIW_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_SRLIW;
+                    alusel_o = `ALU_SEL_SHIFT;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b0;
+                    imm = {27'b0, ui5};
+                    inst_valid = 1'b1;
+                end
+                `SRAIW_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_SRAIW;
+                    alusel_o = `ALU_SEL_SHIFT;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b0;
+                    imm = {27'b0, ui5};
                     inst_valid = 1'b1;
                 end
                 default:begin
