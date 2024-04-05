@@ -199,10 +199,14 @@ module ex (
                     arithmetic_res = mul_result[63:32];
                 end
                 `ALU_DIVW, `ALU_DIVWU: begin
-                    arithmetic_res = div_result_i[31:0];
+                    if(div_done_i) begin
+                        arithmetic_res = div_result_i[31:0];
+                    end
                 end
                 `ALU_MODW, `ALU_MODWU: begin
-                    arithmetic_res = div_result_i[63:32];
+                    if (div_done_i) begin
+                        arithmetic_res = div_result_i[63:32];
+                    end
                 end
                 default: begin
                     arithmetic_res = 32'b0;
