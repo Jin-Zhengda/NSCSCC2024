@@ -67,11 +67,11 @@ module div (
                     end
                     else begin
                         done <= 1'b0;
-                        result <= 54'b0;
+                        result <= 0;
                     end
                 end
                 DivByZero: begin
-                    dividend <= 64'b0;
+                    dividend <= 0;
                     state <= DivEnd;
                 end 
                 DivOn: begin

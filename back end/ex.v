@@ -14,7 +14,14 @@ module ex (
 
     output reg[`RegAddrWidth] reg_write_addr_o,
     output reg reg_write_en_o,
-    output reg[`RegWidth] reg_write_data_o
+    output reg[`RegWidth] reg_write_data_o,
+
+    input wire[`DoubleRegWidth] div_result_i,
+    input wire div_done_i,
+    output reg[`RegWidth] div_data1_o,
+    output reg[`RegWidth] div_data2_o,
+    output reg div_singed_o,
+    output reg div_start_o
 );
 
     reg[`RegWidth] logic_res;
@@ -56,13 +63,13 @@ module ex (
         end
         else begin
             case (aluop_i)
-                `ALU_SLLW: begin
+                `ALU_SLLW, `ALU_SLLIW: begin
                     shift_res = reg1_i << reg2_i[4:0];
                 end
-                `ALU_SRLW: begin
+                `ALU_SRLW, `ALU_SRLIW: begin
                     shift_res = reg1_i >> reg2_i[4:0];
                 end
-                `ALU_SRAW: begin
+                `ALU_SRAW, `ALU_SRAIW: begin
                     shift_res = ({32{reg1_i[31]}} << (6'd32 - {1'b0, reg2_i[4: 0]})) | reg1_i >> reg2_i[4:0];
                 end
                 default: begin
@@ -99,6 +106,79 @@ module ex (
     assign mul_result = (((aluop_i == `ALU_MULW) || (aluop_i == `ALU_MULHW)) 
                         && (reg1_i[31] ^ reg2_i[31])) ? (~mul_temp_result + 1) : mul_temp_result;
 
+    reg pause_ex_div;
+
+    always @(*) begin
+        if (rst) begin
+            pause_ex_div = 1'b0;
+            div_data1_o = 32'b0;
+            div_data2_o = 32'b0;
+            div_start_o = 1'b0;
+            div_singed_o = 1'b0;
+        end
+        else begin
+            pause_ex_div = 1'b0;
+            div_data1_o = 32'b0;
+            div_data2_o = 32'b0;
+            div_start_o = 1'b0;
+            div_singed_o = 1'b0;
+
+            case (aluop_i)
+                `ALU_DIVW, `ALU_MODW: begin
+                    if (~div_done_i) begin
+                        div_data1_o = reg1_i;
+                        div_data2_o = reg2_i;
+                        div_start_o = 1'b1;
+                        div_singed_o = 1'b1;
+                        pause_ex_div = 1'b1;
+                    end 
+                    else if (div_done_i) begin
+                        div_data1_o = reg1_i;
+                        div_data2_o = reg2_i;
+                        div_start_o = 1'b0;
+                        div_singed_o = 1'b1;
+                        pause_ex_div = 1'b0;
+                    end
+                    else begin
+                        div_data1_o = 32'b0;
+                        div_data2_o = 32'b0;
+                        div_start_o = 1'b0;
+                        div_singed_o = 1'b0;
+                        pause_ex_div = 1'b0;
+                    end
+                end 
+                `ALU_DIVWU, `ALU_MODWU: begin
+                    if (~div_done_i) begin
+                        div_data1_o = reg1_i;
+                        div_data2_o = reg2_i;
+                        div_start_o = 1'b1;
+                        div_singed_o = 1'b0;
+                        pause_ex_div = 1'b1;
+                    end 
+                    else if (div_done_i) begin
+                        div_data1_o = reg1_i;
+                        div_data2_o = reg2_i;
+                        div_start_o = 1'b0;
+                        div_singed_o = 1'b0;
+                        pause_ex_div = 1'b0;
+                    end
+                    else begin
+                        div_data1_o = 32'b0;
+                        div_data2_o = 32'b0;
+                        div_start_o = 1'b0;
+                        div_singed_o = 1'b0;
+                        pause_ex_div = 1'b0;
+                    end
+                end
+                default: begin
+                end
+            endcase
+        end
+    end
+
+    always @(*) begin
+        pause_ex = pause_ex_div;
+    end
 
     always @(*) begin
         if (rst) begin
@@ -117,6 +197,12 @@ module ex (
                 end
                 `ALU_MULHW, `ALU_MULHWU: begin
                     arithmetic_res = mul_result[63:32];
+                end
+                `ALU_DIVW, `ALU_DIVWU: begin
+                    arithmetic_res = div_result_i[31:0];
+                end
+                `ALU_MODW, `ALU_MODWU: begin
+                    arithmetic_res = div_result_i[63:32];
                 end
                 default: begin
                     arithmetic_res = 32'b0;

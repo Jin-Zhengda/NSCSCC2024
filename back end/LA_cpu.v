@@ -63,6 +63,13 @@ module LA_cpu (
     wire pause_id;
     wire pause_ex;
 
+    wire div_start;
+    wire div_singed;
+    wire[`RegWidth] div_data1;
+    wire[`RegWidth] div_data2;
+    wire[`DoubleRegWidth] div_result;
+    wire div_done;
+
     pc u_pc (
         .clk(clk),
         .rst(rst),
@@ -174,7 +181,15 @@ module LA_cpu (
         // to ex_mem
         .reg_write_addr_o(ex_reg_write_addr_o),
         .reg_write_en_o(ex_reg_write_en_o),
-        .reg_write_data_o(ex_reg_write_data_o)
+        .reg_write_data_o(ex_reg_write_data_o),
+
+        // div
+        .div_result_i(div_result),
+        .div_done_i(div_done),
+        .div_data1_o(div_data1),
+        .div_data2_o(div_data2),
+        .div_singed_o(div_singed),
+        .div_start_o(div_start)
     );
 
     ex_mem u_ex_mem (
@@ -230,6 +245,21 @@ module LA_cpu (
         .pause_ex(pause_ex),
 
         .pause(pause)
+    );
+
+    div u_div (
+        .clk(clk),
+        .rst(rst),
+
+        .start(div_start),
+        .cancel(1'b0),
+
+        .signed_op(div_singed),
+        .reg1_i(div_data1),
+        .reg2_i(div_data2),
+
+        .result(div_result),
+        .done(div_done)
     );
 
 endmodule
