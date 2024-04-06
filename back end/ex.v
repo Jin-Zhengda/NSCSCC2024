@@ -35,19 +35,16 @@ module ex (
         end
         else begin
             case (aluop_i)
-                `ALU_ORI: begin
+                `ALU_OR, `ALU_ORI: begin
                     logic_res = reg1_i | reg2_i;
                 end
                 `ALU_NOR: begin
                     logic_res = ~(reg1_i | reg2_i);
                 end
-                `ALU_AND: begin
+                `ALU_AND, `ALU_ANDI: begin
                     logic_res = reg1_i & reg2_i;
                 end
-                `ALU_OR: begin
-                    logic_res = reg1_i | reg2_i;
-                end
-                `ALU_XOR: begin
+                `ALU_XOR, `ALU_XORI: begin
                     logic_res = reg1_i ^ reg2_i;
                 end
                 default: begin
@@ -87,7 +84,7 @@ module ex (
 
     assign reg2_i_mux= ((aluop_i == `ALU_SUBW) || (aluop_i == `ALU_SLT)) ? ~reg2_i + 1 : reg2_i;
     assign sum_result = reg1_i + reg2_i_mux;
-    assign reg1_lt_reg2 = (aluop_i == `ALU_SLT) ?
+    assign reg1_lt_reg2 = ((aluop_i == `ALU_SLT) || (aluop_i == `ALU_SLTI)) ?
                             ((reg1_i[31] && !reg2_i[31]) || (!reg1_i[31] && !reg2_i[31] && sum_result[31]) || (reg1_i[31] && reg2_i[31] && sum_result[31])) 
                             : (reg1_i < reg2_i);
     assign reg1_i_not = ~reg1_i;
@@ -186,10 +183,10 @@ module ex (
         end
         else begin
             case (aluop_i)
-                `ALU_ADDW, `ALU_SUBW: begin
+                `ALU_ADDW, `ALU_SUBW, `ALU_ADDIW: begin
                     arithmetic_res = sum_result;
                 end
-                `ALU_SLT, `ALU_SLTU: begin
+                `ALU_SLT, `ALU_SLTU, `ALU_SLTI, `ALU_SLTUI: begin
                     arithmetic_res = reg1_lt_reg2;
                 end
                 `ALU_MULW: begin
