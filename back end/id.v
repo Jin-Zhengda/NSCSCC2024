@@ -33,19 +33,36 @@ module id (
     input[`RegWidth] ex_reg_write_data_i,
     input mem_reg_write_en_i,
     input[`RegAddrWidth] mem_reg_write_addr_i,
-    input[`RegWidth] mem_reg_write_data_i
+    input[`RegWidth] mem_reg_write_data_i,
+
+    output reg is_branch_o,
+    output reg[`InstAddrWidth] branch_target_addr_o,
+    output reg[`RegWidth] reg_write_branch_data_o,
+    output reg branch_flush_o
 );
 
     // Instruction fields
     wire[9: 0] opcode1 = inst_i[31: 22];
     wire[16: 0] opcode2 = inst_i[31: 15];
+    wire[6: 0] opcode3 = inst_i[31: 25];
+    wire[7: 0] opcode4 = inst_i[31: 24];
+    wire[5: 0] opcode5 = inst_i[31: 26];
+
+    wire[19: 0] si20 = inst_i[24: 5];
     wire[11: 0] ui12 = inst_i[21: 10];
     wire[11: 0] si12 = inst_i[21: 10];
     wire[4: 0] ui5 = inst_i[14: 10];
+
     wire[4: 0] rk = inst_i[14: 10];
     wire[4: 0] rj = inst_i[9: 5];
     wire[4: 0] rd = inst_i[4: 0];
     wire[14: 0] code = inst_i[14: 0];
+
+    wire[`RegWidth] branch16_addr;
+    wire[`RegWidth] branch26_addr;
+
+    assign branch16_addr = {{14{inst_i[25]}}, inst_i[25: 10], 2'b00};
+    assign branch26_addr = {{4{inst_i[25]}}, inst_i[25: 0], 2'b00};
 
     reg[`RegWidth] imm;
     reg inst_valid;
@@ -63,6 +80,11 @@ module id (
             reg2_read_addr_o = 5'b0;
             imm = 32'b0;
             inst_valid = 1'b0;
+            is_branch_o = 1'b0;
+            reg_write_branch_data_o = 32'b0;
+            branch_target_addr_o = 5'b0;
+            branch_flush_o = 1'b0;
+
         end
         else begin
             aluop_o = `ALU_NOP;
@@ -75,6 +97,10 @@ module id (
             reg1_read_addr_o = rj;
             reg2_read_addr_o = rk;
             imm = 32'b0;
+            is_branch_o = 1'b0;
+            reg_write_branch_data_o = 32'b0;
+            branch_target_addr_o = 5'b0;
+            branch_flush_o = 1'b0;
 
             case (opcode1)
                 `SLTI_OPCODE: begin
@@ -337,6 +363,147 @@ module id (
                 default:begin
                 end 
             endcase
+
+            case (opcode3)
+                `LU12I_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_LU12I;
+                    alusel_o = `ALU_SEL_LOGIC;
+                    reg1_read_en_o = 1'b1;
+                    reg1_read_addr_o = 5'b0;
+                    reg2_read_en_o = 1'b0;
+                    imm = {si20, 12'b0};
+                    inst_valid = 1'b1;
+                end
+                `PCADDU12I_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_PCADDU12I;
+                    alusel_o = `ALU_SEL_ARITHMETIC;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b0;
+                    imm = {si20, 12'b0};
+                    inst_valid = 1'b1;
+                end
+                default:begin
+                end 
+            endcase
+
+            case (opcode5)
+                `BEQ_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_BEQ;
+                    alusel_o = `ALU_SEL_JUMP_BRANCH;
+                    reg1_read_en_o = 1'b1;
+                    reg1_read_addr_o = rj;
+                    reg2_read_en_o = 1'b1;
+                    reg2_read_addr_o = rd;
+                    inst_valid = 1'b1;
+                    if (reg1_o == reg2_o) begin
+                        is_branch_o = 1'b1;
+                        branch_target_addr_o = pc_i + branch16_addr;
+                        branch_flush_o = 1'b1;
+                    end
+                    else begin
+                        is_branch_o = 1'b0;
+                        branch_flush_o = 1'b0;
+                    end 
+                end 
+                `BNE_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_BNE;
+                    alusel_o = `ALU_SEL_JUMP_BRANCH;
+                    reg1_read_en_o = 1'b1;
+                    reg1_read_addr_o = rj;
+                    reg2_read_en_o = 1'b1;
+                    reg2_read_addr_o = rd;
+                    inst_valid = 1'b1;
+                    if (reg1_o != reg2_o) begin
+                        is_branch_o = 1'b1;
+                        branch_target_addr_o = pc_i + branch16_addr;
+                        branch_flush_o = 1'b1;
+                    end
+                    else begin
+                        is_branch_o = 1'b0;
+                        branch_flush_o = 1'b0;
+                    end 
+                end
+                `BLTU_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_BLT;
+                    alusel_o = `ALU_SEL_JUMP_BRANCH;
+                    reg1_read_en_o = 1'b1;
+                    reg1_read_addr_o = rj;
+                    reg2_read_en_o = 1'b1;
+                    reg2_read_addr_o = rd;
+                    inst_valid = 1'b1;
+                    if (reg1_o < reg2_o) begin
+                        is_branch_o = 1'b1;
+                        branch_target_addr_o = pc_i + branch16_addr;
+                        branch_flush_o = 1'b1;
+                    end
+                    else begin
+                        is_branch_o = 1'b0;
+                        branch_flush_o = 1'b0;
+                    end 
+                end
+                `BGEU_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_BGE;
+                    alusel_o = `ALU_SEL_JUMP_BRANCH;
+                    reg1_read_en_o = 1'b1;
+                    reg1_read_addr_o = rj;
+                    reg2_read_en_o = 1'b1;
+                    reg2_read_addr_o = rd;
+                    inst_valid = 1'b1;
+                    if (reg1_o >= reg2_o) begin
+                        is_branch_o = 1'b1;
+                        branch_target_addr_o = pc_i + branch16_addr;
+                        branch_flush_o = 1'b1;
+                    end
+                    else begin
+                        is_branch_o = 1'b0;
+                        branch_flush_o = 1'b0;
+                    end 
+                end
+                `B_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_B;
+                    alusel_o = `ALU_SEL_JUMP_BRANCH;
+                    reg1_read_en_o = 1'b0;
+                    reg2_read_en_o = 1'b0;
+                    inst_valid = 1'b1;
+                    is_branch_o = 1'b1;
+                    branch_target_addr_o = pc_i + branch26_addr;
+                    branch_flush_o = 1'b1;
+                end
+                `BL_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = 5'b00001;
+                    reg_write_branch_data_o = pc_i + 4'h4;
+                    aluop_o = `ALU_BL;
+                    alusel_o = `ALU_SEL_JUMP_BRANCH;
+                    reg1_read_en_o = 1'b0;
+                    reg2_read_en_o = 1'b0;
+                    inst_valid = 1'b1;
+                    is_branch_o = 1'b1;
+                    branch_target_addr_o = pc_i + branch26_addr;
+                    branch_flush_o = 1'b1;
+                end
+                `JIRL_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    reg_write_branch_data_o = pc_i + 4'h4;
+                    aluop_o = `ALU_JIRL;
+                    alusel_o = `ALU_SEL_JUMP_BRANCH;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b0;
+                    inst_valid = 1'b1;
+                end
+                default: begin
+                end 
+            endcase
         end
     end
 
@@ -344,6 +511,9 @@ module id (
     always @(*) begin
         if (rst) begin
             reg1_o = 32'b0;
+        end
+        else if (reg1_read_en_o && (opcode3 == `PCADDU12I_OPCODE)) begin
+            reg1_o = pc_i;
         end
         else if (reg1_read_en_o && ex_reg_write_en_i && (ex_reg_write_addr_i == reg1_read_addr_o)) begin
             reg1_o = ex_reg_write_data_i;

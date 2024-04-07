@@ -11,7 +11,7 @@ module div (
     input wire[`RegWidth] reg1_i,
     input wire[`RegWidth] reg2_i,
 
-    output reg[`DoubleRegWidth] result_o,
+    output reg[`DoubleRegWidth] result,
     output reg done
 
 );
@@ -29,7 +29,6 @@ module div (
     reg[1: 0] state;
     reg[`RegWidth] temp_op1;
     reg[`RegWidth] temp_op2;
-    reg[`DoubleRegWidth] result;
 
     assign div_temp = {1'b0, dividend[63: 32]} - {1'b0, divisor};
 
@@ -115,15 +114,5 @@ module div (
             endcase
         end
     end
-
-    always @(*) begin
-        if (rst) begin
-            result_o = 0;
-        end
-        else if (done) begin
-            result_o = result;
-        end
-    end
-
 
 endmodule
