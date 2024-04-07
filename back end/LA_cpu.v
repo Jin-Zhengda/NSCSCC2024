@@ -258,7 +258,7 @@ module LA_cpu (
         .reg1_i(div_data1),
         .reg2_i(div_data2),
 
-        .result_o(div_result),
+        .result(div_result),
         .done(div_done)
     );
 

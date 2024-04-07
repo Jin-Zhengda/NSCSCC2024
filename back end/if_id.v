@@ -5,6 +5,7 @@ module if_id (
     input wire rst,
 
     input wire[5: 0] pause,
+    input wire branch_flush_i,
 
     // Instruction fetch stage
     input wire[`InstAddrWidth] if_pc, 
@@ -25,8 +26,14 @@ module if_id (
             id_inst <= 0;
         end 
         else if (~pause[1])begin
-            id_pc <= if_pc;
-            id_inst <= if_inst;
+            if (branch_flush_i) begin
+                id_pc <= 0;
+                id_inst <= 0;
+            end
+            else begin
+                id_pc <= if_pc;
+                id_inst <= if_inst;
+            end
         end
         else begin
             id_pc <= id_pc;

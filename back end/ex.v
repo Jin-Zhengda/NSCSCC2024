@@ -21,7 +21,9 @@ module ex (
     output reg[`RegWidth] div_data1_o,
     output reg[`RegWidth] div_data2_o,
     output reg div_singed_o,
-    output reg div_start_o
+    output reg div_start_o,
+
+    input wire[`RegWidth] reg_write_branch_data_i
 );
 
     reg[`RegWidth] logic_res;
@@ -35,7 +37,7 @@ module ex (
         end
         else begin
             case (aluop_i)
-                `ALU_OR, `ALU_ORI: begin
+                `ALU_OR, `ALU_ORI, `ALU_LU12I: begin
                     logic_res = reg1_i | reg2_i;
                 end
                 `ALU_NOR: begin
@@ -183,7 +185,7 @@ module ex (
         end
         else begin
             case (aluop_i)
-                `ALU_ADDW, `ALU_SUBW, `ALU_ADDIW: begin
+                `ALU_ADDW, `ALU_SUBW, `ALU_ADDIW, `ALU_PCADDU12I: begin
                     arithmetic_res = sum_result;
                 end
                 `ALU_SLT, `ALU_SLTU, `ALU_SLTI, `ALU_SLTUI: begin
@@ -228,6 +230,9 @@ module ex (
             end
             `ALU_SEL_ARITHMETIC: begin
                 reg_write_data_o = arithmetic_res;
+            end
+            `ALU_SEL_JUMP_BRANCH: begin
+                reg_write_data_o = reg_write_branch_data_i;
             end
             default: begin
                 reg_write_data_o = 32'b0;
