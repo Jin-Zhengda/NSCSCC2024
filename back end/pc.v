@@ -6,7 +6,7 @@ module pc (
 
     input wire[5: 0] pause,
     input wire is_branch_i,
-    input wire[`InstAddrWidth] branch_target_i,
+    input wire[`InstAddrWidth] branch_target_addr_i,
 
     output reg[`InstAddrWidth] pc_o,
     output reg inst_en_o   
@@ -30,7 +30,7 @@ module pc (
         end
         else begin
             if (is_branch_i) begin
-                pc_o <= branch_target_i;
+                pc_o <= branch_target_addr_i;
             end
             else begin
             pc_o <= pc_o + 4'h4;

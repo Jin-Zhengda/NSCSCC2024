@@ -10,10 +10,15 @@ module LA_cpu (
     output wire rom_inst_en_o
 );
 
+    // id to pc
+    wire id_is_branch_o;
+    wire[`InstAddrWidth] id_branch_target_addr_o;
+
     // if_id and id
     wire[`InstAddrWidth] pc;
     wire[`InstAddrWidth] id_pc_i;
     wire[`InstWidth] id_inst_i;
+    wire id_branch_flush_o;
 
     // id and id_ex
     wire[`ALUOpWidth] id_aluop_o;
@@ -22,6 +27,7 @@ module LA_cpu (
     wire[`RegWidth] id_reg2_o;
     wire[`RegAddrWidth] id_reg_write_addr_o;
     wire id_reg_write_en_o;
+    wire[`RegWidth] id_reg_write_branch_data_o;
 
     // id_ex and ex
     wire[`ALUOpWidth] ex_aluop_i;
@@ -30,6 +36,7 @@ module LA_cpu (
     wire[`RegWidth] ex_reg2_i;
     wire[`RegAddrWidth] ex_reg_write_addr_i;
     wire ex_reg_write_en_i;
+    wire[`RegWidth] ex_reg_write_branch_data_i;
 
     // ex and ex_mem
     wire[`RegAddrWidth] ex_reg_write_addr_o;
@@ -74,6 +81,8 @@ module LA_cpu (
         .clk(clk),
         .rst(rst),
         .pause(pause),
+        .is_branch_i(id_is_branch_o),
+        .branch_target_addr_i(id_branch_target_addr_o),
         .pc_o(pc),
         .inst_en_o(rom_inst_en_o)
     );
@@ -84,6 +93,7 @@ module LA_cpu (
         .clk(clk),
         .rst(rst),
         .pause(pause),
+        .branch_flush_i(id_branch_flush_o),
 
         .if_pc(pc),
         .if_inst(rom_inst_i),
@@ -123,7 +133,13 @@ module LA_cpu (
         .ex_reg_write_data_i(ex_reg_write_data_o),
         .mem_reg_write_en_i(mem_reg_write_en_o),
         .mem_reg_write_addr_i(mem_reg_write_addr_o),
-        .mem_reg_write_data_i(mem_reg_write_data_o)
+        .mem_reg_write_data_i(mem_reg_write_data_o),
+
+        // branch
+        .is_branch_o(id_is_branch_o),
+        .branch_target_addr_o(id_branch_target_addr_o),
+        .reg_write_branch_data_o(id_reg_write_branch_data_o),
+        .branch_flush_o(id_branch_flush_o)
     );
 
     regfile u_regfile (
@@ -156,6 +172,7 @@ module LA_cpu (
         .id_reg2(id_reg2_o),
         .id_reg_write_addr(id_reg_write_addr_o),
         .id_reg_write_en(id_reg_write_en_o),
+        .id_reg_write_branch_data(id_reg_write_branch_data_o),
 
         // to ex
         .ex_alusel(ex_alusel_i),
@@ -163,7 +180,8 @@ module LA_cpu (
         .ex_reg1(ex_reg1_i),
         .ex_reg2(ex_reg2_i),
         .ex_reg_write_addr(ex_reg_write_addr_i),
-        .ex_reg_write_en(ex_reg_write_en_i)
+        .ex_reg_write_en(ex_reg_write_en_i),
+        .ex_reg_write_branch_data(ex_reg_write_branch_data_i)
     );
 
     ex u_ex (
@@ -189,7 +207,10 @@ module LA_cpu (
         .div_data1_o(div_data1),
         .div_data2_o(div_data2),
         .div_singed_o(div_singed),
-        .div_start_o(div_start)
+        .div_start_o(div_start),
+
+        // branch
+        .reg_write_branch_data_i(ex_reg_write_branch_data_i)
     );
 
     ex_mem u_ex_mem (

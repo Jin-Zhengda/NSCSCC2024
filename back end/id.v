@@ -35,8 +35,9 @@ module id (
     input[`RegAddrWidth] mem_reg_write_addr_i,
     input[`RegWidth] mem_reg_write_data_i,
 
+    // branch
     output reg is_branch_o,
-    output reg[`InstAddrWidth] branch_target_addr_o,
+    output reg[`RegWidth] branch_target_addr_o,
     output reg[`RegWidth] reg_write_branch_data_o,
     output reg branch_flush_o
 );
@@ -62,10 +63,11 @@ module id (
     wire[`RegWidth] branch26_addr;
 
     assign branch16_addr = {{14{inst_i[25]}}, inst_i[25: 10], 2'b00};
-    assign branch26_addr = {{4{inst_i[25]}}, inst_i[25: 0], 2'b00};
+    assign branch26_addr = {{4{inst_i[9]}}, inst_i[9: 0], inst_i[25: 10], 2'b00};
 
     reg[`RegWidth] imm;
     reg inst_valid;
+    reg reg1_lt_reg2;
 
     // Instruction decode
     always @(*) begin
@@ -429,6 +431,50 @@ module id (
                         branch_flush_o = 1'b0;
                     end 
                 end
+                `BLT_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_BLT;
+                    alusel_o = `ALU_SEL_JUMP_BRANCH;
+                    reg1_read_en_o = 1'b1;
+                    reg1_read_addr_o = rj;
+                    reg2_read_en_o = 1'b1;
+                    reg2_read_addr_o = rd;
+                    inst_valid = 1'b1;
+
+                    reg1_lt_reg2 = (reg1_o[31] && !reg2_o[31]) || (!reg1_o[31] && !reg2_o[31] && (reg1_o < reg2_o)) 
+                                    || (reg1_o[31] && reg2_o[31] && (reg1_o > reg2_o));
+                    if (reg1_lt_reg2) begin
+                        is_branch_o = 1'b1;
+                        branch_target_addr_o = pc_i + branch16_addr;
+                        branch_flush_o = 1'b1;
+                    end
+                    else begin
+                        is_branch_o = 1'b0;
+                        branch_flush_o = 1'b0;
+                    end 
+                end
+                `BGE_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_BGE;
+                    alusel_o = `ALU_SEL_JUMP_BRANCH;
+                    reg1_read_en_o = 1'b1;
+                    reg1_read_addr_o = rj;
+                    reg2_read_en_o = 1'b1;
+                    reg2_read_addr_o = rd;
+                    inst_valid = 1'b1;
+
+                    reg1_lt_reg2 = (reg1_o[31] && !reg2_o[31]) || (!reg1_o[31] && !reg2_o[31] && (reg1_o < reg2_o)) 
+                                    || (reg1_o[31] && reg2_o[31] && (reg1_o > reg2_o));
+                    if (~reg1_lt_reg2) begin
+                        is_branch_o = 1'b1;
+                        branch_target_addr_o = pc_i + branch16_addr;
+                        branch_flush_o = 1'b1;
+                    end
+                    else begin
+                        is_branch_o = 1'b0;
+                        branch_flush_o = 1'b0;
+                    end 
+                end
                 `BLTU_OPCODE: begin
                     reg_write_en_o = 1'b0;
                     aluop_o = `ALU_BLT;
@@ -500,6 +546,9 @@ module id (
                     reg1_read_en_o = 1'b1;
                     reg2_read_en_o = 1'b0;
                     inst_valid = 1'b1;
+                    is_branch_o = 1'b1;
+                    branch_target_addr_o = reg1_o + branch26_addr;
+                    branch_flush_o = 1'b1;
                 end
                 default: begin
                 end 
