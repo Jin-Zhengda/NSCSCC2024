@@ -6,6 +6,7 @@ module ex (
 
     input wire[`ALUSelWidth] alusel_i,
     input wire[`ALUOpWidth] aluop_i,
+    input wire[`InstWidth] inst_i,
 
     input wire[`RegWidth] reg1_i,
     input wire[`RegWidth] reg2_i,
@@ -23,8 +24,36 @@ module ex (
     output reg div_singed_o,
     output reg div_start_o,
 
-    input wire[`RegWidth] reg_write_branch_data_i
+    input wire[`RegWidth] reg_write_branch_data_i,
+
+    output wire[`ALUOpWidth] aluop_o,
+    output reg[`RegWidth] mem_addr_o,
+    output wire[`RegWidth] store_data_o
 );
+
+    assign aluop_o = aluop_i;
+    assign store_data_o = reg2_i;
+
+    wire[11: 0] si12 = inst_i[21: 10];
+
+    always @(*) begin
+        if (rst) begin
+            mem_addr_o = 32'b0;
+        end
+        else begin
+            case (aluop_i)
+                `LDB_OPCODE, `LDH_OPCODE, `LDW_OPCODE, `LDBU_OPCODE, `LDHU_OPCODE: begin
+                    mem_addr_o = reg1_i + reg2_i;
+                end
+                `STB_OPCODE, `STH_OPCODE, `STW_OPCODE: begin
+                    mem_addr_o = reg1_i + {{20{si12[11]}}, si12};
+                end
+                default: begin
+                    mem_addr_o = 32'b0;        
+                end
+            endcase
+        end
+    end
 
     reg[`RegWidth] logic_res;
     reg[`RegWidth] shift_res;

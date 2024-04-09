@@ -5,9 +5,16 @@ module LA_cpu (
     input wire rst,
 
     input wire[`InstWidth] rom_inst_i,
+    input wire[`RegWidth] ram_data_i,
 
     output wire[`InstAddrWidth] rom_inst_addr_o,
-    output wire rom_inst_en_o
+    output wire rom_inst_en_o,
+
+    output wire[`RegWidth] ram_addr_o,
+    output wire[`RegWidth] ram_data_o,
+    output wire ram_write_en_o,
+    output wire[3: 0] ram_select_o,
+    output wire ram_en_o
 );
 
     // id to pc
@@ -28,6 +35,7 @@ module LA_cpu (
     wire[`RegAddrWidth] id_reg_write_addr_o;
     wire id_reg_write_en_o;
     wire[`RegWidth] id_reg_write_branch_data_o;
+    wire[`InstWidth] id_inst_o;
 
     // id_ex and ex
     wire[`ALUOpWidth] ex_aluop_i;
@@ -37,16 +45,23 @@ module LA_cpu (
     wire[`RegAddrWidth] ex_reg_write_addr_i;
     wire ex_reg_write_en_i;
     wire[`RegWidth] ex_reg_write_branch_data_i;
+    wire[`InstWidth] ex_inst_i;
 
     // ex and ex_mem
     wire[`RegAddrWidth] ex_reg_write_addr_o;
     wire[`RegWidth] ex_reg_write_data_o;
     wire ex_reg_write_en_o;
+    wire[`ALUOpWidth] ex_aluop_o;
+    wire[`RegWidth] ex_mem_addr_o;
+    wire[`RegWidth] ex_store_data_o;
 
     // ex_mem and mem
     wire[`RegAddrWidth] mem_reg_write_addr_i;
     wire[`RegWidth] mem_reg_write_data_i;
     wire mem_reg_write_en_i;
+    wire[`ALUOpWidth] mem_aluop_i;
+    wire[`RegWidth] mem_mem_addr_i;
+    wire[`RegWidth] mem_store_data_i;
 
     // mem and mem_wb
     wire[`RegAddrWidth] mem_reg_write_addr_o;
@@ -126,6 +141,7 @@ module LA_cpu (
         .reg2_o(id_reg2_o),
         .reg_write_addr_o(id_reg_write_addr_o),
         .reg_write_en_o(id_reg_write_en_o),
+        .inst_o(id_inst_o),
 
         // data pushed forward
         .ex_reg_write_en_i(ex_reg_write_en_o),
@@ -156,8 +172,7 @@ module LA_cpu (
         .read1_addr(reg1_read_addr),
         .read1_data(reg1_data),
         .read2_en(reg2_read_en),
-        .read2_addr(reg2_read_addr),
-        .read2_data(reg2_data)
+        .read2_addr(reg2_read_addr)
     );
 
     id_ex u_id_ex (
@@ -173,6 +188,7 @@ module LA_cpu (
         .id_reg_write_addr(id_reg_write_addr_o),
         .id_reg_write_en(id_reg_write_en_o),
         .id_reg_write_branch_data(id_reg_write_branch_data_o),
+        .id_inst(id_inst_o),
 
         // to ex
         .ex_alusel(ex_alusel_i),
@@ -181,7 +197,8 @@ module LA_cpu (
         .ex_reg2(ex_reg2_i),
         .ex_reg_write_addr(ex_reg_write_addr_i),
         .ex_reg_write_en(ex_reg_write_en_i),
-        .ex_reg_write_branch_data(ex_reg_write_branch_data_i)
+        .ex_reg_write_branch_data(ex_reg_write_branch_data_i),
+        .ex_inst(ex_inst_i)
     );
 
     ex u_ex (
@@ -200,6 +217,9 @@ module LA_cpu (
         .reg_write_addr_o(ex_reg_write_addr_o),
         .reg_write_en_o(ex_reg_write_en_o),
         .reg_write_data_o(ex_reg_write_data_o),
+        .aluop_o(ex_aluop_o),
+        .mem_addr_o(ex_mem_addr_o),
+        .store_data_o(ex_store_data_o),
 
         // div
         .div_result_i(div_result),
@@ -222,11 +242,17 @@ module LA_cpu (
         .ex_reg_write_data(ex_reg_write_data_o),
         .ex_reg_write_addr(ex_reg_write_addr_o),
         .ex_reg_write_en(ex_reg_write_en_o),
+        .ex_aluop(ex_aluop_o),
+        .ex_mem_addr(ex_mem_addr_o),
+        .ex_store_data(ex_store_data_o),
 
         // to mem
         .mem_reg_write_data(mem_reg_write_data_i),
         .mem_reg_write_addr(mem_reg_write_addr_i),
-        .mem_reg_write_en(mem_reg_write_en_i)
+        .mem_reg_write_en(mem_reg_write_en_i),
+        .mem_aluop(mem_aluop_i),
+        .mem_mem_addr(mem_mem_addr_i),
+        .mem_store_data(mem_store_data_i)
     );
 
     mem u_mem (
@@ -236,11 +262,24 @@ module LA_cpu (
         .reg_write_data_i(ex_reg_write_data_o),
         .reg_write_addr_i(ex_reg_write_addr_o),
         .reg_write_en_i(ex_reg_write_en_o),
+        .aluop_i(mem_aluop_i),
+        .mem_addr_i(mem_mem_addr_i),
+        .store_data_i(mem_store_data_i),
 
         // to mem_wb
         .reg_write_data_o(mem_reg_write_data_o),
         .reg_write_addr_o(mem_reg_write_addr_o),
-        .reg_write_en_o(mem_reg_write_en_o)
+        .reg_write_en_o(mem_reg_write_en_o),
+
+        // from ram
+        .ram_data_i(ram_data_i),
+
+        // to ram
+        .mem_addr_o(ram_addr_o),
+        .store_data_o(ram_data_o),
+        .mem_write_en_o(ram_write_en_o),
+        .mem_select_o(ram_select_o),
+        .ram_en_o(ram_en_o)
     );
 
     mem_wb u_mem_wb (

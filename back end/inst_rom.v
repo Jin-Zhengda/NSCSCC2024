@@ -13,11 +13,11 @@ module inst_rom (
         $readmemh("C:/Documents/Code/NSCSCC2024/back end/inst_rom.mem", rom);
     end
 
-    wire[`InstWidth] inst_addr;
+    wire[11: 0] inst_addr;
     assign inst_addr = rom_inst_addr[13: 2];
 
     always @(*) begin
-        if (!rom_inst_en) begin
+        if (~rom_inst_en) begin
             rom_inst <= 32'b0;
         end
         else begin
