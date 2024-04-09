@@ -3,6 +3,7 @@
 
 `define RegAddrWidth 4: 0 // Register address width
 `define RegWidth 31: 0 // Register width
+`define ByteWidth 7: 0 // Byte width
 `define DoubleRegWidth 63: 0 // Double register width
 
 `define ALUOpWidth 7: 0 // ALU operation width
@@ -58,6 +59,18 @@
 `define BLTU_OPCODE 6'b011010
 `define BGEU_OPCODE 6'b011011
 
+`define LLW_OPCODE 8'b00100000
+`define SCW_OPCODE 8'b00100001
+
+`define LDB_OPCODE 10'b0010100000
+`define LDH_OPCODE 10'b0010100001
+`define LDW_OPCODE 10'b0010100010
+`define STB_OPCODE 10'b0010100100
+`define STH_OPCODE 10'b0010100101
+`define STW_OPCODE 10'b0010100110
+`define LDBU_OPCODE 10'b0010101000
+`define LDHU_OPCODE 10'b0010101001
+
 // ALU operations
 `define ALU_NOP 8'b00000000
 
@@ -97,11 +110,22 @@
 `define ALU_B 8'b01010000
 `define ALU_BL 8'b01010100
 `define ALU_BEQ 8'b01011000
-`define ALU_BNE 8'b01011100
+`define ALU_BNE 8'b01011100  
 `define ALU_BLT 8'b01100000
 `define ALU_BGE 8'b01100100
 `define ALU_BLTU 8'b01101000
 `define ALU_BGEU 8'b01101100
+
+`define ALU_LLW 8'b11100000
+`define ALU_SCW 8'b00100001
+`define ALU_LDB 8'b10100000
+`define ALU_LDH 8'b10100001
+`define ALU_LDW 8'b10100010
+`define ALU_STB 8'b10100100
+`define ALU_STH 8'b10100101
+`define ALU_STW 8'b10100110
+`define ALU_LDBU 8'b10101000
+`define ALU_LDHU 8'b10101001
 
 // ALU sel operations 
 `define ALU_SEL_NOP 3'b000
@@ -110,3 +134,4 @@
 `define ALU_SEL_ARITHMETIC 3'b100
 `define ALU_SEL_MOVE 3'b011
 `define ALU_SEL_JUMP_BRANCH 3'b101
+`define ALU_SEL_LOAD_STORE 3'b110

@@ -39,8 +39,12 @@ module id (
     output reg is_branch_o,
     output reg[`RegWidth] branch_target_addr_o,
     output reg[`RegWidth] reg_write_branch_data_o,
-    output reg branch_flush_o
+    output reg branch_flush_o,
+
+    output wire[`InstWidth] inst_o
 );
+
+    assign inst_o = inst_i;
 
     // Instruction fields
     wire[9: 0] opcode1 = inst_i[31: 22];
@@ -86,7 +90,6 @@ module id (
             reg_write_branch_data_o = 32'b0;
             branch_target_addr_o = 5'b0;
             branch_flush_o = 1'b0;
-
         end
         else begin
             aluop_o = `ALU_NOP;
@@ -163,6 +166,83 @@ module id (
                     reg1_read_en_o = 1'b1;
                     reg2_read_en_o = 1'b0;
                     imm = {20'b0, ui12};
+                    inst_valid = 1'b1;
+                end
+                `LDB_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_LDB;
+                    alusel_o = `ALU_SEL_LOAD_STORE;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b0;
+                    imm = {{20{si12[11]}}, si12};
+                    inst_valid = 1'b1;
+                end
+                `LDH_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_LDH;
+                    alusel_o = `ALU_SEL_LOAD_STORE;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b0;
+                    imm = {{20{si12[11]}}, si12};
+                    inst_valid = 1'b1;
+                end
+                `LDW_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_LDW;
+                    alusel_o = `ALU_SEL_LOAD_STORE;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b0;
+                    imm = {{20{si12[11]}}, si12};
+                    inst_valid = 1'b1;
+                end
+                `LDBU_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_LDBU;
+                    alusel_o = `ALU_SEL_LOAD_STORE;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b0;
+                    imm = {{20{si12[11]}}, si12};
+                    inst_valid = 1'b1;
+                end
+                `LDHU_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_LDHU;
+                    alusel_o = `ALU_SEL_LOAD_STORE;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b0;
+                    imm = {{20{si12[11]}}, si12};
+                    inst_valid = 1'b1;
+                end
+                `STB_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_STB;
+                    alusel_o = `ALU_SEL_LOAD_STORE;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    reg2_read_addr_o = rd;
+                    inst_valid = 1'b1;
+                end
+                `STH_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_STH;
+                    alusel_o = `ALU_SEL_LOAD_STORE;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    reg2_read_addr_o = rd;
+                    inst_valid = 1'b1;
+                end
+                `STW_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_STW;
+                    alusel_o = `ALU_SEL_LOAD_STORE;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    reg2_read_addr_o = rd;
                     inst_valid = 1'b1;
                 end
                 default: begin
