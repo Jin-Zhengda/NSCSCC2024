@@ -172,7 +172,8 @@ module LA_cpu (
         .read1_addr(reg1_read_addr),
         .read1_data(reg1_data),
         .read2_en(reg2_read_en),
-        .read2_addr(reg2_read_addr)
+        .read2_addr(reg2_read_addr),
+        .read2_data(reg2_data)
     );
 
     id_ex u_id_ex (
@@ -212,6 +213,7 @@ module LA_cpu (
         .reg2_i(ex_reg2_i),
         .reg_write_addr_i(ex_reg_write_addr_i),
         .reg_write_en_i(ex_reg_write_en_i),
+        .inst_i(ex_inst_i),
 
         // to ex_mem
         .reg_write_addr_o(ex_reg_write_addr_o),
@@ -259,9 +261,9 @@ module LA_cpu (
         .rst(rst),
 
         // from ex_mem
-        .reg_write_data_i(ex_reg_write_data_o),
-        .reg_write_addr_i(ex_reg_write_addr_o),
-        .reg_write_en_i(ex_reg_write_en_o),
+        .reg_write_data_i(mem_reg_write_data_i),
+        .reg_write_addr_i(mem_reg_write_addr_i),
+        .reg_write_en_i(mem_reg_write_en_i),
         .aluop_i(mem_aluop_i),
         .mem_addr_i(mem_mem_addr_i),
         .store_data_i(mem_store_data_i),

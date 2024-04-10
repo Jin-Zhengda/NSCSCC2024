@@ -12,14 +12,14 @@ module data_ram (
     output reg[`RegWidth] data_o
 );
 
-    reg[`ByteWidth] ram0[0: 131070];
-    reg[`ByteWidth] ram1[0: 131070];
-    reg[`ByteWidth] ram2[0: 131070];
-    reg[`ByteWidth] ram3[0: 131070];
+    reg[`ByteWidth] ram0[0: 1023];
+    reg[`ByteWidth] ram1[0: 1023];
+    reg[`ByteWidth] ram2[0: 1023];
+    reg[`ByteWidth] ram3[0: 1023];
 
-    wire[16: 0] data_addr;
+    wire[9: 0] data_addr;
 
-    assign data_addr = addr[18: 2];
+    assign data_addr = addr[11: 2];
 
     always @(posedge clk) begin
         if (~ram_en) begin
@@ -30,27 +30,27 @@ module data_ram (
                     ram3[data_addr] <= data_i[31: 24];
                 end
                 if (select[2]) begin
-                    ram0[data_addr] <= data_i[23: 16];
+                    ram2[data_addr] <= data_i[23: 16];
                 
                 end
                 if (select[1]) begin
                     ram1[data_addr] <= data_i[15: 8];
                 end
                 if (select[0]) begin
-                    ram2[data_addr] <= data_i[7: 0];
+                    ram0[data_addr] <= data_i[7: 0];
                 end
         end
     end
 
     always @(*) begin
         if (~ram_en) begin
-            data_o = 32'b0;
+            data_o <= 32'b0;
         end
         else if (~write_en) begin
-            data_o = {ram3[data_addr], ram2[data_addr], ram1[data_addr], ram0[data_addr]};
+            data_o <= {ram3[data_addr], ram2[data_addr], ram1[data_addr], ram0[data_addr]};
         end 
         else begin
-            data_o = 32'b0;
+            data_o <= 32'b0;
         end
     end
 
