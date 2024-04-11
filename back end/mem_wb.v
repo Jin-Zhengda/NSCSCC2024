@@ -5,13 +5,19 @@ module mem_wb (
     input wire rst,
     input wire[5: 0] pause,
 
+    // from mem
     input wire[`RegWidth] mem_reg_write_data,
     input wire[`RegAddrWidth] mem_reg_write_addr,
     input wire mem_reg_write_en,
+    input wire mem_LLbit_write_en,
+    input wire mem_LLbit_write_data,
 
+    // to wb
     output reg[`RegWidth] wb_reg_write_data,
     output reg[`RegAddrWidth] wb_reg_write_addr,
-    output reg wb_reg_write_en
+    output reg wb_reg_write_en,
+    output reg wb_LLbit_write_en,
+    output reg wb_LLbit_write_data
 );
 
     always @(posedge clk) begin
@@ -19,21 +25,29 @@ module mem_wb (
             wb_reg_write_data <= 32'b0;
             wb_reg_write_addr <= 5'b0;
             wb_reg_write_en <= 1'b0;
+            wb_LLbit_write_en <= 1'b0;
+            wb_LLbit_write_data <= 1'b0;
         end
         else if (pause[4] && ~pause[5]) begin
             wb_reg_write_data <= 32'b0;
             wb_reg_write_addr <= 5'b0;
             wb_reg_write_en <= 1'b0;
+            wb_LLbit_write_en <= 1'b0;
+            wb_LLbit_write_data <= 1'b0;
         end
         else if (~pause[4]) begin
             wb_reg_write_data <= mem_reg_write_data;
             wb_reg_write_addr <= mem_reg_write_addr;
             wb_reg_write_en <= mem_reg_write_en;
+            wb_LLbit_write_en <= mem_LLbit_write_en;
+            wb_LLbit_write_data <= mem_LLbit_write_data;
         end
         else begin
             wb_reg_write_data <= wb_reg_write_data;
             wb_reg_write_addr <= wb_reg_write_addr;
             wb_reg_write_en <= wb_reg_write_en;
+            wb_LLbit_write_en <= wb_LLbit_write_en;
+            wb_LLbit_write_data <= wb_LLbit_write_data;
         end
     end
     

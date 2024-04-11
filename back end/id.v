@@ -3,7 +3,7 @@
 module id (
     input wire rst,
 
-    output reg pause_id,
+    output wire pause_id,
 
     // Instruction memory
     input wire[`InstAddrWidth] pc_i,
@@ -26,6 +26,10 @@ module id (
     output reg[`RegWidth] reg2_o,
     output reg[`RegAddrWidth] reg_write_addr_o,
     output reg reg_write_en_o,
+    output wire[`InstWidth] inst_o,
+
+    // from ex
+    input wire[`ALUOpWidth] ex_aluop_i,
 
     // ex and mem data pushed forward
     input ex_reg_write_en_i,
@@ -39,9 +43,7 @@ module id (
     output reg is_branch_o,
     output reg[`RegWidth] branch_target_addr_o,
     output reg[`RegWidth] reg_write_branch_data_o,
-    output reg branch_flush_o,
-
-    output wire[`InstWidth] inst_o
+    output reg branch_flush_o
 );
 
     assign inst_o = inst_i;
@@ -56,6 +58,7 @@ module id (
     wire[19: 0] si20 = inst_i[24: 5];
     wire[11: 0] ui12 = inst_i[21: 10];
     wire[11: 0] si12 = inst_i[21: 10];
+    wire[13: 0] si14 = inst_i[23: 10];
     wire[4: 0] ui5 = inst_i[14: 10];
 
     wire[4: 0] rk = inst_i[14: 10];
@@ -72,6 +75,19 @@ module id (
     reg[`RegWidth] imm;
     reg inst_valid;
     reg reg1_lt_reg2;
+
+    wire pause_reg1_load_relate;
+    wire pause_reg2_load_relate;
+    wire load_pre;
+
+    assign load_pre = ((ex_aluop_i == `ALU_LDB) || (ex_aluop_i == `ALU_LDH) || (ex_aluop_i == `ALU_LDW) 
+                    || (ex_aluop_i == `ALU_LDBU) || (ex_aluop_i == `ALU_LDHU) || (ex_aluop_i == `ALU_LLW)
+                    || (ex_aluop_i == `ALU_SCW)) ? 1'b1 : 1'b0;
+
+    assign pause_reg1_load_relate = (load_pre && (ex_reg_write_addr_i == reg1_read_addr_o) && reg1_read_en_o) ? 1'b1 : 1'b0;
+    assign pause_reg2_load_relate = (load_pre && (ex_reg_write_addr_i == reg2_read_addr_o) && reg2_read_en_o) ? 1'b1 : 1'b0;
+
+    assign pause_id = pause_reg1_load_relate || pause_reg2_load_relate;
 
     // Instruction decode
     always @(*) begin
@@ -471,6 +487,32 @@ module id (
                 default:begin
                 end 
             endcase
+
+            case (opcode4)
+                `LLW_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_LLW;
+                    alusel_o = `ALU_SEL_LOAD_STORE;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b0;
+                    imm = {{16{si14[13]}}, si14, 2'b00};
+                    inst_valid = 1'b1;
+                end
+                `SCW_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_SCW;
+                    alusel_o = `ALU_SEL_LOAD_STORE;
+                    reg1_read_en_o = 1'b1;
+                    reg2_read_en_o = 1'b1;
+                    reg2_read_addr_o = rd;
+                    inst_valid = 1'b1;
+                end
+                default: begin 
+                end 
+            endcase
+
 
             case (opcode5)
                 `BEQ_OPCODE: begin
