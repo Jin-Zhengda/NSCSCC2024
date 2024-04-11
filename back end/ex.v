@@ -35,6 +35,10 @@ module ex (
     assign store_data_o = reg2_i;
 
     wire[11: 0] si12 = inst_i[21: 10];
+    wire[13: 9] si14 = inst_i[14: 10];
+
+    // assign mem_addr_o = (aluop_i == `LDB_OPCODE || aluop_i == `LDH_OPCODE || aluop_i == `LDW_OPCODE || aluop_i == `LDBU_OPCODE || aluop_i == `LDHU_OPCODE) ? reg1_i + reg2_i : 
+    //                     ((aluop_i == `STB_OPCODE || aluop_i == `STH_OPCODE || aluop_i == `STW_OPCODE) ? reg1_i + {{20{si12[11]}}, si12} : 32'b0);
 
     always @(*) begin
         if (rst) begin
@@ -42,11 +46,14 @@ module ex (
         end
         else begin
             case (aluop_i)
-                `LDB_OPCODE, `LDH_OPCODE, `LDW_OPCODE, `LDBU_OPCODE, `LDHU_OPCODE: begin
+                `ALU_LDB, `ALU_LDBU, `ALU_LDH, `ALU_LDHU, `ALU_LDW, `ALU_LLW: begin
                     mem_addr_o = reg1_i + reg2_i;
                 end
-                `STB_OPCODE, `STH_OPCODE, `STW_OPCODE: begin
+                `ALU_STB, `ALU_STH, `ALU_STW: begin
                     mem_addr_o = reg1_i + {{20{si12[11]}}, si12};
+                end
+                `ALU_SCW: begin
+                    mem_addr_o = reg1_i + {{16{si14[13]}}, si14, 2'b00};
                 end
                 default: begin
                     mem_addr_o = 32'b0;        
