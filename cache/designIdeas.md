@@ -93,7 +93,7 @@ $2^{8}*2*2^{5}*2^{3} = 2 ^ {17} Bit = 2^{14}Byte=2^{4}KB= 16KB$
 |icache_mem_read_en|1|OUT|cache需要读数据的使能信号|
 |icache_mem_read_addr|32|OUT|cache需要读的数据的地址(给物理地址吧)|
 |mem_icache_return_en|1|IN|总线向cache返回所读取数据的使能信号|
-|mem_icache_return_data|32|IN|总线向cache返回的所读取数据|
+|mem_icache_return_data|32*8|IN|总线向cache返回的所读取数据|
 
 
 
@@ -123,3 +123,9 @@ $2^{8}*2*2^{5}*2^{3} = 2 ^ {17} Bit = 2^{14}Byte=2^{4}KB= 16KB$
 - RefreshCache:当总线将数据传回时，向cpu输出数据，并更新cache中的数据，然后进入IDLE。
 
 
+# 第二次尝试——icache
+### 状态定义：
+- IDLE:空闲等待状态，接收到使能则保存命令信息，判断是否命中，若命中则进入下一状态ReturnInstruction;否则进入下一状态AskMem
+- ReturnInstruction:向cpu输出数据，下一状态进入IDLE
+- AskMem:向mem查找数据，然后进入RefreshCache
+- RefreshCache:当总线将数据传回时，向cpu输出数据，并更新cache中的数据，然后进入IDLE。
