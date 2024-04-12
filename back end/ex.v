@@ -4,6 +4,7 @@ module ex (
     input wire rst,
     output reg pause_ex,
 
+    // from id_ex
     input wire[`ALUSelWidth] alusel_i,
     input wire[`ALUOpWidth] aluop_i,
     input wire[`InstWidth] inst_i,
@@ -17,8 +18,12 @@ module ex (
     output reg reg_write_en_o,
     output reg[`RegWidth] reg_write_data_o,
 
+
+    // from div
     input wire[`DoubleRegWidth] div_result_i,
     input wire div_done_i,
+
+    // to div
     output reg[`RegWidth] div_data1_o,
     output reg[`RegWidth] div_data2_o,
     output reg div_singed_o,
@@ -28,8 +33,24 @@ module ex (
 
     output wire[`ALUOpWidth] aluop_o,
     output reg[`RegWidth] mem_addr_o,
-    output wire[`RegWidth] store_data_o
+    output wire[`RegWidth] store_data_o,
+
+    input wire csr_read_en_i,
+    input wire csr_write_en_i,
+    input wire[`CSRAddrWidth] csr_addr_i,
+
+    output wire csr_read_en_o,
+    output wire csr_write_en_o,
+    output wire[`CSRAddrWidth] csr_addr_o,
+    output wire[`RegWidth] csr_write_data_o,
+    output wire[`RegWidth] csr_mask_o
 );
+
+    assign csr_read_en_o = csr_read_en_i;
+    assign csr_write_en_o = csr_write_en_i;
+    assign csr_addr_o = csr_addr_i;
+    assign csr_write_data_o = reg1_i;
+    assign csr_mask_o = reg2_i;
 
     assign aluop_o = aluop_i;
     assign store_data_o = reg2_i;

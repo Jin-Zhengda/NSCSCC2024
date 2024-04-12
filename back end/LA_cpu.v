@@ -36,6 +36,9 @@ module LA_cpu (
     wire id_reg_write_en_o;
     wire[`RegWidth] id_reg_write_branch_data_o;
     wire[`InstWidth] id_inst_o;
+    wire id_csr_read_en_o;
+    wire id_csr_write_en_o;
+    wire[`CSRAddrWidth] id_csr_addr_o;
 
     // id_ex and ex
     wire[`ALUOpWidth] ex_aluop_i;
@@ -46,6 +49,9 @@ module LA_cpu (
     wire ex_reg_write_en_i;
     wire[`RegWidth] ex_reg_write_branch_data_i;
     wire[`InstWidth] ex_inst_i;
+    wire ex_csr_read_en_i;
+    wire ex_csr_write_en_i;
+    wire[`CSRAddrWidth] ex_csr_addr_i;
 
     // ex and ex_mem
     wire[`RegAddrWidth] ex_reg_write_addr_o;
@@ -54,6 +60,11 @@ module LA_cpu (
     wire[`ALUOpWidth] ex_aluop_o;
     wire[`RegWidth] ex_mem_addr_o;
     wire[`RegWidth] ex_store_data_o;
+    wire ex_csr_read_en_o;
+    wire ex_csr_write_en_o;
+    wire[`CSRAddrWidth] ex_csr_addr_o;
+    wire[`RegWidth] ex_csr_write_data_o;
+    wire[`RegWidth] ex_csr_mask_o;
 
     // ex_mem and mem
     wire[`RegAddrWidth] mem_reg_write_addr_i;
@@ -62,6 +73,11 @@ module LA_cpu (
     wire[`ALUOpWidth] mem_aluop_i;
     wire[`RegWidth] mem_mem_addr_i;
     wire[`RegWidth] mem_store_data_i;
+    wire mem_csr_read_en_i;
+    wire mem_csr_write_en_i;
+    wire[`CSRAddrWidth] mem_csr_addr_i;
+    wire[`RegWidth] mem_csr_write_data_i;
+    wire[`RegWidth] mem_csr_mask_i;
 
     // mem and mem_wb
     wire[`RegAddrWidth] mem_reg_write_addr_o;
@@ -69,6 +85,10 @@ module LA_cpu (
     wire mem_reg_write_en_o;
     wire mem_LLbit_write_en_o;
     wire mem_LLbit_data_o;
+    wire mem_csr_write_en_o;
+    wire[`CSRAddrWidth] mem_csr_write_addr_o;
+    wire[`RegWidth] mem_csr_write_data_o;
+
 
     // mem_wb and wb
     wire[`RegAddrWidth] wb_reg_write_addr_i;
@@ -76,6 +96,9 @@ module LA_cpu (
     wire wb_reg_write_en_i;
     wire wb_LLbit_write_en_i;
     wire wb_LLbit_write_data_i;
+    wire wb_csr_write_en_i;
+    wire[`CSRAddrWidth] wb_csr_write_addr_i;
+    wire[`RegWidth] wb_csr_write_data_i;
 
     // id and regfile
     wire reg1_read_en;
@@ -85,8 +108,12 @@ module LA_cpu (
     wire[`RegWidth] reg1_data;
     wire[`RegWidth] reg2_data;
 
-    // mem and LLbit
+    // mem and csr
     wire LLbit_o;
+    wire[`RegWidth] csr_read_data;
+    wire csr_read_en;
+    wire[`RegWidth] csr_read_addr;
+
 
     wire[5: 0] pause;
     wire pause_id;
@@ -150,6 +177,10 @@ module LA_cpu (
         .reg_write_en_o(id_reg_write_en_o),
         .inst_o(id_inst_o),
 
+        .csr_read_en_o(id_csr_read_en_o),
+        .csr_write_en_o(id_csr_write_en_o),
+        .csr_addr_o(id_csr_addr_o),
+
         // data pushed forward
         .ex_reg_write_en_i(ex_reg_write_en_o),
         .ex_reg_write_addr_i(ex_reg_write_addr_o),
@@ -200,6 +231,9 @@ module LA_cpu (
         .id_reg_write_en(id_reg_write_en_o),
         .id_reg_write_branch_data(id_reg_write_branch_data_o),
         .id_inst(id_inst_o),
+        .id_csr_read_en(id_csr_read_en_o),
+        .id_csr_write_en(id_csr_write_en_o),
+        .id_csr_addr(id_csr_addr_o),
 
         // to ex
         .ex_alusel(ex_alusel_i),
@@ -209,7 +243,10 @@ module LA_cpu (
         .ex_reg_write_addr(ex_reg_write_addr_i),
         .ex_reg_write_en(ex_reg_write_en_i),
         .ex_reg_write_branch_data(ex_reg_write_branch_data_i),
-        .ex_inst(ex_inst_i)
+        .ex_inst(ex_inst_i),
+        .ex_csr_read_en(ex_csr_read_en_i),
+        .ex_csr_write_en(ex_csr_write_en_i),
+        .ex_csr_addr(ex_csr_addr_i)
     );
 
     ex u_ex (
@@ -224,6 +261,9 @@ module LA_cpu (
         .reg_write_addr_i(ex_reg_write_addr_i),
         .reg_write_en_i(ex_reg_write_en_i),
         .inst_i(ex_inst_i),
+        .csr_read_en_i(ex_csr_read_en_i),
+        .csr_write_en_i(ex_csr_write_en_i),
+        .csr_addr_i(ex_csr_addr_i),
 
         // to ex_mem
         .reg_write_addr_o(ex_reg_write_addr_o),
@@ -232,6 +272,11 @@ module LA_cpu (
         .aluop_o(ex_aluop_o),
         .mem_addr_o(ex_mem_addr_o),
         .store_data_o(ex_store_data_o),
+        .csr_read_en_o(ex_csr_read_en_o),
+        .csr_write_en_o(ex_csr_write_en_o),
+        .csr_addr_o(ex_csr_addr_o),
+        .csr_write_data_o(ex_csr_write_data_o),
+        .csr_mask_o(ex_csr_mask_o),
 
         // div
         .div_result_i(div_result),
@@ -257,6 +302,11 @@ module LA_cpu (
         .ex_aluop(ex_aluop_o),
         .ex_mem_addr(ex_mem_addr_o),
         .ex_store_data(ex_store_data_o),
+        .ex_csr_read_en(ex_csr_read_en_o),
+        .ex_csr_write_en(ex_csr_write_en_o),
+        .ex_csr_addr(ex_csr_addr_o),
+        .ex_csr_write_data(ex_csr_write_data_o),
+        .ex_csr_mask(ex_csr_mask_o),
 
         // to mem
         .mem_reg_write_data(mem_reg_write_data_i),
@@ -264,7 +314,12 @@ module LA_cpu (
         .mem_reg_write_en(mem_reg_write_en_i),
         .mem_aluop(mem_aluop_i),
         .mem_mem_addr(mem_mem_addr_i),
-        .mem_store_data(mem_store_data_i)
+        .mem_store_data(mem_store_data_i),
+        .mem_csr_read_en(mem_csr_read_en_i),
+        .mem_csr_write_en(mem_csr_write_en_i),
+        .mem_csr_addr(mem_csr_addr_i),
+        .mem_csr_write_data(mem_csr_write_data_i),
+        .mem_csr_mask(mem_csr_mask_i)
     );
 
     mem u_mem (
@@ -277,6 +332,11 @@ module LA_cpu (
         .aluop_i(mem_aluop_i),
         .mem_addr_i(mem_mem_addr_i),
         .store_data_i(mem_store_data_i),
+        .csr_read_en_i(mem_csr_read_en_i),
+        .csr_write_en_i(mem_csr_write_en_i),
+        .csr_addr_i(mem_csr_addr_i),
+        .csr_write_data_i(mem_csr_write_data_i),
+        .csr_read_en_i(mem_csr_read_en_i),
 
         // to mem_wb
         .reg_write_data_o(mem_reg_write_data_o),
@@ -284,6 +344,9 @@ module LA_cpu (
         .reg_write_en_o(mem_reg_write_en_o),
         .LLbit_write_en_o(mem_LLbit_write_en_o),
         .LLbit_write_data_o(mem_LLbit_data_o),
+        .csr_write_en_o(mem_csr_write_en_o),
+        .csr_write_addr_o(mem_csr_write_addr_o),
+        .csr_write_data_o(mem_csr_write_data_o),
 
         // from wb
         .wb_LLbit_write_en_i(wb_LLbit_write_en_i),
@@ -299,8 +362,13 @@ module LA_cpu (
         .mem_select_o(ram_select_o),
         .ram_en_o(ram_en_o),
 
-        // from LLbit
-        .LLbit_i(LLbit_o)
+        // from csr
+        .LLbit_i(LLbit_o),
+        .csr_read_data_i(csr_read_data),
+
+        // to csr
+        .csr_read_en_o(csr_read_en),
+        .csr_read_addr_o(csr_read_addr)
     );
 
     mem_wb u_mem_wb (
@@ -347,12 +415,12 @@ module LA_cpu (
         .done(div_done)
     );
 
-    LLbit u_LLbit (
+    csr u_csr (
         .clk(clk),
         .rst(rst),
 
         .is_exception(1'b0),
-        .write_en(wb_LLbit_write_en_i),
+        .LLbit_write_en(wb_LLbit_write_en_i),
 
         .LLbit_i(wb_LLbit_write_data_i),
         .LLbit_o(LLbit_o)

@@ -3,6 +3,7 @@
 module mem (
     input wire rst,
 
+    // from ex_mem
     input wire[`RegWidth] reg_write_data_i,
     input wire[`RegAddrWidth] reg_write_addr_i,
     input wire reg_write_en_i,
@@ -11,16 +12,33 @@ module mem (
     input wire[`RegWidth] mem_addr_i,
     input wire[`RegWidth] store_data_i,
 
+    input wire csr_read_en_i,
+    input wire csr_write_en_i,
+    input wire[`CSRAddrWidth] csr_addr_i,
+    input wire[`RegWidth] csr_write_data_i,
+    input wire[`RegWidth] csr_mask_i,
+
+    // to mem_wb
     output reg[`RegWidth] reg_write_data_o,
     output reg[`RegAddrWidth] reg_write_addr_o,
     output reg reg_write_en_o,
+    output reg LLbit_write_en_o,
+    output reg LLbit_write_data_o,
+    output reg csr_write_en_o,
+    output reg[`CSRAddrWidth] csr_write_addr_o,
+    output reg[`RegWidth] csr_write_data_o,
 
+    // from csr
     input wire LLbit_i,
+    input wire[`RegWidth] csr_read_data_i,
+
+    // from mem_wb
     input wb_LLbit_write_en_i,
     input wb_LLbit_write_data_i,
 
-    output reg LLbit_write_en_o,
-    output reg LLbit_write_data_o,
+    // to csr
+    output wire csr_read_en_o,
+    output wire[`CSRAddrWidth] csr_read_addr_o,
 
     // from data ram
     input wire[`RegWidth] ram_data_i,
@@ -33,6 +51,9 @@ module mem (
     output reg ram_en_o
 );
 
+    assign csr_read_en_o = csr_read_en_i;
+    assign csr_read_data_o = csr_read_data_i;
+    assign csr_read_addr_o = csr_addr_i;
 
     reg LLbit;
 
@@ -60,6 +81,9 @@ module mem (
             ram_en_o = 1'b0;
             LLbit_write_en_o = 1'b0;
             LLbit_write_data_o = 1'b0;
+            csr_write_en_o = 1'b0;
+            csr_write_addr_o = 14'b0;
+            csr_write_data_o = 32'b0;
         end
         else begin
             reg_write_data_o = reg_write_data_i;
@@ -72,6 +96,9 @@ module mem (
             ram_en_o = 1'b0;
             LLbit_write_en_o = 1'b0;
             LLbit_write_data_o = 1'b0;
+            csr_write_en_o = csr_write_en_i;
+            csr_write_addr_o = csr_addr_i;
+            csr_write_data_o = csr_write_data_i;
 
             case (aluop_i)
                 `ALU_LDB: begin
@@ -238,6 +265,16 @@ module mem (
                     end else begin
                         reg_write_data_o = 32'b0;
                     end
+                end
+                `ALU_CSRRD: begin
+                    reg_write_data_o = csr_read_data_i;
+                end
+                `ALU_CSRWR: begin
+                    reg_write_data_o = csr_read_data_i;
+                end
+                `ALU_CSRXCHG: begin
+                    reg_write_data_o = csr_read_data_i;
+                    csr_write_data_o = 
                 end
                 default: begin
                 end 
