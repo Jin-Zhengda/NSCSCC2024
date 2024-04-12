@@ -168,15 +168,15 @@ simple_dual_ram WAY1_BANK6(.reset(reset),.clk_read(clk),.read_en(way1_read_en),.
 simple_dual_ram WAY1_BANK7(.reset(reset),.clk_read(clk),.read_en(way1_read_en),.read_addr(index),.read_data(way1_cache[7]),.clk_write(clk),.write_en(way1_write_en),.write_addr(index),.write_data(data_record_from_mem[7]));
 
 //tag_valid
-wire [`TAG_SIZE-1:0] tagv_way0_cache,tagv_way1_cache;
-simple_dual_ram WAY0_TAGV (.reset(reset),.clk_read(clk),.read_en(way0_read_en),.read_addr(index),.read_data(tagv_cache_way0),.clk_write(clk),.write_en(way0_write_en),.write_addr(index),.write_data({12'b1,tag}));
-simple_dual_ram WAY1_TAGV (.reset(reset),.clk_read(clk),.read_en(way1_read_en),.read_addr(index),.read_data(tagv_cache_way1),.clk_write(clk),.write_en(way1_write_en),.write_addr(index),.write_data({12'b1,tag}));
+wire [31:0] tagv_way0_cache,tagv_way1_cache;
+simple_dual_ram WAY0_TAGV (.reset(reset),.clk_read(clk),.read_en(way0_read_en),.read_addr(index),.read_data(tagv_way0_cache),.clk_write(clk),.write_en(way0_write_en),.write_addr(index),.write_data({12'b1,tag}));
+simple_dual_ram WAY1_TAGV (.reset(reset),.clk_read(clk),.read_en(way1_read_en),.read_addr(index),.read_data(tagv_way1_cache),.clk_write(clk),.write_en(way1_write_en),.write_addr(index),.write_data({12'b1,tag}));
 
 
 //判断命中
 wire hit_way0;
 wire hit_way1;
-assign hit_way0=(tagv_way0_cache[19:0]==tag&&tagv_way0_cache[20]==1'b1)?1'b1:1'b0;
+assign hit_way0=((tagv_way0_cache[19:0]==tag)&&(tagv_way0_cache[20]==1'b1))?1'b1:1'b0;
 assign hit_way1=(tagv_way1_cache[19:0]==tag&&tagv_way1_cache[20]==1'b1)?1'b1:1'b0;
 assign hit_success=(hit_way0|hit_way1)&cpu_icache_read_en;
 assign hit_fail=~(hit_success)&cpu_icache_read_en;
