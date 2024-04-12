@@ -87,6 +87,32 @@ $2^{8}*2*2^{5}*2^{3} = 2 ^ {17} Bit = 2^{14}Byte=2^{4}KB= 16KB$
 
 不懂：CPU暂停控制：stall_i
 
+2024-4-11更新icache接口
+`
+    input               clk                     ,//时钟信号
+    input               reset                   ,//复位信号
+    //to from cpu
+    input               cpu_icache_read_en      ,//请求有效(即表示有真实数据传来了)
+    input               cpu_receive_data_ok     ,//cpu成功接收到信号
+    input [`INSTRUCTION_ADDR_SIZE-1:0] virtual_addr,
+    input [`INSTRUCTION_ADDR_SIZE-1:0] physical_addr,
+    output              cpu_icache_addr_request_ok,//该次请求的地址传输OK，读：地址被接收；
+    output              icache_cpu_return_data_en ,//该次请求的数据传输OK，读：数据返回;
+    output reg[31:0]       icache_cpu_return_data    ,//读Cache的结果
+
+    //to from axi
+    output reg           icache_mem_read_request            ,//读请求有效信号,高电平有效。
+    output wire           read_data_from_mem_ok              ,//成功从mem读到信号
+    //output [ 2:0]       read_type              ,//读请求类型。3’b000——字节，3’b001——半字,3’b010——字，3’b100——Cache行。
+    output reg[31:0]       icache_mem_read_addr               ,//读请求起始地址(最后两位为00)
+    input               mem_ready_to_read              ,//读请求能否被axi接收的握手信号。高电平有效。
+    input               mem_read_addr_ok              ,//mem成功读取addr
+    input               mem_return_en            ,//返回数据有效的信号。高电平有效。
+    //input               return_last             ,//返回数据是一次读请求对应的最后一个返回数据。(感觉是若返回整个cache行则需要)
+    input  [`PACKED_DATA_SIZE-1:0]       mem_return_data             ,//读返回数据。
+    //to perf_counter
+    output              cache_hit_fail_output//未命中信号  
+`
 ##### Cache模块与AXI总线的交互接口
 |name|位宽|I/O|含义|
 |:---:|:---:|:---:|:---:|
@@ -124,6 +150,8 @@ $2^{8}*2*2^{5}*2^{3} = 2 ^ {17} Bit = 2^{14}Byte=2^{4}KB= 16KB$
 
 
 # 第二次尝试——icache
+### 主要改进：
+重新对icache的状态进行定义。主要增加了**ok反馈信号**，即模块间通信时，每次的信号成功接收都会返回ok信号，根据这个信号可以将en使能信号重新变回低电平，从而方便进行下一个信号发出时，en重新变为高电平，实现信号的连续传输。
 ### 状态定义：
 - IDLE:空闲等待状态，接收到使能则保存命令信息，判断是否命中，若命中则进入下一状态ReturnInstruction;否则进入下一状态AskMem
 - ReturnInstruction:向cpu输出数据，下一状态进入IDLE
