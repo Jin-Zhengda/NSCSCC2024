@@ -1,0 +1,35 @@
+# 进展
+
+### 时间表
+
+| 日期         | 实现功能                  |
+|:---------- | --------------------- |
+| 2024.03.31 | 完成流水线基本结构，实现 ori 指令   |
+| 2024.04.02 | 实现基本加减、移位、逻辑运算指令      |
+| 2024.04.04 | 实现乘除运算指令              |
+| 2024.04.05 | 完成已实现的所有指令的正确性验证          |
+| 2024.04.06 | 实现所有运算的立即数指令并完成其正确性验证 |
+| 2024.04.07 | 实现转移指令并完成其正确性验证       |
+| 2024.04.09 | 实现普通访存指令              |
+| 2024.04.10 | 完成普通访存指令的正确性验证        |
+| 2024.04.11 | 实现原子访存指令，并完成其正确性验证    |
+
+### 指令
+
+已实现指令：
+
+- 算数运算指令：add.w, sub.w, addi.w, lu12i.w, slt, sltu, slti, sltui, pcaddu12i, and, or, nor, xor, andi, ori, xori, mul.w, mulh.w, mulh.wu, div.w, div.wu, mod.w, mod.wu
+- 移位运算指令：sll.w, srl.w, sra.w, slli.w, srli.w, srai.w
+- 转移指令：beq, bne, blt, bltu, bge, bgeu, b, bl, jirl
+- 普通访存指令：ld.b, ld.bu, ld.h, ld\.hu, ld.w, st.b, st.h, st.w
+- 原子访存指令：ll.w, sc.w
+
+未实现指令：
+
+- 浮点数指令
+- 栅障指令：dbar, ibar
+- 系统异常指令：syscall, break, ertn, idle
+- 计时器指令：rdcntvl.w, rdcntvh.w, rdcntid
+- CSR 访问指令：csrrd, csrwr, csrxchg
+- Cache 维护指令：cacop
+- TLB 维护指令：tlbsrch, tlbrd, tlbwr, tlbfill, invtlb

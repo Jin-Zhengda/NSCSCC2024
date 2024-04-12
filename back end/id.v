@@ -9,17 +9,17 @@ module id (
     input wire[`InstAddrWidth] pc_i,
     input wire[`InstWidth] inst_i,
 
-    // Regfile input
+    // from Regfile
     input wire[`RegWidth] reg1_data_i,
     input wire[`RegWidth] reg2_data_i,
 
-    // Regfile output
+    // to Regfile
     output reg reg1_read_en_o,
     output reg reg2_read_en_o,
     output reg[`RegAddrWidth] reg1_read_addr_o,
     output reg[`RegAddrWidth] reg2_read_addr_o,
 
-    // Convert to ex stage
+    //to ex 
     output reg[`ALUOpWidth] aluop_o,
     output reg[`ALUSelWidth] alusel_o,
     output reg[`RegWidth] reg1_o,
@@ -27,6 +27,10 @@ module id (
     output reg[`RegAddrWidth] reg_write_addr_o,
     output reg reg_write_en_o,
     output wire[`InstWidth] inst_o,
+
+    output reg csr_read_en_o,
+    output reg csr_write_en_o,
+    output reg[`CSRAddrWidth] csr_addr_o,
 
     // from ex
     input wire[`ALUOpWidth] ex_aluop_i,
@@ -65,6 +69,7 @@ module id (
     wire[4: 0] rj = inst_i[9: 5];
     wire[4: 0] rd = inst_i[4: 0];
     wire[14: 0] code = inst_i[14: 0];
+    wire[13: 0] csr = inst_i[23: 10];
 
     wire[`RegWidth] branch16_addr;
     wire[`RegWidth] branch26_addr;
@@ -106,6 +111,8 @@ module id (
             reg_write_branch_data_o = 32'b0;
             branch_target_addr_o = 5'b0;
             branch_flush_o = 1'b0;
+            csr_write_en_o = 1'b0;
+            csr_addr_o = 14'b0;
         end
         else begin
             aluop_o = `ALU_NOP;
@@ -122,6 +129,8 @@ module id (
             reg_write_branch_data_o = 32'b0;
             branch_target_addr_o = 5'b0;
             branch_flush_o = 1'b0;
+            csr_write_en_o = 1'b0;
+            csr_addr_o = csr;
 
             case (opcode1)
                 `SLTI_OPCODE: begin
@@ -508,6 +517,46 @@ module id (
                     reg2_read_en_o = 1'b1;
                     reg2_read_addr_o = rd;
                     inst_valid = 1'b1;
+                end
+                `CSR_OPCODE: begin
+                    case (rj)
+                        `CSRRD_OPCODE: begin
+                            reg_write_en_o = 1'b1;
+                            reg_write_addr_o = rd;
+                            aluop_o = `ALU_CSRRD;
+                            alusel_o = `ALU_SEL_NOP;
+                            reg1_read_en_o = 1'b0;
+                            reg2_read_en_o = 1'b0;
+                            csr_read_en_o = 1'b1;
+                            csr_write_en_o = 1'b0;
+                            inst_valid = 1'b1;
+                        end 
+                        `CSRWR_OPCODE: begin
+                            reg_write_en_o = 1'b1;
+                            reg_write_addr_o = rd;
+                            aluop_o = `ALU_CSRWR;
+                            alusel_o = `ALU_SEL_NOP;
+                            reg1_read_en_o = 1'b1;
+                            reg1_read_addr_o = rd;
+                            reg2_read_en_o = 1'b0;
+                            csr_read_en_o = 1'b1;
+                            csr_write_en_o = 1'b1;
+                            inst_valid = 1'b1;
+                        end
+                        default: begin
+                            reg_write_en_o = 1'b1;
+                            reg_write_addr_o = rd;
+                            aluop_o = `ALU_CSRXCHG;
+                            alusel_o = `ALU_SEL_NOP;
+                            reg1_read_en_o = 1'b1;
+                            reg1_read_addr_o = rd;
+                            reg2_read_en_o = 1'b1;
+                            reg2_read_addr_o = rj;
+                            csr_read_en_o = 1'b1;
+                            csr_write_en_o = 1'b1;
+                            inst_valid = 1'b1;
+                        end 
+                    endcase
                 end
                 default: begin 
                 end 
