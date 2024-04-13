@@ -28,14 +28,23 @@ module instbuffer(
     input rst,
     input flush,
 
+    //if_unit给的
     input [`InstBus] inst_1_i,
     input [`InstBus] inst_2_i,
     input [`InstBus] pc_1_i,
     input [`InstBus] pc_2_i,
+    input is_inst1_valid,
+    input is_inst2_valid,
 
+    //发射指令的使能信号
     input send_inst_1_en,
     input send_inst_2_en,
 
+    //从if_unit取指令的使能信号
+    input fetch_inst_1_en,
+    input fetch_inst_2_en,
+
+    //输出给if_id的
     output reg [`InstBus] instbuffer_1_o,
     output reg [`InstBus] instbuffer_2_o,
     output reg [`InstBus] pc_1_o,
@@ -62,13 +71,19 @@ module instbuffer(
     end
 
 
-//还没想好怎么处理head和tail的增减问题
-
     always @(posedge clk) begin
-        FIFO_inst[tail] <= inst_1_i;
-        FIFO_inst[tail+`InstBufferAddrSize'h1] <=inst_2_i;
-        FIFO_pc[tail] <= pc_1_i;
-        FIFO_pc[tail+`InstBufferAddrSize'h1] <= pc_2_i;
+        if(fetch_inst_1_en) begin
+            FIFO_inst[tail] <= inst_1_i;
+            FIFO_pc[tail] <= pc_1_i;
+            FIFO_valid[tail] <= is_inst1_valid;
+            tail <= tail + 1;
+        end
+        if(fetch_inst_2_en) begin
+            FIFO_inst[tail] <= inst_2_i;
+            FIFO_pc[tail] <= pc_2_i;
+            FIFO_valid[tail] <= is_inst2_valid;
+            tail <= tail +1;
+        end
     end
 
     always @(posedge clk) begin
@@ -79,13 +94,15 @@ module instbuffer(
             pc_2_o <= 0;
         end
         else begin
-            if(send_inst_1_en) begin
+            if(send_inst_1_en && FIFO_valid[head]) begin
                 instbuffer_1_o <= FIFO_inst[head];
                 pc_1_o <= FIFO_pc[head];
+                head <= head + 1;
             end
-            if(send_inst_2_en) begin
-                instbuffer_2_o <= FIFO_inst[head+`InstBufferAddrSize'h1];
-                pc_2_o <= FIFO_pc[head+`InstBufferAddrSize'h1];
+            if(send_inst_2_en && FIFO_valid[head]) begin
+                instbuffer_2_o <= FIFO_inst[head];
+                pc_2_o <= FIFO_pc[head];
+                head <= head + 1;
             end
         end
     end
