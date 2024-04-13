@@ -18,22 +18,32 @@
 // Additional Comments:
 // 
 //////////////////////////////////////////////////////////////////////////////////
-
+`define InstBus 31:0
 
 module if_unit(
     input clk,
     input rst,
-    input inst_1_i,
-    input inst_2_i,
-    input pc_1_i,
-    input pc_2_i,
+
+    //从icache取到的指令
+    input [`InstBus] inst_1_i,
+    input [`InstBus] inst_2_i,
+    //输出给icache的pc值
+    output reg [`InstBus] pc_1_o,
+    output reg [`InstBus] pc_2_o,
+
+    input is_branch_1_i,
+    input is_branch_2_i,
+    input [`InstBus] pc_1_i,
+    input [`InstBus] pc_2_i,
     input flush,
     input TLB,  //留作与TLB进行交互
 
-    output reg inst_1_o,
-    output reg inst_2_o,
-    output reg pc_1_o,
-    output reg pc_2_o,
+    //输出给instbuffer的指令
+    output reg [`InstBus] inst_1_o,
+    output reg [`InstBus] inst_2_o,
+
+    output reg is_branch_1_o,
+    output reg is_branch_2_o,
     output TLB_o  //留作与TLB进行交互
     );
 
@@ -43,12 +53,16 @@ module if_unit(
             inst_2_o <= 0;
             pc_1_o <= 0;
             pc_2_o <= 0;
+            is_branch_1_o <= 0;
+            is_branch_2_o <= 0;
         end
         else begin
             inst_1_o <= inst_1_i;
             inst_2_o <= inst_2_i;
             pc_1_o <= pc_1_i;
             pc_2_o <= pc_2_i;
+            is_branch_1_o <= is_branch_1_i;
+            is_branch_2_o <= is_branch_1_i;
         end
     end
 
