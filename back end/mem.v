@@ -33,8 +33,11 @@ module mem (
     input wire[`RegWidth] csr_read_data_i,
 
     // from mem_wb
-    input wb_LLbit_write_en_i,
-    input wb_LLbit_write_data_i,
+    input wire wb_LLbit_write_en_i,
+    input wire wb_LLbit_write_data_i,
+    input wire wb_csr_write_en_i,
+    input wire[`CSRAddrWidth] wb_csr_write_addr_i,
+    input wire[`RegWidth] wb_csr_write_data_i,
 
     // to csr
     output wire csr_read_en_o,
@@ -52,7 +55,6 @@ module mem (
 );
 
     assign csr_read_en_o = csr_read_en_i;
-    assign csr_read_data_o = csr_read_data_i;
     assign csr_read_addr_o = csr_addr_i;
 
     reg LLbit;
@@ -66,6 +68,23 @@ module mem (
         end
         else begin
             LLbit = LLbit_i;
+        end
+    end
+
+    reg[`RegWidth] csr_read_data;
+
+    always @(*) begin
+        if (rst) begin
+            csr_read_data = 32'b0;
+        end
+        else if (csr_read_en_o && wb_csr_write_en_i && (csr_read_addr_o == wb_csr_write_addr_i)) begin
+            csr_read_data = wb_csr_write_data_i;
+        end
+        else if (csr_read_en_o) begin
+            csr_read_data = csr_read_data_i;
+        end
+        else begin
+            csr_read_data = 32'b0;
         end
     end
 
@@ -267,14 +286,14 @@ module mem (
                     end
                 end
                 `ALU_CSRRD: begin
-                    reg_write_data_o = csr_read_data_i;
+                    reg_write_data_o = csr_read_data;
                 end
                 `ALU_CSRWR: begin
-                    reg_write_data_o = csr_read_data_i;
+                    reg_write_data_o = csr_read_data;
                 end
                 `ALU_CSRXCHG: begin
-                    reg_write_data_o = csr_read_data_i;
-                    csr_write_data_o = 
+                    reg_write_data_o = csr_read_data;
+                    csr_write_data_o = (csr_read_data & ~csr_mask_i) | (csr_write_data_i & csr_mask_i);
                 end
                 default: begin
                 end 
