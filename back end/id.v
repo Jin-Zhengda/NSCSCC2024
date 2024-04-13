@@ -111,6 +111,7 @@ module id (
             reg_write_branch_data_o = 32'b0;
             branch_target_addr_o = 5'b0;
             branch_flush_o = 1'b0;
+            csr_read_en_o = 1'b0;
             csr_write_en_o = 1'b0;
             csr_addr_o = 14'b0;
         end
@@ -129,6 +130,7 @@ module id (
             reg_write_branch_data_o = 32'b0;
             branch_target_addr_o = 5'b0;
             branch_flush_o = 1'b0;
+            csr_read_en_o = 1'b0;
             csr_write_en_o = 1'b0;
             csr_addr_o = csr;
 

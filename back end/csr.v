@@ -352,56 +352,56 @@ module csr (
     assign LLbit_o = llbctl[0];
 
     // read
-    always @(posedge clk) begin
+    always @(*) begin
         if (rst) begin
-            read_data <= 0;
+            read_data = 0;
         end 
         else if (read_en) begin
             case (read_addr)
                 `CSR_CRMD: begin
-                    read_data <= crmd;
+                    read_data = crmd;
                 end 
                 `CSR_PRMD: begin
-                    read_data <= prmd;
+                    read_data = prmd;
                 end
                 `CSR_EUEN: begin
-                    read_data <= euem;
+                    read_data = euem;
                 end
                 `CSR_ECFG: begin
-                    read_data <= ecfg;
+                    read_data = ecfg;
                 end
                 `CSR_ESTAT: begin
-                    read_data <= estat;
+                    read_data = estat;
                 end
                 `CSR_ERA: begin
-                    read_data <= era;
+                    read_data = era;
                 end
                 `CSR_BADV: begin
-                    read_data <= badv;
+                    read_data = badv;
                 end
                 `CSR_EENTRY: begin
-                    read_data <= eentry;
+                    read_data = eentry;
                 end
                 `CSR_CPUID: begin
-                    read_data <= cpuid;
+                    read_data = cpuid;
                 end
                 `CSR_SAVE0: begin
-                    read_data <= save0;
+                    read_data = save0;
                 end
                 `CSR_SAVE1: begin
-                    read_data <= save1;
+                    read_data = save1;
                 end
                 `CSR_SAVE2: begin
-                    read_data <= save2;
+                    read_data = save2;
                 end
                 `CSR_SAVE3: begin
-                    read_data <= save3;
+                    read_data = save3;
                 end
                 `CSR_LLBCTL: begin
-                    read_data <= llbctl;
+                    read_data = llbctl;
                 end
                 default: begin
-                    read_data <= 0;
+                    read_data = 0;
                 end
             endcase
         end

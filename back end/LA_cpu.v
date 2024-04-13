@@ -336,7 +336,7 @@ module LA_cpu (
         .csr_write_en_i(mem_csr_write_en_i),
         .csr_addr_i(mem_csr_addr_i),
         .csr_write_data_i(mem_csr_write_data_i),
-        .csr_read_en_i(mem_csr_read_en_i),
+        .csr_mask_i(mem_csr_mask_i),
 
         // to mem_wb
         .reg_write_data_o(mem_reg_write_data_o),
@@ -351,6 +351,9 @@ module LA_cpu (
         // from wb
         .wb_LLbit_write_en_i(wb_LLbit_write_en_i),
         .wb_LLbit_write_data_i(wb_LLbit_write_data_i),
+        .wb_csr_write_en_i(wb_csr_write_en_i),
+        .wb_csr_write_addr_i(wb_csr_write_addr_i),
+        .wb_csr_write_data_i(wb_csr_write_data_i),
 
         // from ram
         .ram_data_i(ram_data_i),
@@ -382,13 +385,19 @@ module LA_cpu (
         .mem_reg_write_en(mem_reg_write_en_o),
         .mem_LLbit_write_en(mem_LLbit_write_en_o),
         .mem_LLbit_write_data(mem_LLbit_data_o),
+        .mem_csr_write_en(mem_csr_write_en_o),
+        .mem_csr_write_addr(mem_csr_write_addr_o),
+        .mem_csr_write_data(mem_csr_write_data_o),
 
         // to wb
         .wb_reg_write_data(wb_reg_write_data_i),
         .wb_reg_write_addr(wb_reg_write_addr_i),
         .wb_reg_write_en(wb_reg_write_en_i),
         .wb_LLbit_write_en(wb_LLbit_write_en_i),
-        .wb_LLbit_write_data(wb_LLbit_write_data_i)
+        .wb_LLbit_write_data(wb_LLbit_write_data_i),
+        .wb_csr_write_en(wb_csr_write_en_i),
+        .wb_csr_write_addr(wb_csr_write_addr_i),
+        .wb_csr_write_data(wb_csr_write_data_i)
     );
 
     ctrl u_ctrl (
@@ -419,9 +428,20 @@ module LA_cpu (
         .clk(clk),
         .rst(rst),
 
-        .is_exception(1'b0),
-        .LLbit_write_en(wb_LLbit_write_en_i),
+        .read_en(csr_read_en),
+        .read_addr(csr_read_addr),
+        .read_data(csr_read_data),
 
+        .write_en(wb_csr_write_en_i),
+        .write_addr(wb_csr_write_addr_i),
+        .write_data(wb_csr_write_data_i),
+
+        .is_exception(1'b0),
+        .exception_cause(0),
+        .exception_pc(0),
+        .exception_addr(0),
+
+        .LLbit_write_en(wb_LLbit_write_en_i),
         .LLbit_i(wb_LLbit_write_data_i),
         .LLbit_o(LLbit_o)
     );
