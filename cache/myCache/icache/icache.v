@@ -19,10 +19,10 @@
 `define TAGV_SIZE 32
 
 //state define
-`define IDLE 4'b0001//空闲等待状态，接收到使能则保存命令信息，判断是否命中，若命中则进入下一状态ReturnInstruction;否则进入下一状态AskMem
-`define ReturnInstruction 4'b0010//向cpu输出数据，下一状态进入IDLE
-`define AskMem 4'b0100//向mem查找数据，然后进入RefreshCache
-`define RefreshCache 4'b1000//当总线将数据传回时，向cpu输出数据，并更新cache中的数据，然后进入IDLE。
+`define ICACHEIDLE 4'b0001//空闲等待状态，接收到使能则保存命令信息，判断是否命中，若命中则进入下一状态ReturnInstruction;否则进入下一状态AskMem
+`define ICACHEReturnInstruction 4'b0010//向cpu输出数据，下一状态进入IDLE
+`define ICACHEAskMem 4'b0100//向mem查找数据，然后进入RefreshCache
+`define RefreshICache 4'b1000//当总线将数据传回时，向cpu输出数据，并更新cache中的数据，然后进入IDLE。
 
 
 module icache
@@ -69,7 +69,7 @@ reg [3:0] current_state,next_state;
 //current_state赋值
 always @(posedge clk or negedge rst_n) begin
     if(reset)begin
-        current_state<=`IDLE;
+        current_state<=`ICACHEIDLE;
     end
     else begin
         current_state<=next_state;
@@ -81,28 +81,28 @@ reg hit_result;//记录是否hit
 
 //next_state赋值
 always @(*) begin
-    if(reset) next_state=`IDLE;
-    else if(current_state==`IDLE)begin
+    if(reset) next_state=`ICACHEIDLE;
+    else if(current_state==`ICACHEIDLE)begin
         if(cpu_icache_read_en)begin
-            if(hit_success)next_state=`ReturnInstruction;
-            else if(hit_fail) next_state=`AskMem;
+            if(hit_success)next_state=`ICACHEReturnInstruction;
+            else if(hit_fail) next_state=`ICACHEAskMem;
         end
-        else next_state=`IDLE;
+        else next_state=`ICACHEIDLE;
     end
-    else if(current_state==`ReturnInstruction) next_state=`IDLE;
-    else if(current_state==`AskMem)begin
-        if(mem_ready_to_read)next_state=`RefreshCache;
+    else if(current_state==`ICACHEReturnInstruction) next_state=`ICACHEIDLE;
+    else if(current_state==`ICACHEAskMem)begin
+        if(mem_ready_to_read)next_state=`RefreshICache;
     end 
-    else if(current_state==`RefreshCache)begin
-        if(mem_return_en)next_state=`IDLE;
-        else current_state=`RefreshCache;
+    else if(current_state==`RefreshICache)begin
+        if(mem_return_en)next_state=`ICACHEIDLE;
+        else current_state=`RefreshICache;
     end
 end
 
 //分状态解决
 
 /*------------------------------------------IDLE状态--------------------------------------------*/
-//IDLE:空闲等待状态，接收到使能则保存命令信息，判断是否命中，
+//ICACHEIDLE:空闲等待状态，接收到使能则保存命令信息，判断是否命中，
 //若命中则进入下一状态ReturnInstruction;否则进入下一状态AskMem
 
 //记录信号
@@ -141,6 +141,7 @@ assign way0_read_en=cpu_icache_read_en?1'b1:1'b0;
 assign way1_read_en=cpu_icache_read_en?1'b1:1'b0;
 assign way0_write_en=hit_result?1'b0:1'b1;
 assign way1_write_en=hit_result?1'b0:1'b1;
+//这个地方应该同时考虑mem返回数据，才在更准确的时间进行写？？？？？？？？？？？？？？？？
 
 //将mem返回的数据转换成数组格式，便于读取赋值
 wire [`INSTRUCTION_DATA_SIZE-1:0]data_record_from_mem[`BANK_NUM-1:0];
@@ -189,7 +190,7 @@ end
 
 
 /*------------------------------------ReturnInstruction状态-------------------------------------*/
-//ReturnInstruction:向cpu输出数据，下一状态进入IDLE
+//ICACHEReturnInstruction:向cpu输出数据，下一状态进入IDLE
 
 
 //icache_cpu_return_data赋值
@@ -211,7 +212,7 @@ assign icache_cpu_return_data_en=cpu_receive_data_ok?1'b0:(hit_success?1'b1:(mem
 
 
 /*------------------------------------ReturnInstruction状态-------------------------------------*/
-//AskMem:向mem查找数据，然后进入RefreshCache
+//ICACHEAskMem:向mem查找数据，然后进入RefreshCache
 always @(*) begin
     if(reset)begin
         icache_mem_read_request=1'b0;
@@ -221,7 +222,7 @@ always @(*) begin
         if(mem_read_addr_ok)begin
             icache_mem_read_request=1'b0;
         end
-        else if(current_state==`AskMem||current_state==`RefreshCache) begin
+        else if(current_state==`ICACHEAskMem||current_state==`RefreshICache) begin
             icache_mem_read_addr=physical_addr;
             icache_mem_read_request=1'b1;
         end
@@ -229,7 +230,7 @@ always @(*) begin
 end
 
 /*---------------------------------------RefreshCache状态----------------------------------------*/
-//RefreshCache:当总线将数据传回时，向cpu输出数据，并更新cache中的数据，然后进入IDLE。
+//RefreshICache:当总线将数据传回时，向cpu输出数据，并更新cache中的数据，然后进入IDLE。
 //向cpu输出数据在ReturnInstruction状态实现
 //更新cache数据
 reg[`SETSIZE-1:0]LRU;
@@ -247,8 +248,8 @@ assign way1_write_en = (mem_return_en && LRU_pick == 1'b1)? 1'b1 : 1'b0;
 
 
 /*----------------------------------------其他信号----------------------------------------------*/
-assign cpu_icache_addr_request_ok=(current_state==`IDLE)?1'b0:1'b1;
-assign read_data_from_mem_ok=(current_state==`IDLE)?1'b1:1'b0;
+assign cpu_icache_addr_request_ok=(current_state==`ICACHEIDLE)?1'b0:1'b1;
+assign read_data_from_mem_ok=(current_state==`ICACHEIDLE)?1'b1:1'b0;
 assign cache_hit_fail_output=hit_fail;
 
 endmodule

@@ -149,11 +149,67 @@ $2^{8}*2*2^{5}*2^{3} = 2 ^ {17} Bit = 2^{14}Byte=2^{4}KB= 16KB$
 - RefreshCache:当总线将数据传回时，向cpu输出数据，并更新cache中的数据，然后进入IDLE。
 
 
-# 第二次尝试——icache
-### 主要改进：
+#### 第二次尝试——icache
+##### 主要改进：
 重新对icache的状态进行定义。主要增加了**ok反馈信号**，即模块间通信时，每次的信号成功接收都会返回ok信号，根据这个信号可以将en使能信号重新变回低电平，从而方便进行下一个信号发出时，en重新变为高电平，实现信号的连续传输。
-### 状态定义：
-- IDLE:空闲等待状态，接收到使能则保存命令信息，判断是否命中，若命中则进入下一状态ReturnInstruction;否则进入下一状态AskMem
-- ReturnInstruction:向cpu输出数据，下一状态进入IDLE
-- AskMem:向mem查找数据，然后进入RefreshCache
-- RefreshCache:当总线将数据传回时，向cpu输出数据，并更新cache中的数据，然后进入IDLE。
+##### 状态定义：
+- ICacheIDLE:空闲等待状态，接收到使能则保存命令信息，判断是否命中，若命中则进入下一状态ReturnInstruction;否则进入下一状态AskMem
+- ICacheReturnInstruction:向cpu输出数据，下一状态进入IDLE
+- ICacheAskMem:向mem查找数据，然后进入RefreshCache
+- RefreshICache:当总线将数据传回时，向cpu输出数据，并更新cache中的数据，然后进入IDLE。
+
+### dcache状态机
+##### 状态定义：
+- DCache_IDLE:空闲等待状态，接收到使能则保存命令信息，判断是否命中。根据是否命中，读还是写决定进入下一个状态(命中读——ReadDCache;命中写——WriteDCache;未命中读或写——AskMem)若dcache未命中但writebuffer命中，则下一状态返回IDLE;
+- ReadDCache:向cpu输出数据，下一状态进入IDLE;
+- WriteDCache:改写DCache中的数据，下一状态进入IDLE;
+- DCacheAskMem:向mem查找数据，处理LRU_pick所指向的数据，若为脏则传给WriteBuffer，若writebuffer还在阻塞则进行阻塞,然后进入RefreshDCache;
+- RefreshDCache:等到总线数据返回时，根据命令要求，若读则返回对应数据；若写则改写数据。然后进入IDLE;
+
+##### 难点分析：
+1. 相比于icache,dcache新增了写的功能，工作量起码翻倍。
+2. 写操作引起的"脏"导致dcache中LRU_pick指向的数据不能单纯地直接被替换掉，而是要将它保存入mem，再更新成新的一路。为了使写回mem的这个操作不引起阻塞，设计模块Write_Buffer，可存储最多8个写mem命令，每当dcache的脏数据需要写回mem时，将信号传递给WriteBuffer即可进入下一状态(注意若WriteBuffer已满则需阻塞)
+3. WriteBuffer的实现：WriteBuffer也可以hit!!!当cpu需要读/写的数据在WriteBuffer中时，可直接对WriteBuffer进行读/写操作。有关dcache的结构设计为：cpu-dcache-writebuffer-mem。cpu命令信息同步传给writebuffer，当writebuffer hit时，dcache直接回到IDLE状态，命令由writebuffer负责执行即可。**还要注意考虑是否在writebuffer写回mem的时刻数据被命中，导致错误！！！**
+
+##### 接口定义：
+`
+    input wire clk,
+    input wire reset,
+    //cpu
+    input wire [`ADDR_SIZE-1:0] cpu_dcache_virtual_addr,//cpu传的虚拟地址
+    input wire [`ADDR_SIZE-1:0] cpu_dcache_physical_addr,//cpu传的物理地址
+    output wire cpu_command_dcache_ok,//cpu向dcache的命令成功接收
+
+    //cpu读数据
+    input wire cpu_read_dcache_en,//cpu读数据命令使能信号
+    input wire cpu_receive_dcache_data_ok,//cpu成功接收dcache的数据
+    output wire dcache_cpu_return_data_en,//dcache正在向cpu返回数据
+    output reg [`DATA_SIZE-1:0] dcache_cpu_return_data,//dcache向cpu返回的数据
+    //cpu写数据
+    input wire cpu_write_dcache_en,//cpu写数据命令使能信号
+    input wire [`DATA_SIZE-1:0] cpu_write_dcache_data,//cpu需要写的数据
+    output wire cpu_write_dcache_ok,//dcache写入完成
+
+    //axi读数据
+    output wire dcache_read_mem_en,//dcache读数据命令信号
+    output wire [`ADDR_SIZE-1:0] dcache_read_mem_addr,//dcache读数据的地址(物理地址)
+    output wire dcache_receive_mem_data_ok,//dcache成功接收来自mem的data
+    input wire mem_ready_for_dcache_read,//mem空闲可读
+    input wire mem_dcache_return_data_en,//mem正在向dcache返回数据
+    input wire [`PACKED_DATA_SIZE-1:0] mem_dcache_return_data,//mem向cache返回的数据
+    input wire mem_receive_dcache_read_ok,//mem成功接收dcache的读取命令
+    //通过write_buffer向mem写数据
+    output wire dcache_write_buffer_en,//dcache写数据命令信号
+    output wire [`ADDR_SIZE-1:0]dcache_write_buffer_physical_addr,//dcache向mem写数据的物理地址
+    output wire [`ADDR_SIZE-1:0]dcache_write_buffer_virtual_addr,//dcache向mem写数据的虚拟地址
+    output wire [`PACKED_DATA_SIZE-1:0]dcache_write_buffer_data,//dcache向mem写的数据
+    input wire buffer_ready_for_dcache_write,//buffer可接收写命令
+    input wire buffer_receive_dcache_write_ok,//buffer成功接收写命令
+    //writebuffer命中情况
+    input wire buffer_hit_success,//write_buffer成功命中
+    
+    //其他信号
+    output wire dcache_hit_success,//dcache成功命中
+    output wire dcache_hit_fail,//dcache未命中
+    output reg dcache_hit_result//dcache的命中结果
+`
