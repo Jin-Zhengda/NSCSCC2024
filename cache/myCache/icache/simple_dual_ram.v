@@ -39,24 +39,24 @@ module simple_dual_ram (
     input wire[`INSTRUCTION_DATA_SIZE-1:0] write_data
 );
 
-reg [`INSTRUCTION_DATA_SIZE*8-1:0] mem[0:`SETSIZE-1];
+reg [`INSTRUCTION_DATA_SIZE*8-1:0] ram[0:`SETSIZE-1];
 
 
 integer i;
 always @(posedge clk_write) begin
     if(reset)begin
         for(i=0;i<`SETSIZE;i=i+1)begin
-            mem[i]<=`INSTRUCTION_DATA_SIZE*'b0;
+            ram[i]<=`INSTRUCTION_DATA_SIZE*'b0;
         end
     end
     if(write_en) begin
-        mem[write_addr] <= write_data;
+        ram[write_addr] <= write_data;
     end
 end
 
 always @(posedge clk_read) begin
     if(read_en) begin
-        read_data <= mem[read_addr];
+        read_data <= ram[read_addr];
     end
 end
     
