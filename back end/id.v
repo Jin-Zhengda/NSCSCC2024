@@ -9,6 +9,12 @@ module id (
     input wire[`InstAddrWidth] pc_i,
     input wire[`InstWidth] inst_i,
 
+    input wire is_exception_i,
+    input wire[`ExceptionCauseWidth] exception_cause_i,
+
+    output reg is_exception_o,
+    output reg[`ExceptionCauseWidth] exception_cause_o,
+
     // from Regfile
     input wire[`RegWidth] reg1_data_i,
     input wire[`RegWidth] reg2_data_i,
@@ -27,6 +33,7 @@ module id (
     output reg[`RegAddrWidth] reg_write_addr_o,
     output reg reg_write_en_o,
     output wire[`InstWidth] inst_o,
+    output wire[`InstAddrWidth] pc_o,
 
     output reg csr_read_en_o,
     output reg csr_write_en_o,
@@ -36,21 +43,32 @@ module id (
     input wire[`ALUOpWidth] ex_aluop_i,
 
     // ex and mem data pushed forward
-    input ex_reg_write_en_i,
-    input[`RegAddrWidth] ex_reg_write_addr_i,
-    input[`RegWidth] ex_reg_write_data_i,
-    input mem_reg_write_en_i,
-    input[`RegAddrWidth] mem_reg_write_addr_i,
-    input[`RegWidth] mem_reg_write_data_i,
+    input wire ex_reg_write_en_i,
+    input wire [`RegAddrWidth] ex_reg_write_addr_i,
+    input wire [`RegWidth] ex_reg_write_data_i,
+    input wire mem_reg_write_en_i,
+    input wire [`RegAddrWidth] mem_reg_write_addr_i,
+    input wire [`RegWidth] mem_reg_write_data_i,
+    input wire mem_csr_write_en_i,
+    input wire [`CSRAddrWidth] mem_csr_write_addr_i,
+    input wire [`RegWidth] mem_csr_write_data_i,
 
     // branch
     output reg is_branch_o,
     output reg[`RegWidth] branch_target_addr_o,
     output reg[`RegWidth] reg_write_branch_data_o,
-    output reg branch_flush_o
+    output reg branch_flush_o,
+
+    // from csr
+    input wire[1: 0] PLV
 );
 
     assign inst_o = inst_i;
+    assign pc_o = pc_i;
+
+    wire[1: 0] PLV_current;
+    assign PLV_current = (mem_csr_write_en_i && (mem_csr_write_addr_i == `CSR_CRMD))  
+                          ? mem_csr_write_data_i: PLV;
 
     // Instruction fields
     wire[9: 0] opcode1 = inst_i[31: 22];
@@ -58,6 +76,7 @@ module id (
     wire[6: 0] opcode3 = inst_i[31: 25];
     wire[7: 0] opcode4 = inst_i[31: 24];
     wire[5: 0] opcode5 = inst_i[31: 26];
+    wire[21: 0] opcode6 = inst_i[31: 10];
 
     wire[19: 0] si20 = inst_i[24: 5];
     wire[11: 0] ui12 = inst_i[21: 10];
@@ -114,6 +133,8 @@ module id (
             csr_read_en_o = 1'b0;
             csr_write_en_o = 1'b0;
             csr_addr_o = 14'b0;
+            is_exception_o = 1'b0;
+            exception_cause_o = 7'b0;
         end
         else begin
             aluop_o = `ALU_NOP;
@@ -133,6 +154,8 @@ module id (
             csr_read_en_o = 1'b0;
             csr_write_en_o = 1'b0;
             csr_addr_o = csr;
+            is_exception_o = is_exception_i;
+            exception_cause_o = exception_cause_i;
 
             case (opcode1)
                 `SLTI_OPCODE: begin
@@ -469,6 +492,36 @@ module id (
                     imm = {27'b0, ui5};
                     inst_valid = 1'b1;
                 end
+                `BREAK_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_BREAK;
+                    alusel_o = `ALU_SEL_NOP;
+                    reg1_read_en_o = 1'b0;
+                    reg2_read_en_o = 1'b0;
+                    is_exception_o = 1'b1;
+                    exception_cause_o = `EXCEPTION_BRK;
+                    inst_valid = 1'b1;
+                end
+                `SYSCALL_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_SYSCALL;
+                    alusel_o = `ALU_SEL_NOP;
+                    reg1_read_en_o = 1'b0;
+                    reg2_read_en_o = 1'b0;
+                    is_exception_o = 1'b1;
+                    exception_cause_o = `EXCEPTION_SYS;
+                    inst_valid = 1'b1;
+                end
+                `IDEL_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_IDEL;
+                    alusel_o = `ALU_SEL_NOP;
+                    reg1_read_en_o = 1'b0;
+                    reg2_read_en_o = 1'b0;
+                    is_exception_o = (PLV_current == 2'b00) ? 1'b0: 1'b1;
+                    exception_cause_o = (PLV_current == 2'b00) ? 7'b0: `EXCEPTION_IPE;
+                    inst_valid = 1'b1;
+                end
                 default:begin
                 end 
             endcase
@@ -521,6 +574,8 @@ module id (
                     inst_valid = 1'b1;
                 end
                 `CSR_OPCODE: begin
+                    is_exception_o = (PLV_current == 2'b00) ? 1'b0: 1'b1;  
+                    exception_cause_o = (PLV_current == 2'b00) ? 7'b0: `EXCEPTION_IPE;
                     case (rj)
                         `CSRRD_OPCODE: begin
                             reg_write_en_o = 1'b1;
@@ -726,6 +781,21 @@ module id (
                 default: begin
                 end 
             endcase
+
+            case (opcode6)
+                `ERTN_OPCODE: begin
+                    reg_write_en_o = 1'b0;
+                    aluop_o = `ALU_ERTN;
+                    alusel_o = `ALU_SEL_NOP;
+                    reg1_read_en_o = 1'b0;
+                    reg2_read_en_o = 1'b0;
+                    inst_valid = 1'b1;
+                    is_exception_o = (PLV_current == 2'b00) ? 1'b0: 1'b1;
+                    exception_cause_o = (PLV_current == 2'b00) ? 7'b0: `EXCEPTION_IPE;
+                end 
+                default: begin
+                end 
+            endcase
         end
     end
 
@@ -774,5 +844,7 @@ module id (
             reg2_o = 32'b0;
         end
     end
+
+
 
 endmodule

@@ -21,11 +21,17 @@ module LA_cpu (
     wire id_is_branch_o;
     wire[`InstAddrWidth] id_branch_target_addr_o;
 
-    // if_id and id
+    // if and if_id
     wire[`InstAddrWidth] pc;
+    wire if_is_exception_o;
+    wire [`ExceptionCauseWidth] if_exception_cause_o;
+
+    // if_id and id
     wire[`InstAddrWidth] id_pc_i;
     wire[`InstWidth] id_inst_i;
     wire id_branch_flush_o;
+    wire id_is_exception_i;
+    wire[`ExceptionCauseWidth] id_exception_cause_i;
 
     // id and id_ex
     wire[`ALUOpWidth] id_aluop_o;
@@ -36,9 +42,12 @@ module LA_cpu (
     wire id_reg_write_en_o;
     wire[`RegWidth] id_reg_write_branch_data_o;
     wire[`InstWidth] id_inst_o;
+    wire[`InstAddrWidth] id_pc_o;
     wire id_csr_read_en_o;
     wire id_csr_write_en_o;
     wire[`CSRAddrWidth] id_csr_addr_o;
+    wire id_is_exception_o;
+    wire[`ExceptionCauseWidth] id_exception_cause_o;
 
     // id_ex and ex
     wire[`ALUOpWidth] ex_aluop_i;
@@ -52,6 +61,9 @@ module LA_cpu (
     wire ex_csr_read_en_i;
     wire ex_csr_write_en_i;
     wire[`CSRAddrWidth] ex_csr_addr_i;
+    wire ex_is_exception_i;
+    wire[`ExceptionCauseWidth] ex_exception_cause_i;
+    wire[`InstAddrWidth] ex_pc_i;
 
     // ex and ex_mem
     wire[`RegAddrWidth] ex_reg_write_addr_o;
@@ -65,7 +77,10 @@ module LA_cpu (
     wire[`CSRAddrWidth] ex_csr_addr_o;
     wire[`RegWidth] ex_csr_write_data_o;
     wire[`RegWidth] ex_csr_mask_o;
-
+    wire[`InstAddrWidth] ex_pc_o;
+    wire ex_is_exception_o;
+    wire[`ExceptionCauseWidth] ex_exception_cause_o;
+ 
     // ex_mem and mem
     wire[`RegAddrWidth] mem_reg_write_addr_i;
     wire[`RegWidth] mem_reg_write_data_i;
@@ -78,6 +93,9 @@ module LA_cpu (
     wire[`CSRAddrWidth] mem_csr_addr_i;
     wire[`RegWidth] mem_csr_write_data_i;
     wire[`RegWidth] mem_csr_mask_i;
+    wire[`InstAddrWidth] mem_pc_i;
+    wire mem_is_exception_i;
+    wire[`ExceptionCauseWidth] mem_exception_cause_i;
 
     // mem and mem_wb
     wire[`RegAddrWidth] mem_reg_write_addr_o;
@@ -113,12 +131,24 @@ module LA_cpu (
     wire[`RegWidth] csr_read_data;
     wire csr_read_en;
     wire[`RegWidth] csr_read_addr;
-
-
+    wire[`InstAddrWidth] exception_pc;
+    wire[`RegWidth] exception_addr;
+    wire is_exception;
+    wire[`ExceptionCauseWidth] exception_cause;
+    wire is_ertn;
+ 
+    // ctrl
     wire[5: 0] pause;
     wire pause_id;
     wire pause_ex;
+    wire exception_flush;
+    wire[`InstAddrWidth] exception_in_pc_o;
 
+    // ctrl and csr
+    wire[`InstAddrWidth] EENTRY_VA;
+    wire[`InstAddrWidth] ERA_PC;
+
+    // div 
     wire div_start;
     wire div_singed;
     wire[`RegWidth] div_data1;
@@ -126,12 +156,19 @@ module LA_cpu (
     wire[`DoubleRegWidth] div_result;
     wire div_done;
 
+    // id and csr
+    wire[1: 0] PLV;
+
     pc u_pc (
         .clk(clk),
         .rst(rst),
         .pause(pause),
         .is_branch_i(id_is_branch_o),
         .branch_target_addr_i(id_branch_target_addr_o),
+        .exception_flush(exception_flush),
+        .exception_handle_pc_i(exception_in_pc_o),
+        .is_exception_o(if_is_exception_o),
+        .exception_cause_o(if_exception_cause_o),
         .pc_o(pc),
         .inst_en_o(rom_inst_en_o)
     );
@@ -142,13 +179,18 @@ module LA_cpu (
         .clk(clk),
         .rst(rst),
         .pause(pause),
-        .branch_flush_i(id_branch_flush_o),
+        .branch_flush(id_branch_flush_o),
+        .if_is_exception(if_is_exception_o),
+        .if_exception_cause(if_exception_cause_o),
+        .exception_flush(exception_flush),
 
         .if_pc(pc),
         .if_inst(rom_inst_i),
 
         .id_pc(id_pc_i),
-        .id_inst(id_inst_i)
+        .id_inst(id_inst_i),
+        .id_is_exception(id_is_exception_i),
+        .id_exception_cause(id_exception_cause_i)
     );
 
     id u_id (
@@ -157,6 +199,8 @@ module LA_cpu (
 
         .pc_i(id_pc_i),
         .inst_i(id_inst_i),
+        .is_exception_i(id_is_exception_i),
+        .exception_cause_i(id_exception_cause_i),
 
         // from regfile
         .reg1_data_i(reg1_data),
@@ -176,10 +220,14 @@ module LA_cpu (
         .reg_write_addr_o(id_reg_write_addr_o),
         .reg_write_en_o(id_reg_write_en_o),
         .inst_o(id_inst_o),
+        .pc_o(id_pc_o),
 
         .csr_read_en_o(id_csr_read_en_o),
         .csr_write_en_o(id_csr_write_en_o),
         .csr_addr_o(id_csr_addr_o),
+
+        .is_exception_o(id_is_exception_o),
+        .exception_cause_o(id_exception_cause_o),
 
         // data pushed forward
         .ex_reg_write_en_i(ex_reg_write_en_o),
@@ -196,7 +244,10 @@ module LA_cpu (
         .branch_flush_o(id_branch_flush_o),
 
         // from ex
-        .ex_aluop_i(ex_aluop_o)
+        .ex_aluop_i(ex_aluop_o),
+
+        // from csr
+        .PLV(PLV)
     );
 
     regfile u_regfile (
@@ -221,6 +272,7 @@ module LA_cpu (
         .clk(clk),
         .rst(rst),
         .pause(pause),
+        .exception_flush(exception_flush),
 
         // from id
         .id_alusel(id_alusel_o),
@@ -234,6 +286,9 @@ module LA_cpu (
         .id_csr_read_en(id_csr_read_en_o),
         .id_csr_write_en(id_csr_write_en_o),
         .id_csr_addr(id_csr_addr_o),
+        .id_is_exception(id_is_exception_o),
+        .id_exception_cause(id_exception_cause_o),
+        .id_pc(id_pc_o),
 
         // to ex
         .ex_alusel(ex_alusel_i),
@@ -246,7 +301,10 @@ module LA_cpu (
         .ex_inst(ex_inst_i),
         .ex_csr_read_en(ex_csr_read_en_i),
         .ex_csr_write_en(ex_csr_write_en_i),
-        .ex_csr_addr(ex_csr_addr_i)
+        .ex_csr_addr(ex_csr_addr_i),
+        .ex_is_exception(ex_is_exception_i),
+        .ex_exception_cause(ex_exception_cause_i),
+        .ex_pc(ex_pc_i)
     );
 
     ex u_ex (
@@ -264,6 +322,9 @@ module LA_cpu (
         .csr_read_en_i(ex_csr_read_en_i),
         .csr_write_en_i(ex_csr_write_en_i),
         .csr_addr_i(ex_csr_addr_i),
+        .is_exception_i(ex_is_exception_i),
+        .is_exception_cause_i(ex_exception_cause_i),
+        .pc_i(ex_pc_i),
 
         // to ex_mem
         .reg_write_addr_o(ex_reg_write_addr_o),
@@ -277,6 +338,9 @@ module LA_cpu (
         .csr_addr_o(ex_csr_addr_o),
         .csr_write_data_o(ex_csr_write_data_o),
         .csr_mask_o(ex_csr_mask_o),
+        .pc_o(ex_pc_o),
+        .is_exception_o(ex_is_exception_o),
+        .exception_cause_o(ex_exception_cause_o),
 
         // div
         .div_result_i(div_result),
@@ -294,6 +358,7 @@ module LA_cpu (
         .clk(clk),
         .rst(rst),
         .pause(pause),
+        .exception_flush(exception_flush),
 
         // from ex
         .ex_reg_write_data(ex_reg_write_data_o),
@@ -307,6 +372,9 @@ module LA_cpu (
         .ex_csr_addr(ex_csr_addr_o),
         .ex_csr_write_data(ex_csr_write_data_o),
         .ex_csr_mask(ex_csr_mask_o),
+        .ex_pc(ex_pc_o),
+        .ex_is_exception(ex_is_exception_o),
+        .ex_exception_cause(ex_exception_cause_o),
 
         // to mem
         .mem_reg_write_data(mem_reg_write_data_i),
@@ -319,7 +387,10 @@ module LA_cpu (
         .mem_csr_write_en(mem_csr_write_en_i),
         .mem_csr_addr(mem_csr_addr_i),
         .mem_csr_write_data(mem_csr_write_data_i),
-        .mem_csr_mask(mem_csr_mask_i)
+        .mem_csr_mask(mem_csr_mask_i),
+        .mem_pc(mem_pc_i),
+        .mem_is_exception(mem_is_exception_i),
+        .mem_exception_cause(mem_exception_cause_i)
     );
 
     mem u_mem (
@@ -337,6 +408,9 @@ module LA_cpu (
         .csr_addr_i(mem_csr_addr_i),
         .csr_write_data_i(mem_csr_write_data_i),
         .csr_mask_i(mem_csr_mask_i),
+        .pc_i(mem_pc_i),
+        .is_exception_i(mem_is_exception_i),
+        .exception_cause_i(mem_exception_cause_i),
 
         // to mem_wb
         .reg_write_data_o(mem_reg_write_data_o),
@@ -371,13 +445,19 @@ module LA_cpu (
 
         // to csr
         .csr_read_en_o(csr_read_en),
-        .csr_read_addr_o(csr_read_addr)
+        .csr_read_addr_o(csr_read_addr),
+        .is_exception_o(is_exception),
+        .exception_cause_o(exception_cause),
+        .pc_o(exception_pc),
+        .exception_addr_o(exception_addr),
+        .is_ertn(is_ertn)
     );
 
     mem_wb u_mem_wb (
         .clk(clk),
         .rst(rst),
         .pause(pause),
+        .exception_flush(exception_flush),
 
         // from mem
         .mem_reg_write_data(mem_reg_write_data_o),
@@ -406,7 +486,20 @@ module LA_cpu (
         .pause_id(pause_id),
         .pause_ex(pause_ex),
 
-        .pause(pause)
+        .EENTRY_VA(EENTRY_VA),
+        .ERA_PC(ERA_PC),
+
+        .is_exception(is_exception),
+        .exception_cause(exception_cause),
+        .is_ertn(is_ertn),
+
+        .wb_csr_write_en_i(wb_csr_write_en_i),
+        .wb_csr_write_addr_i(wb_csr_write_addr_i),
+        .wb_csr_write_data_i(wb_csr_write_data_i),
+
+        .pause(pause),
+        .exception_flush(exception_flush),
+        .exception_in_pc_o(exception_in_pc_o)
     );
 
     div u_div (
@@ -436,14 +529,19 @@ module LA_cpu (
         .write_addr(wb_csr_write_addr_i),
         .write_data(wb_csr_write_data_i),
 
-        .is_exception(1'b0),
-        .exception_cause(0),
-        .exception_pc(0),
-        .exception_addr(0),
+        .is_exception(is_exception),
+        .exception_cause(exception_cause),
+        .exception_pc(exception_pc),
+        .exception_addr(exception_addr),
+        .is_ertn(is_ertn),
 
         .LLbit_write_en(wb_LLbit_write_en_i),
         .LLbit_i(wb_LLbit_write_data_i),
-        .LLbit_o(LLbit_o)
+        .LLbit_o(LLbit_o),
+
+        .PLV(PLV),
+        .EENTRY_VA(EENTRY_VA),
+        .ERA_PC(ERA_PC)
     );
 
 endmodule

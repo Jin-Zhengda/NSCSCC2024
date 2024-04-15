@@ -8,6 +8,8 @@ module ex (
     input wire[`ALUSelWidth] alusel_i,
     input wire[`ALUOpWidth] aluop_i,
     input wire[`InstWidth] inst_i,
+    input wire[`InstAddrWidth] pc_i,
+    output wire[`InstAddrWidth] pc_o,
 
     input wire[`RegWidth] reg1_i,
     input wire[`RegWidth] reg2_i,
@@ -18,6 +20,11 @@ module ex (
     output reg reg_write_en_o,
     output reg[`RegWidth] reg_write_data_o,
 
+    input wire is_exception_i,
+    input wire[`ExceptionCauseWidth] exception_cause_i,
+
+    output wire is_exception_o,
+    output wire[`ExceptionCauseWidth] exception_cause_o,
 
     // from div
     input wire[`DoubleRegWidth] div_result_i,
@@ -45,6 +52,10 @@ module ex (
     output wire[`RegWidth] csr_write_data_o,
     output wire[`RegWidth] csr_mask_o
 );
+    assign pc_o = pc_i;
+
+    assign is_exception_o = is_exception_i;
+    assign exception_cause_o = exception_cause_i;
 
     assign csr_read_en_o = csr_read_en_i;
     assign csr_write_en_o = csr_write_en_i;
