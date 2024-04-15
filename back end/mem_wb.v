@@ -4,6 +4,7 @@ module mem_wb (
     input wire clk,
     input wire rst,
     input wire[5: 0] pause,
+    input wire exception_flush,
 
     // from mem
     input wire[`RegWidth] mem_reg_write_data,
@@ -28,6 +29,16 @@ module mem_wb (
 
     always @(posedge clk) begin
         if (rst) begin
+            wb_reg_write_data <= 32'b0;
+            wb_reg_write_addr <= 5'b0;
+            wb_reg_write_en <= 1'b0;
+            wb_LLbit_write_en <= 1'b0;
+            wb_LLbit_write_data <= 1'b0;
+            wb_csr_write_en <= 1'b0;
+            wb_csr_write_addr <= 14'b0;
+            wb_csr_write_data <= 32'b0;
+        end
+        else if (exception_flush) begin
             wb_reg_write_data <= 32'b0;
             wb_reg_write_addr <= 5'b0;
             wb_reg_write_en <= 1'b0;

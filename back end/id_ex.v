@@ -4,6 +4,7 @@ module id_ex (
     input wire clk,
     input wire rst,
     input wire[5: 0] pause,
+    input wire exception_flush,
 
     input wire[`ALUSelWidth] id_alusel,
     input wire[`ALUOpWidth] id_aluop,
@@ -16,6 +17,9 @@ module id_ex (
     input wire id_csr_read_en,
     input wire id_csr_write_en,
     input wire[`CSRAddrWidth] id_csr_addr,
+    input wire id_is_exception,
+    input wire[`ExceptionCauseWidth] id_exception_cause,
+    input wire[`InstAddrWidth] id_pc,
 
     output reg[`ALUSelWidth] ex_alusel,
     output reg[`ALUOpWidth] ex_aluop,
@@ -27,7 +31,10 @@ module id_ex (
     output reg[`InstWidth] ex_inst,
     output reg ex_csr_read_en,
     output reg ex_csr_write_en,
-    output reg[`CSRAddrWidth] ex_csr_addr
+    output reg[`CSRAddrWidth] ex_csr_addr,
+    output reg ex_is_exception,
+    output reg[`ExceptionCauseWidth] ex_exception_cause,
+    output reg[`InstAddrWidth] ex_pc
 );
 
     always @(posedge clk) begin
@@ -43,6 +50,25 @@ module id_ex (
             ex_csr_read_en <= 1'b0;
             ex_csr_write_en <= 1'b0;
             ex_csr_addr <= 14'b0;
+            ex_is_exception <= 1'b0;
+            ex_exception_cause <= 7'b0;
+            ex_pc <= 32'h1C000000;
+        end
+        else if (exception_flush) begin
+            ex_alusel <= `ALU_SEL_NOP;
+            ex_aluop <= `ALU_NOP;
+            ex_reg1 <= 32'b0;
+            ex_reg2 <= 32'b0;
+            ex_reg_write_addr <= 5'b0;
+            ex_reg_write_en <= 1'b0;
+            ex_reg_write_branch_data <= 32'b0;
+            ex_inst <= 32'b0;
+            ex_csr_read_en <= 1'b0;
+            ex_csr_write_en <= 1'b0;
+            ex_csr_addr <= 14'b0;
+            ex_is_exception <= 1'b0;
+            ex_exception_cause <= 7'b0;
+            ex_pc <= 32'h1C000000;
         end
         else if (pause[2] && ~pause[3]) begin
             ex_alusel <= `ALU_SEL_NOP;
@@ -56,6 +82,9 @@ module id_ex (
             ex_csr_read_en <= 1'b0;
             ex_csr_write_en <= 1'b0;
             ex_csr_addr <= 14'b0;
+            ex_is_exception <= 1'b0;
+            ex_exception_cause <= 7'b0;
+            ex_pc <= 32'h1C000000;
         end
         else if (~pause[2]) begin
             ex_alusel <= id_alusel;
@@ -69,6 +98,9 @@ module id_ex (
             ex_csr_read_en <= id_csr_read_en;
             ex_csr_write_en <= id_csr_write_en;
             ex_csr_addr <= id_csr_addr;
+            ex_is_exception <= id_is_exception;
+            ex_exception_cause <= id_exception_cause;
+            ex_pc <= id_pc;
         end 
         else begin
             ex_alusel <= ex_alusel;
@@ -82,6 +114,9 @@ module id_ex (
             ex_csr_read_en <= ex_csr_read_en;
             ex_csr_write_en <= ex_csr_write_en;
             ex_csr_addr <= ex_csr_addr;
+            ex_is_exception <= ex_is_exception;
+            ex_exception_cause <= ex_exception_cause;
+            ex_pc <= ex_pc;
         end
     end
     

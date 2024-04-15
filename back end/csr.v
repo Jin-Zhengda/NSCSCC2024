@@ -19,6 +19,7 @@ module csr (
     input wire[`ExceptionCauseWidth] exception_cause,
     input wire[`InstAddrWidth] exception_pc,
     input wire[`RegWidth] exception_addr,
+    input wire is_ertn,
 
     // interrupt
     input wire is_ipi,
@@ -28,7 +29,11 @@ module csr (
     // LLbit
     input wire LLbit_write_en,
     input wire LLbit_i,
-    output wire LLbit_o
+    output wire LLbit_o,
+
+    output wire[1: 0] PLV,
+    output wire[`InstAddrWidth] EENTRY_VA,
+    output wire[`InstAddrWidth] ERA_PC
 );
 
     reg[`RegWidth] crmd;
@@ -62,6 +67,11 @@ module csr (
     reg[`RegWidth] dmw0;
     reg[`RegWidth] dmw1;
 
+    assign PLV = crmd[1: 0];
+
+    assign EENTRY_VA = {eentry[31: 6], 6'b0};
+    assign ERA_PC = era;
+
     // CRMD write
     always @(posedge clk) begin
         if (rst) begin
@@ -70,11 +80,17 @@ module csr (
         else if (is_exception) begin
             crmd[1: 0] <= 2'b0; // PLV
             crmd[2] <= 1'b0; // IE
+            if (exception_cause == `EXCEPTION_TLBR) begin
+                crmd[3] <= 1'b0; // DA
+                crmd[4] <= 1'b1; // PG
+            end
         end 
-        else if (is_exception && exception_cause == `EXCEPTION_TLBR) begin
-            crmd[3] <= 1'b1; // DA
-            crmd[4] <= 1'b0; // PG
-        end 
+        else if (is_ertn) begin
+            crmd[1: 0] <= prmd[1: 0]; // PLV
+            crmd[2] <= prmd[2]; // IE
+            crmd[3] <= (estat[21: 16] == 6'b111111) ? 1'b0 : crmd[3]; // DA
+            crmd[4] <= (estat[21: 16] == 6'b111111) ? 1'b1 : crmd[4]; // PG
+        end
         else if (write_en && write_addr == `CSR_CRMD) begin
             crmd[8: 0] <= write_data[8: 0];
         end
@@ -133,11 +149,12 @@ module csr (
             estat <= 32'b0;
         end 
         else if (is_exception) begin
+            estat[9: 2] <= is_hwi;
+            estat[11] <= is_ti;
+            estat[12] <= is_ipi;
+            
             case (exception_cause)
                 `EXCEPTION_INT: begin
-                    estat[9: 2] <= is_hwi;
-                    estat[11] <= is_ti;
-                    estat[12] <= is_ipi;
                     estat[21: 16] <= 6'h0;
                     estat[30: 22] <= 9'b0;
                 end
@@ -331,18 +348,24 @@ module csr (
     end
 
     // LLBCTL write
-    always @(rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             llbctl <= 32'b0;
         end
-        else if (is_exception) begin
+        else if (llbctl[1]) begin
             llbctl[0] <= 1'b0;
-        end 
+            llbctl[1] <= 1'b0;
+        end
+        else if (is_ertn && llbctl[2] != 1'b1) begin
+            llbctl[0] <= 1'b0;
+            llbctl[2] <= 1'b0;
+        end
         else if (LLbit_write_en) begin
             llbctl[0] <= LLbit_i;
         end
         else if (write_en && write_addr == `CSR_LLBCTL) begin
-            llbctl[1] <= write_data[1];
+            llbctl[1] <= (write_data[1] == 1'b1) ? 1'b1: llbctl[1];
+            llbctl[2] <= write_data[2];
         end
         else begin
             llbctl <= llbctl;

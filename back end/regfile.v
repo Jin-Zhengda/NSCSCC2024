@@ -3,6 +3,7 @@
 module regfile (
     input wire clk,
     input wire rst,
+    input wire[5: 0] pause,
 
     // Write
     input wire write_en,
