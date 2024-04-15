@@ -59,7 +59,7 @@ module instbuffer(
     //头尾指针
     reg [`InstBufferAddrSize-1:0]tail;
     reg [`InstBufferAddrSize-1:0]head;
-    //表征FIFO中的指令是否有效
+    //表征FIFO中的指令是否有效,暂时没有使用
     reg [`InstBufferSize-1:0]FIFO_valid;
 
     always @(posedge clk) begin
@@ -68,21 +68,27 @@ module instbuffer(
             tail <= `ZeroInstBufferAddr;
             FIFO_valid <= `InstBufferSize'd0;
         end
-    end
-
-
-    always @(posedge clk) begin
-        if(fetch_inst_1_en) begin
-            FIFO_inst[tail] <= inst_1_i;
-            FIFO_pc[tail] <= pc_1_i;
-            FIFO_valid[tail] <= is_inst1_valid;
-            tail <= tail + 1;
-        end
-        if(fetch_inst_2_en) begin
-            FIFO_inst[tail] <= inst_2_i;
-            FIFO_pc[tail] <= pc_2_i;
-            FIFO_valid[tail] <= is_inst2_valid;
-            tail <= tail +1;
+        else begin
+            if(fetch_inst_1_en) begin
+                FIFO_inst[tail] <= inst_1_i;
+                FIFO_pc[tail] <= pc_1_i;
+                FIFO_valid[tail] <= 1'b1;
+                tail <= tail + 1;
+            end else begin
+                FIFO_inst[tail] <= FIFO_inst[tail];
+                FIFO_pc[tail] <= FIFO_pc[tail];
+                tail <= tail;
+            end
+            if(fetch_inst_2_en) begin
+                FIFO_inst[tail] <= inst_2_i;
+                FIFO_pc[tail] <= pc_2_i;
+                FIFO_valid[tail] <= 1'b1;
+                tail <= tail +1;
+            end else begin
+                FIFO_inst[tail] <= FIFO_inst[tail];
+                FIFO_pc[tail] <= FIFO_pc[tail];
+                tail <= tail;
+            end
         end
     end
 
@@ -98,15 +104,21 @@ module instbuffer(
                 instbuffer_1_o <= FIFO_inst[head];
                 pc_1_o <= FIFO_pc[head];
                 head <= head + 1;
+            end else begin
+                instbuffer_1_o <= instbuffer_1_o;
+                pc_1_o <= pc_1_o;
+                head <= head;
             end
             if(send_inst_2_en && FIFO_valid[head]) begin
                 instbuffer_2_o <= FIFO_inst[head];
                 pc_2_o <= FIFO_pc[head];
                 head <= head + 1;
+            end else begin
+                instbuffer_2_o <= instbuffer_2_o;
+                pc_2_o <= pc_2_o;
+                head <= head;
             end
         end
     end
-
-
 
 endmodule
