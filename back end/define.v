@@ -42,7 +42,7 @@
 
 `define BREAK_OPCODE 17'b00000000001010100
 `define SYSCALL_OPCODE 17'b00000000001010110
-`define IDEL_OPCODE 17'b00000110010010001
+`define IDLE_OPCODE 17'b00000110010010001
 `define ERTN_OPCODE 22'b0000011001001000001110
 
 `define LU12I_OPCODE 7'b0001010
@@ -135,7 +135,7 @@
 
 `define ALU_BREAK 8'b11010100
 `define ALU_SYSCALL 8'b01010110
-`define ALU_IDEL 8'b11010001
+`define ALU_IDLE 8'b11010001
 `define ALU_ERTN 8'b10001110
 
 // ALU sel operations 
@@ -181,6 +181,7 @@
 
 `define CSRAddrWidth 13: 0 // CSR addr width
 `define ExceptionCauseWidth 6: 0 // Exception cause width
+`define FiveExceptionCauseWidth 34: 0 // Four stage exception cause width
 
 // Exceptions
 `define EXCEPTION_INT 7'b0000000
@@ -199,3 +200,4 @@
 `define EXCEPTION_FPD 7'b0011110
 `define EXCEPTION_FPE 7'b0100100
 `define EXCEPTION_TLBR 7'b1111110
+`define EXCEPTION_NOP 7'b1111111

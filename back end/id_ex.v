@@ -17,8 +17,8 @@ module id_ex (
     input wire id_csr_read_en,
     input wire id_csr_write_en,
     input wire[`CSRAddrWidth] id_csr_addr,
-    input wire id_is_exception,
-    input wire[`ExceptionCauseWidth] id_exception_cause,
+    input wire[4: 0] id_is_exception,
+    input wire[`FiveExceptionCauseWidth] id_exception_cause,
     input wire[`InstAddrWidth] id_pc,
 
     output reg[`ALUSelWidth] ex_alusel,
@@ -32,8 +32,8 @@ module id_ex (
     output reg ex_csr_read_en,
     output reg ex_csr_write_en,
     output reg[`CSRAddrWidth] ex_csr_addr,
-    output reg ex_is_exception,
-    output reg[`ExceptionCauseWidth] ex_exception_cause,
+    output reg[4: 0] ex_is_exception,
+    output reg[`FiveExceptionCauseWidth] ex_exception_cause,
     output reg[`InstAddrWidth] ex_pc
 );
 
@@ -50,8 +50,8 @@ module id_ex (
             ex_csr_read_en <= 1'b0;
             ex_csr_write_en <= 1'b0;
             ex_csr_addr <= 14'b0;
-            ex_is_exception <= 1'b0;
-            ex_exception_cause <= 7'b0;
+            ex_is_exception <= 5'b0;
+            ex_exception_cause <= {5{`EXCEPTION_NOP}};
             ex_pc <= 32'h1C000000;
         end
         else if (exception_flush) begin
@@ -66,8 +66,8 @@ module id_ex (
             ex_csr_read_en <= 1'b0;
             ex_csr_write_en <= 1'b0;
             ex_csr_addr <= 14'b0;
-            ex_is_exception <= 1'b0;
-            ex_exception_cause <= 7'b0;
+            ex_is_exception <= 5'b0;
+            ex_exception_cause <= {5{`EXCEPTION_NOP}};
             ex_pc <= 32'h1C000000;
         end
         else if (pause[2] && ~pause[3]) begin
@@ -82,8 +82,8 @@ module id_ex (
             ex_csr_read_en <= 1'b0;
             ex_csr_write_en <= 1'b0;
             ex_csr_addr <= 14'b0;
-            ex_is_exception <= 1'b0;
-            ex_exception_cause <= 7'b0;
+            ex_is_exception <= 5'b0;
+            ex_exception_cause <= {5{`EXCEPTION_NOP}};
             ex_pc <= 32'h1C000000;
         end
         else if (~pause[2]) begin

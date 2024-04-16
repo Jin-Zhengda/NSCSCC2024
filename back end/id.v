@@ -9,11 +9,11 @@ module id (
     input wire[`InstAddrWidth] pc_i,
     input wire[`InstWidth] inst_i,
 
-    input wire is_exception_i,
-    input wire[`ExceptionCauseWidth] exception_cause_i,
+    input wire[4: 0] is_exception_i,
+    input wire[`FiveExceptionCauseWidth] exception_cause_i,
 
-    output reg is_exception_o,
-    output reg[`ExceptionCauseWidth] exception_cause_o,
+    output wire[4: 0] is_exception_o,
+    output wire[`FiveExceptionCauseWidth] exception_cause_o,
 
     // from Regfile
     input wire[`RegWidth] reg1_data_i,
@@ -60,15 +60,15 @@ module id (
     output reg branch_flush_o,
 
     // from csr
-    input wire[1: 0] PLV
+    input wire[1: 0] CRMD_PLV
 );
 
     assign inst_o = inst_i;
     assign pc_o = pc_i;
 
-    wire[1: 0] PLV_current;
-    assign PLV_current = (mem_csr_write_en_i && (mem_csr_write_addr_i == `CSR_CRMD))  
-                          ? mem_csr_write_data_i: PLV;
+    wire[1: 0] CRMD_PLV_current;
+    assign CRMD_PLV_current = (mem_csr_write_en_i && (mem_csr_write_addr_i == `CSR_CRMD))  
+                          ? mem_csr_write_data_i: CRMD_PLV;
 
     // Instruction fields
     wire[9: 0] opcode1 = inst_i[31: 22];
@@ -98,7 +98,12 @@ module id (
 
     reg[`RegWidth] imm;
     reg inst_valid;
+    reg id_exception;
+    reg[`ExceptionCauseWidth] id_exception_cause;
     reg reg1_lt_reg2;
+
+    assign is_exception_o = {is_exception_i[4: 3], {((rst || inst_valid || inst_i == 32'b0) ? id_exception: 1'b1)}, is_exception_i[1: 0]};
+    assign exception_cause_o = {exception_cause_i[34: 21], {((rst || inst_valid || inst_i == 32'b0) ? id_exception_cause: `EXCEPTION_INE)}, exception_cause_i[13: 0]};
 
     wire pause_reg1_load_relate;
     wire pause_reg2_load_relate;
@@ -133,8 +138,8 @@ module id (
             csr_read_en_o = 1'b0;
             csr_write_en_o = 1'b0;
             csr_addr_o = 14'b0;
-            is_exception_o = 1'b0;
-            exception_cause_o = 7'b0;
+            id_exception = 1'b0;
+            id_exception_cause = `EXCEPTION_NOP;
         end
         else begin
             aluop_o = `ALU_NOP;
@@ -154,8 +159,8 @@ module id (
             csr_read_en_o = 1'b0;
             csr_write_en_o = 1'b0;
             csr_addr_o = csr;
-            is_exception_o = is_exception_i;
-            exception_cause_o = exception_cause_i;
+            id_exception = 1'b0;
+            id_exception_cause = `EXCEPTION_NOP;
 
             case (opcode1)
                 `SLTI_OPCODE: begin
@@ -498,8 +503,8 @@ module id (
                     alusel_o = `ALU_SEL_NOP;
                     reg1_read_en_o = 1'b0;
                     reg2_read_en_o = 1'b0;
-                    is_exception_o = 1'b1;
-                    exception_cause_o = `EXCEPTION_BRK;
+                    id_exception = 1'b1;
+                    id_exception_cause = `EXCEPTION_BRK;
                     inst_valid = 1'b1;
                 end
                 `SYSCALL_OPCODE: begin
@@ -508,18 +513,18 @@ module id (
                     alusel_o = `ALU_SEL_NOP;
                     reg1_read_en_o = 1'b0;
                     reg2_read_en_o = 1'b0;
-                    is_exception_o = 1'b1;
-                    exception_cause_o = `EXCEPTION_SYS;
+                    id_exception = 1'b1;
+                    id_exception_cause = `EXCEPTION_SYS;
                     inst_valid = 1'b1;
                 end
-                `IDEL_OPCODE: begin
+                `IDLE_OPCODE: begin
                     reg_write_en_o = 1'b0;
-                    aluop_o = `ALU_IDEL;
+                    aluop_o = `ALU_IDLE;
                     alusel_o = `ALU_SEL_NOP;
                     reg1_read_en_o = 1'b0;
                     reg2_read_en_o = 1'b0;
-                    is_exception_o = (PLV_current == 2'b00) ? 1'b0: 1'b1;
-                    exception_cause_o = (PLV_current == 2'b00) ? 7'b0: `EXCEPTION_IPE;
+                    id_exception = (CRMD_PLV_current == 2'b00) ? 1'b0: 1'b1;
+                    id_exception_cause = (CRMD_PLV_current == 2'b00) ? 7'b0: `EXCEPTION_IPE;
                     inst_valid = 1'b1;
                 end
                 default:begin
@@ -574,8 +579,8 @@ module id (
                     inst_valid = 1'b1;
                 end
                 `CSR_OPCODE: begin
-                    is_exception_o = (PLV_current == 2'b00) ? 1'b0: 1'b1;  
-                    exception_cause_o = (PLV_current == 2'b00) ? 7'b0: `EXCEPTION_IPE;
+                    id_exception = (CRMD_PLV_current == 2'b00) ? 1'b0: 1'b1;  
+                    id_exception_cause = (CRMD_PLV_current == 2'b00) ? 7'b0: `EXCEPTION_IPE;
                     case (rj)
                         `CSRRD_OPCODE: begin
                             reg_write_en_o = 1'b1;
@@ -790,8 +795,8 @@ module id (
                     reg1_read_en_o = 1'b0;
                     reg2_read_en_o = 1'b0;
                     inst_valid = 1'b1;
-                    is_exception_o = (PLV_current == 2'b00) ? 1'b0: 1'b1;
-                    exception_cause_o = (PLV_current == 2'b00) ? 7'b0: `EXCEPTION_IPE;
+                    id_exception = (CRMD_PLV_current == 2'b00) ? 1'b0: 1'b1;
+                    id_exception_cause = (CRMD_PLV_current == 2'b00) ? 7'b0: `EXCEPTION_IPE;
                 end 
                 default: begin
                 end 
