@@ -27,13 +27,11 @@ module pc_reg(
     input wire[5: 0] pause,
     input wire is_branch_i_1,
     input wire is_branch_i_2,
-    input wire taken_or_not_1,
-    input wire taken_or_not_2,
-    input wire[`InstAddrWidth] branch_target_addr_i_1,
-    input wire[`InstAddrWidth] branch_target_addr_i_2,
+    input wire taken_or_not,
+    input wire[`InstAddrWidth] branch_target_addr_i,
 
-    output reg[`InstAddrWidth] pc_o_1,
-    output reg[`InstAddrWidth] pc_o_2,
+    output reg[`InstAddrWidth] pc_1_o,
+    output reg[`InstAddrWidth] pc_2_o,
     output reg inst_en_o_1,
     output reg inst_en_o_2   
 );
@@ -49,21 +47,24 @@ module pc_reg(
         end
     end
 
+
     always @(posedge clk) begin
         if (rst) begin
-            pc_o_1 <= 32'h0;
-            pc_o_2 <= 32'h0;
+            pc_1_o <= 32'h0;
+            pc_2_o <= 32'h4;
         end
         else if (pause[0]) begin
-            pc_o_1 <= pc_o_1;
-            pc_o_2 <= pc_o_2;
+            pc_1_o <= pc_1_o;
+            pc_2_o <= pc_2_o;
         end
         else begin
-            if (is_branch_i_1&&taken_or_not_1) begin
-                pc_o_1 <= branch_target_addr_i_1;
+            if ((is_branch_i_1&is_branch_i_2)&&taken_or_not) begin
+                pc_1_o <= branch_target_addr_i;
+                pc_2_o <= branch_target_addr_i+4;
             end
             else begin
-            pc_o_1 <= pc_o_1 + 4'h4;
+            pc_1_o <= pc_1_o + 4'h8;
+            pc_2_o <= pc_2_o + 4'h8;
             end
         end
     end
