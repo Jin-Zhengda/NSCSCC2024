@@ -35,12 +35,10 @@ module branch_prediction_unit(
     output reg [`InstBus] pc_2_o,
     output reg is_branch_1,
     output reg is_branch_2,
-    output reg taken_or_not_1,
-    output reg taken_or_not_2,
+    output reg taken_or_not,
 
     //跳转的目标地址，传给pc
-    output reg [`InstBus] branch_target_1,  
-    output reg [`InstBus] branch_target_2,
+    output reg [`InstBus] branch_target,  
     output reg [`InstBus] inst_1_o,
     output reg [`InstBus] inst_2_o,
     output reg fetch_inst_1_en,
@@ -52,6 +50,7 @@ module branch_prediction_unit(
 
     assign branch_judge_1 = inst_1_i[31:26];
     assign branch_judge_2 = inst_2_i[31:26];
+
 
     always @(*) begin
         case(branch_judge_1)
@@ -129,6 +128,12 @@ module branch_prediction_unit(
         endcase
     end
 
+    reg [`InstBus] prediction_addr_1;
+    reg [`InstBus] prediction_addr_2;
+
+    reg taken_or_not_1;
+    reg taken_or_not_2;
+
     always @(posedge clk) begin
         if(rst|flush) begin
             fetch_inst_1_en <= 0;
@@ -137,20 +142,42 @@ module branch_prediction_unit(
             inst_2_o <= 0;
             pc_1_o <= 0;
             pc_2_o <= 0;
+            is_branch_1 <= 0;
+            is_branch_2 <= 0;
         end
         else begin
-            fetch_inst_1_en <= 1'b0;
-            fetch_inst_2_en <= 1'b1;
-            inst_1_o <= inst_1_i;
-            inst_2_o <= inst_2_i;
-            pc_1_o <= pc_1_i;
-            pc_2_o <= pc_2_i;
+            if(is_branch_1&&taken_or_not_1)begin
+                fetch_inst_1_en <= 1'b1;
+                fetch_inst_2_en <= 1'b0;
+                inst_1_o <= inst_1_i;
+                pc_1_o <= pc_1_i;
+                branch_target <= prediction_addr_1;
+            end else if(is_branch_2&&taken_or_not_2) begin
+                fetch_inst_1_en <= 1'b1;
+                fetch_inst_2_en <= 1'b1;
+                inst_1_o <= inst_1_i;
+                inst_2_o <= inst_2_i;
+                pc_1_o <= pc_1_i;
+                pc_2_o <= pc_2_i;
+                branch_target <= prediction_addr_2;
+            end else begin
+                fetch_inst_1_en <= 1'b1;
+                fetch_inst_2_en <= 1'b1;
+                inst_1_o <= inst_1_i;
+                inst_2_o <= inst_2_i;
+                pc_1_o <= pc_1_i;
+                pc_2_o <= pc_2_i;
+            end
         end
     end
 
+    // always @(*) begin
+    //     taken_or_not <= taken_or_not_1&taken_or_not_2;
+    // end
+
     always @(*) begin
-        taken_or_not_1 <= 0;
-        taken_or_not_2 <= 0;
+        taken_or_not <= 0;
     end
+
 
 endmodule
