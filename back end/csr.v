@@ -28,12 +28,18 @@ module csr (
 
     // LLbit
     input wire LLbit_write_en,
-    input wire LLbit_i,
+    input wire LLbit_i, 
     output wire LLbit_o,
 
-    output wire[1: 0] PLV,
+    // to id
+    output wire[1: 0] CRMD_PLV,
+
+    // to ctrl
     output wire[`InstAddrWidth] EENTRY_VA,
-    output wire[`InstAddrWidth] ERA_PC
+    output wire[`InstAddrWidth] ERA_PC,
+    output wire[11: 0] ECFG_LIE,
+    output wire[11: 0] ESTAT_IS,
+    output wire CRMD_IE
 );
 
     reg[`RegWidth] crmd;
@@ -67,10 +73,12 @@ module csr (
     reg[`RegWidth] dmw0;
     reg[`RegWidth] dmw1;
 
-    assign PLV = crmd[1: 0];
+    assign CRMD_PLV = crmd[1: 0];
 
     assign EENTRY_VA = {eentry[31: 6], 6'b0};
     assign ERA_PC = era;
+    assign ECFG_LIE = {ecfg[12: 11], ecfg[9: 0]};
+    assign ESTAT_IS = {estat[12: 11], estat[9: 0]};
 
     // CRMD write
     always @(posedge clk) begin
@@ -149,10 +157,6 @@ module csr (
             estat <= 32'b0;
         end 
         else if (is_exception) begin
-            estat[9: 2] <= is_hwi;
-            estat[11] <= is_ti;
-            estat[12] <= is_ipi;
-            
             case (exception_cause)
                 `EXCEPTION_INT: begin
                     estat[21: 16] <= 6'h0;
@@ -226,7 +230,12 @@ module csr (
             estat[1: 0] <= write_data[1: 0];
         end
         else begin
-            estat <= estat;
+            estat[1: 0] <= estat[1: 0];
+            estat[9: 2] <= is_hwi;
+            estat[10] <= estat[10];
+            estat[11] <= is_ti;
+            estat[12] <= is_ipi;
+            estat[31: 13] <= estat[31: 13];
         end
     end
 

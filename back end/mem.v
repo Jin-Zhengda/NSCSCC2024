@@ -5,7 +5,6 @@ module mem (
 
     // from ex_mem
     input wire[`InstAddrWidth] pc_i,
-    output wire[`InstAddrWidth] pc_o,
     input wire[`RegWidth] reg_write_data_i,
     input wire[`RegAddrWidth] reg_write_addr_i,
     input wire reg_write_en_i,
@@ -20,13 +19,16 @@ module mem (
     input wire[`RegWidth] csr_write_data_i,
     input wire[`RegWidth] csr_mask_i,
 
-    input wire is_exception_i,
-    input wire[`ExceptionCauseWidth] exception_cause_i,
+    input wire[5: 0] is_exception_i,
+    input wire[`FiveExceptionCauseWidth] exception_cause_i,
 
-    output wire is_exception_o,
-    output reg[`ExceptionCauseWidth] exception_cause_o,
+    // to ctrl
+    output wire[5: 0] is_exception_o,
+    output wire[`FiveExceptionCauseWidth] exception_cause_o,
+    output wire[`InstAddrWidth] pc_o,
     output wire[`RegWidth] exception_addr_o,
     output wire is_ertn,
+    output wire pause_mem,
 
     // to mem_wb
     output reg[`RegWidth] reg_write_data_o,
@@ -71,7 +73,7 @@ module mem (
 
     assign exception_addr_o = mem_addr_i;
 
-    assign is_ertn = (~is_exception_o && aluop_i == `ALU_ERTN) ? 1'b1 : 1'b0;
+    assign is_ertn = (is_exception_o == 5'b0 && aluop_i == `ALU_ERTN) ? 1'b1 : 1'b0;
 
     wire LLbit;
 
@@ -79,9 +81,13 @@ module mem (
 
     reg[`RegWidth] csr_read_data;
 
-    reg is_exception;
+    assign pause_mem = (aluop_i == `ALU_IDLE) ? 1'b1 : 1'b0;
 
-    assign is_exception_o = (pc_i == 32'h0) ? 1'b0 : is_exception;
+    reg mem_is_exception;
+    reg[`ExceptionCauseWidth] mem_is_exception_cause;
+
+    assign is_exception_o = {is_exception_i[4: 1], mem_is_exception};
+    assign exception_cause_o = {exception_cause_i[34: 7], mem_is_exception_cause};
 
     always @(*) begin
         if (rst) begin
@@ -113,8 +119,8 @@ module mem (
             csr_write_en_o = 1'b0;
             csr_write_addr_o = 14'b0;
             csr_write_data_o = 32'b0;
-            is_exception = 1'b0;
-            exception_cause_o = 7'b0;
+            mem_is_exception = 1'b0;
+            mem_is_exception_cause = `EXCEPTION_NOP;
         end
         else begin
             reg_write_data_o = reg_write_data_i;
@@ -130,8 +136,8 @@ module mem (
             csr_write_en_o = csr_write_en_i;
             csr_write_addr_o = csr_addr_i;
             csr_write_data_o = csr_write_data_i;
-            is_exception = is_exception_i;
-            exception_cause_o = exception_cause_i;
+            mem_is_exception = 1'b0;
+            mem_is_exception_cause = `EXCEPTION_NOP;
 
             case (aluop_i)
                 `ALU_LDB: begin
@@ -201,8 +207,8 @@ module mem (
                         end
                         2'b01, 2'b11: begin
                             reg_write_data_o = 32'b0;
-                            is_exception = 1'b1;
-                            exception_cause_o = `EXCEPTION_ALE;
+                            mem_is_exception = 1'b1;
+                            mem_is_exception_cause = `EXCEPTION_ALE;
                         end
                         default: begin
                             reg_write_data_o = 32'b0;
@@ -224,8 +230,8 @@ module mem (
                         end
                         2'b01, 2'b11: begin
                             reg_write_data_o = 32'b0;
-                            is_exception = 1'b1;
-                            exception_cause_o = `EXCEPTION_ALE;
+                            mem_is_exception = 1'b1;
+                            mem_is_exception_cause = `EXCEPTION_ALE;
                         end
                         default: begin
                             reg_write_data_o = 32'b0;
@@ -238,8 +244,8 @@ module mem (
                     ram_en_o = 1'b1;
                     reg_write_data_o = ram_data_i;
                     mem_select_o = 4'b1111;
-                    is_exception = (mem_addr_i[1: 0] == 2'b00) ? 1'b0 : 1'b1;
-                    exception_cause_o = (mem_addr_i[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
+                    mem_is_exception = (mem_addr_i[1: 0] == 2'b00) ? 1'b0 : 1'b1;
+                    mem_is_exception_cause = (mem_addr_i[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
                 end
                 `ALU_STB: begin
                     mem_addr_o = mem_addr_i;
@@ -278,8 +284,8 @@ module mem (
                         end
                         2'b01, 2'b11: begin
                             mem_select_o = 4'b0000;
-                            is_exception = 1'b1;
-                            exception_cause_o = `EXCEPTION_ALE;
+                            mem_is_exception = 1'b1;
+                            mem_is_exception_cause = `EXCEPTION_ALE;
                         end
                         default: begin
                             mem_select_o = 4'b0000;                        
@@ -292,8 +298,8 @@ module mem (
                     store_data_o = store_data_i;
                     ram_en_o = 1'b1;
                     mem_select_o = 4'b1111;
-                    is_exception = (mem_addr_i[1: 0] == 2'b00) ? 1'b0 : 1'b1;
-                    exception_cause_o = (mem_addr_i[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
+                    mem_is_exception = (mem_addr_i[1: 0] == 2'b00) ? 1'b0 : 1'b1;
+                    mem_is_exception_cause = (mem_addr_i[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
                 end
                 `ALU_LLW: begin
                     mem_addr_o = mem_addr_i;
@@ -303,8 +309,8 @@ module mem (
                     mem_select_o = 4'b1111;
                     LLbit_write_en_o = 1'b1;
                     LLbit_write_data_o = 1'b1;
-                    is_exception = (mem_addr_i[1: 0] == 2'b00) ? 1'b0 : 1'b1;
-                    exception_cause_o = (mem_addr_i[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
+                    mem_is_exception = (mem_addr_i[1: 0] == 2'b00) ? 1'b0 : 1'b1;
+                    mem_is_exception_cause = (mem_addr_i[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
                 end
                 `ALU_SCW: begin
                     if (LLbit) begin
@@ -319,8 +325,8 @@ module mem (
                     end else begin
                         reg_write_data_o = 32'b0;
                     end
-                    is_exception = (mem_addr_i[1: 0] == 2'b00) ? 1'b0 : 1'b1;
-                    exception_cause_o = (mem_addr_i[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
+                    mem_is_exception = (mem_addr_i[1: 0] == 2'b00) ? 1'b0 : 1'b1;
+                    mem_is_exception_cause = (mem_addr_i[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
                 end
                 `ALU_CSRRD: begin
                     reg_write_data_o = csr_read_data;

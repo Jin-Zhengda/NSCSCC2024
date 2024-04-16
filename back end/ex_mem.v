@@ -17,8 +17,8 @@ module ex_mem (
     input wire[`CSRAddrWidth] ex_csr_addr,
     input wire[`RegWidth] ex_csr_write_data,
     input wire[`RegWidth] ex_csr_mask,
-    input wire ex_is_exception,
-    input wire[`ExceptionCauseWidth] ex_exception_cause,
+    input wire[4: 0] ex_is_exception,
+    input wire[`FiveExceptionCauseWidth] ex_exception_cause,
     input wire[`InstAddrWidth] ex_pc,
 
     output reg[`RegWidth] mem_reg_write_data,
@@ -32,8 +32,8 @@ module ex_mem (
     output reg[`CSRAddrWidth] mem_csr_addr,
     output reg[`RegWidth] mem_csr_write_data,
     output reg[`RegWidth] mem_csr_mask,
-    output reg mem_is_exception,
-    output reg[`ExceptionCauseWidth] mem_exception_cause,
+    output reg[4: 0] mem_is_exception,
+    output reg[`FiveExceptionCauseWidth] mem_exception_cause,
     output reg[`InstAddrWidth] mem_pc
 );  
 
@@ -50,8 +50,8 @@ module ex_mem (
             mem_csr_addr <= 14'b0;
             mem_csr_write_data <= 32'b0;
             mem_csr_mask <= 32'b0;
-            mem_is_exception <= 1'b0;
-            mem_exception_cause <= 7'b0;
+            mem_is_exception <= 5'b0;
+            mem_exception_cause <= {5{`EXCEPTION_NOP}};
             mem_pc <= 32'h1C000000;
         end
         else if (exception_flush) begin
@@ -66,8 +66,8 @@ module ex_mem (
             mem_csr_addr <= 14'b0;
             mem_csr_write_data <= 32'b0;
             mem_csr_mask <= 32'b0;
-            mem_is_exception <= 1'b0;
-            mem_exception_cause <= 7'b0;
+            mem_is_exception <= 5'b0;
+            mem_exception_cause <= {5{`EXCEPTION_NOP}};
             mem_pc <= 32'h1C000000;
         end
         else if (pause[3] && ~pause[4]) begin
@@ -82,8 +82,8 @@ module ex_mem (
             mem_csr_addr <= 14'b0;
             mem_csr_write_data <= 32'b0;
             mem_csr_mask <= 32'b0;
-            mem_is_exception <= 1'b0;
-            mem_exception_cause <= 7'b0;
+            mem_is_exception <= 5'b0;
+            mem_exception_cause <= {5{`EXCEPTION_NOP}};
             mem_pc <= 32'h1C000000;
         end 
         else if (~pause[3]) begin

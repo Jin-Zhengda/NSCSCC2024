@@ -2,7 +2,7 @@
 
 module ex (
     input wire rst,
-    output reg pause_ex,
+    output wire pause_ex,
 
     // from id_ex
     input wire[`ALUSelWidth] alusel_i,
@@ -20,11 +20,11 @@ module ex (
     output reg reg_write_en_o,
     output reg[`RegWidth] reg_write_data_o,
 
-    input wire is_exception_i,
-    input wire[`ExceptionCauseWidth] exception_cause_i,
+    input wire[4: 0] is_exception_i,
+    input wire[`FiveExceptionCauseWidth] exception_cause_i,
 
-    output wire is_exception_o,
-    output wire[`ExceptionCauseWidth] exception_cause_o,
+    output wire[4: 0] is_exception_o,
+    output wire[`FiveExceptionCauseWidth] exception_cause_o,
 
     // from div
     input wire[`DoubleRegWidth] div_result_i,
@@ -68,9 +68,6 @@ module ex (
 
     wire[11: 0] si12 = inst_i[21: 10];
     wire[13: 9] si14 = inst_i[14: 10];
-
-    // assign mem_addr_o = (aluop_i == `LDB_OPCODE || aluop_i == `LDH_OPCODE || aluop_i == `LDW_OPCODE || aluop_i == `LDBU_OPCODE || aluop_i == `LDHU_OPCODE) ? reg1_i + reg2_i : 
-    //                     ((aluop_i == `STB_OPCODE || aluop_i == `STH_OPCODE || aluop_i == `STW_OPCODE) ? reg1_i + {{20{si12[11]}}, si12} : 32'b0);
 
     always @(*) begin
         if (rst) begin
@@ -243,9 +240,7 @@ module ex (
         end
     end
 
-    always @(*) begin
-        pause_ex = pause_ex_div;
-    end
+    assign pause_ex = pause_ex_div;
 
     always @(*) begin
         if (rst) begin
