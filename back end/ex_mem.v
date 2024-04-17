@@ -52,7 +52,7 @@ module ex_mem (
             mem_csr_mask <= 32'b0;
             mem_is_exception <= 5'b0;
             mem_exception_cause <= {5{`EXCEPTION_NOP}};
-            mem_pc <= 32'h1C000000;
+            mem_pc <= 32'h100;
         end
         else if (exception_flush) begin
             mem_reg_write_data <= 32'b0;
@@ -68,7 +68,7 @@ module ex_mem (
             mem_csr_mask <= 32'b0;
             mem_is_exception <= 5'b0;
             mem_exception_cause <= {5{`EXCEPTION_NOP}};
-            mem_pc <= 32'h1C000000;
+            mem_pc <= 32'h100;
         end
         else if (pause[3] && ~pause[4]) begin
             mem_reg_write_data <= 32'b0;
@@ -84,7 +84,7 @@ module ex_mem (
             mem_csr_mask <= 32'b0;
             mem_is_exception <= 5'b0;
             mem_exception_cause <= {5{`EXCEPTION_NOP}};
-            mem_pc <= 32'h1C000000;
+            mem_pc <= 32'h100;
         end 
         else if (~pause[3]) begin
             mem_reg_write_data <= ex_reg_write_data;

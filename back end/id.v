@@ -89,6 +89,7 @@ module id (
     wire[4: 0] rd = inst_i[4: 0];
     wire[14: 0] code = inst_i[14: 0];
     wire[13: 0] csr = inst_i[23: 10];
+    wire[9: 0] level = inst_i[9: 0]; 
 
     wire[`RegWidth] branch16_addr;
     wire[`RegWidth] branch26_addr;

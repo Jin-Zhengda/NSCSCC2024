@@ -35,7 +35,7 @@ module pc (
 
     always @(posedge clk) begin
         if (rst) begin
-            pc_o <= 32'h1C000000;
+            pc_o <= 32'h100;
         end
         else if (exception_flush) begin
             pc_o <= exception_handle_pc_i;

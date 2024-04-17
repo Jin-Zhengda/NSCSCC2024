@@ -20,6 +20,7 @@ module csr (
     input wire[`InstAddrWidth] exception_pc,
     input wire[`RegWidth] exception_addr,
     input wire is_ertn,
+    input wire is_syscall_break,
 
     // interrupt
     input wire is_ipi,
@@ -245,7 +246,12 @@ module csr (
             era <= 32'b0;
         end 
         else if (is_exception) begin
-            era <= exception_pc;
+            if (is_syscall_break) begin
+                era <= exception_pc + 4'h4;
+            end
+            else begin
+                era <= exception_pc;
+            end
         end
         else if (write_en && write_addr == `CSR_ERA) begin
             era <= write_data;

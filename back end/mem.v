@@ -29,6 +29,7 @@ module mem (
     output wire[`RegWidth] exception_addr_o,
     output wire is_ertn,
     output wire pause_mem,
+    output wire is_syscall_break,
 
     // to mem_wb
     output reg[`RegWidth] reg_write_data_o,
@@ -74,6 +75,7 @@ module mem (
     assign exception_addr_o = mem_addr_i;
 
     assign is_ertn = (is_exception_o == 5'b0 && aluop_i == `ALU_ERTN) ? 1'b1 : 1'b0;
+    assign is_syscall_break = (aluop_i == `ALU_SYSCALL || aluop_i == `ALU_BREAK) ? 1'b1 : 1'b0;
 
     wire LLbit;
 

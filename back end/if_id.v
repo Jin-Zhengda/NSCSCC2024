@@ -23,26 +23,26 @@ module if_id (
 
     always @(posedge clk) begin
         if (rst) begin
-            id_pc <= 32'h1C000000;
+            id_pc <= 32'h100;
             id_inst <= 32'b0;
             id_is_exception <= 5'b0;
             id_exception_cause <= {5{`EXCEPTION_NOP}};
         end
         else if (exception_flush) begin
-            id_pc <= 32'h1C000000;
+            id_pc <= 32'h100;
             id_inst <= 32'b0;
             id_is_exception <= 5'b0;
             id_exception_cause <= {5{`EXCEPTION_NOP}};
         end
         else if (pause[1] && ~pause[2]) begin
-            id_pc <= 32'h1C000000;
+            id_pc <= 32'h100;
             id_inst <= 32'b0;
             id_is_exception <= 5'b0;
             id_exception_cause <= {5{`EXCEPTION_NOP}};
         end 
         else if (~pause[1])begin
             if (branch_flush) begin
-                id_pc <= 32'h1C000000;
+                id_pc <= 32'h100;
                 id_inst <= 32'b0;
                 id_is_exception <= 5'b0;
                 id_exception_cause <= {5{`EXCEPTION_NOP}};

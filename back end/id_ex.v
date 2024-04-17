@@ -52,7 +52,7 @@ module id_ex (
             ex_csr_addr <= 14'b0;
             ex_is_exception <= 5'b0;
             ex_exception_cause <= {5{`EXCEPTION_NOP}};
-            ex_pc <= 32'h1C000000;
+            ex_pc <= 32'h100;
         end
         else if (exception_flush) begin
             ex_alusel <= `ALU_SEL_NOP;
@@ -68,7 +68,7 @@ module id_ex (
             ex_csr_addr <= 14'b0;
             ex_is_exception <= 5'b0;
             ex_exception_cause <= {5{`EXCEPTION_NOP}};
-            ex_pc <= 32'h1C000000;
+            ex_pc <= 32'h100;
         end
         else if (pause[2] && ~pause[3]) begin
             ex_alusel <= `ALU_SEL_NOP;
@@ -84,7 +84,7 @@ module id_ex (
             ex_csr_addr <= 14'b0;
             ex_is_exception <= 5'b0;
             ex_exception_cause <= {5{`EXCEPTION_NOP}};
-            ex_pc <= 32'h1C000000;
+            ex_pc <= 32'h100;
         end
         else if (~pause[2]) begin
             ex_alusel <= id_alusel;

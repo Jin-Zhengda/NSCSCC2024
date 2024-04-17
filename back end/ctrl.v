@@ -62,7 +62,7 @@ module ctrl (
 
     wire[11: 0] int_vec;
 
-    assign int_vec = ECFG_LIE_current & ESTAT_IS_current;
+    assign int_vec = CRMD_IE_current ? ECFG_LIE_current & ESTAT_IS_current: 12'b0;
  
     assign is_interrupt_o = (int_vec != 12'b0) ? 1'b1 : 1'b0;
     
@@ -72,7 +72,7 @@ module ctrl (
             is_exception_o = 1'b0;
             exception_cause_o = `EXCEPTION_NOP;
         end
-        else if (pc != 32'h1C000000 && is_exception_i != 5'b0) begin
+        else if (pc != 32'h100 && is_exception_i != 5'b0) begin
             is_exception_o = 1'b1;
             if (is_exception_i[4]) begin
                 exception_cause_o = exception_cause_i[34: 28];
@@ -98,7 +98,7 @@ module ctrl (
 
     wire pause_idle;
 
-    assign pause_idle = pause_mem;
+    assign pause_idle = pause_mem && (int_vec == 12'b0) && ~rst;
 
     always @(*) begin
         if (rst) begin

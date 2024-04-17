@@ -132,6 +132,7 @@ module LA_cpu (
     wire csr_read_en;
     wire[`RegWidth] csr_read_addr;
     wire is_ertn;
+    wire is_syscall_break;
 
     // mem and ctrl
     wire[`InstAddrWidth] mem_exception_pc_o;
@@ -156,8 +157,8 @@ module LA_cpu (
     wire CRMD_IE;
     wire is_exception;
     wire[`ExceptionCauseWidth] exception_cause;
-    wire exception_pc;
-    wire exception_addr;
+    wire[`InstAddrWidth] exception_pc;
+    wire[`RegWidth] exception_addr;
 
     // div 
     wire div_start;
@@ -472,7 +473,8 @@ module LA_cpu (
         .exception_cause_o(mem_exception_cause_o),
         .pc_o(mem_exception_pc_o),
         .exception_addr_o(mem_exception_addr_o),
-        .pause_mem(pause_mem)
+        .pause_mem(pause_mem),
+        .is_syscall_break(is_syscall_break)
     );
 
     mem_wb u_mem_wb (
@@ -568,6 +570,7 @@ module LA_cpu (
         .exception_pc(exception_pc),
         .exception_addr(exception_addr),
         .is_ertn(is_ertn),
+        .is_syscall_break(is_syscall_break),
 
         .LLbit_write_en(wb_LLbit_write_en_i),
         .LLbit_i(wb_LLbit_write_data_i),
