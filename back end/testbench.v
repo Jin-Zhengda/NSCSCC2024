@@ -21,7 +21,8 @@ module testbench (
     initial begin
         rst = 1'b1;
         #195 rst = 1'b0;
-        #1000 $finish;
+        #900 rst = 1'b1;
+        #100 $finish;
     end
     
 endmodule

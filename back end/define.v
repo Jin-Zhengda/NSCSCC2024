@@ -9,6 +9,8 @@
 `define ALUOpWidth 7: 0 // ALU operation width
 `define ALUSelWidth 2: 0 // ALU width
 
+`define CountWidth 63: 0 // Counter width
+
 // Opcodes 
 
 `define SLTI_OPCODE 10'b0000001000
