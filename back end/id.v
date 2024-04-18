@@ -77,6 +77,7 @@ module id (
     wire[7: 0] opcode4 = inst_i[31: 24];
     wire[5: 0] opcode5 = inst_i[31: 26];
     wire[21: 0] opcode6 = inst_i[31: 10];
+    wire[26: 0] opcode7 = inst_i[31: 5];   
 
     wire[19: 0] si20 = inst_i[24: 5];
     wire[11: 0] ui12 = inst_i[21: 10];
@@ -799,8 +800,40 @@ module id (
                     id_exception = (CRMD_PLV_current == 2'b00) ? 1'b0: 1'b1;
                     id_exception_cause = (CRMD_PLV_current == 2'b00) ? 7'b0: `EXCEPTION_IPE;
                 end 
+                `RDCNTID_OPCDOE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rj;
+                    aluop_o = `ALU_RDCNTID;
+                    alusel_o = `ALU_SEL_NOP;
+                    reg1_read_en_o = 1'b0;
+                    reg2_read_en_o = 1'b0;
+                    inst_valid = 1'b1;
+                end
                 default: begin
                 end 
+            endcase
+
+            case (opcode7) 
+                `RDCNTVLW_OPCODE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_RDCNTVLW;
+                    alusel_o = `ALU_SEL_NOP;
+                    reg1_read_en_o = 1'b0;
+                    reg2_read_en_o = 1'b0;
+                    inst_valid = 1'b1;
+                end
+                `RDCNTVHW_OPCDOE: begin
+                    reg_write_en_o = 1'b1;
+                    reg_write_addr_o = rd;
+                    aluop_o = `ALU_RDCNTVHW;
+                    alusel_o = `ALU_SEL_NOP;
+                    reg1_read_en_o = 1'b0;
+                    reg2_read_en_o = 1'b0;
+                    inst_valid = 1'b1;
+                end
+                default: begin
+                end
             endcase
         end
     end

@@ -25,7 +25,6 @@ module csr (
     // interrupt
     input wire is_ipi,
     input wire[7: 0] is_hwi,
-    input wire is_ti,
 
     // LLbit
     input wire LLbit_write_en,
@@ -40,7 +39,8 @@ module csr (
     output wire[`InstAddrWidth] ERA_PC,
     output wire[11: 0] ECFG_LIE,
     output wire[11: 0] ESTAT_IS,
-    output wire CRMD_IE
+    output wire CRMD_IE,
+    output wire TCFG
 );
 
     reg[`RegWidth] crmd;
@@ -73,6 +73,8 @@ module csr (
     reg[`RegWidth] ctag;
     reg[`RegWidth] dmw0;
     reg[`RegWidth] dmw1;
+
+    wire is_ti;
 
     assign CRMD_PLV = crmd[1: 0];
 
@@ -303,7 +305,7 @@ module csr (
     // CPUID write
     always @(posedge clk) begin
         if (rst) begin
-            cpuid <= 32'b0;
+            cpuid <= 32'b1;
         end
         else begin
             cpuid <= cpuid;
@@ -389,6 +391,73 @@ module csr (
 
     assign LLbit_o = llbctl[0];
 
+    // TID write
+    always @(posedge clk) begin
+        if (rst) begin
+            tid <= cpuid;
+        end
+        else if (write_en && write_addr == `CSR_TID) begin
+            tid <= write_data;
+        end
+        else begin
+            tid <= tid;
+        end
+    end
+
+    // TCFG write
+    always @(posedge clk) begin
+        if (rst) begin
+            tcfg <= 32'b0;
+        end
+        else if (write_en && write_addr == `CSR_TCFG) begin
+            tcfg <= write_data;
+        end
+        else begin
+            tcfg <= tcfg;
+        end
+    end
+
+    // TVAL write
+    // csr counter
+    wire csr_cnt_end;
+
+    assign is_ti = (tval == 32'h0) && ~ticlr[0];
+
+    assign csr_cnt_end = tcfg[0] && (tval == 32'h0) && ~is_ti;
+
+    always @(posedge clk) begin
+        if (rst) begin
+            tval <= 32'hFFFFFFFF;
+        end
+        else if (csr_cnt_end) begin
+            if (tcfg[1]) begin
+                tval <= {tcfg[31: 2], 2'b0};
+            end
+            else begin
+                tval <= tval;
+            end
+        end
+        else if (tcfg[0] && ~is_ti) begin
+            tval <= tval - 32'h1;
+        end
+        else begin
+            tval <= tval;
+        end
+    end
+
+    // TICLR write
+    always @(posedge clk) begin
+        if (rst) begin
+            ticlr <= 32'b0;
+        end
+        else if (write_en && write_addr == `CSR_TICLR && write_data[0] == 1'b1) begin
+            ticlr[0] <= write_data[0];
+        end
+        else begin
+            ticlr <= 32'b0;
+        end
+    end
+
     // read
     always @(*) begin
         if (rst) begin
@@ -438,13 +507,25 @@ module csr (
                 `CSR_LLBCTL: begin
                     read_data = llbctl;
                 end
+                `CSR_TID: begin
+                    read_data = tid;
+                end
+                `CSR_TCFG: begin
+                    read_data = tcfg;
+                end
+                `CSR_TVAL: begin
+                    read_data = tval;
+                end
+                `CSR_TICLR: begin
+                    read_data = ticlr;
+                end
                 default: begin
-                    read_data = 0;
+                    read_data = 32'b0;
                 end
             endcase
         end
         else begin
-            read_data <= 32'b0;
+            read_data = 32'b0;
         end
     end
     
