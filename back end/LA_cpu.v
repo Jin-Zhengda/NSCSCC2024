@@ -140,6 +140,9 @@ module LA_cpu (
     wire[4: 0] mem_is_exception_o;
     wire[`FiveExceptionCauseWidth] mem_exception_cause_o;
     wire pause_mem;
+
+    // mem and stable counter
+    wire[63: 0] cnt;
  
     // ctrl
     wire[5: 0] pause;
@@ -474,7 +477,10 @@ module LA_cpu (
         .pc_o(mem_exception_pc_o),
         .exception_addr_o(mem_exception_addr_o),
         .pause_mem(pause_mem),
-        .is_syscall_break(is_syscall_break)
+        .is_syscall_break(is_syscall_break),
+
+        // from stable counter
+        .cnt(cnt)
     );
 
     mem_wb u_mem_wb (
@@ -582,6 +588,13 @@ module LA_cpu (
         .ECFG_LIE(ECFG_LIE),
         .ESTAT_IS(ESTAT_IS),
         .CRMD_IE(CRMD_IE)
+    );
+
+    stable_counter u_stable_counter (
+        .clk(clk),
+        .rst(rst),
+
+        .cnt(cnt)
     );
 
 endmodule

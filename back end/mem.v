@@ -64,13 +64,16 @@ module mem (
     output reg[`RegWidth] store_data_o,
     output reg mem_write_en_o,
     output reg[3: 0] mem_select_o,
-    output reg ram_en_o
+    output reg ram_en_o,
+
+    //from stable counter
+    input wire[63: 0] cnt
 );
 
     assign pc_o = pc_i;
 
-    assign csr_read_en_o = csr_read_en_i;
-    assign csr_read_addr_o = csr_addr_i;
+    assign csr_read_en_o = (aluop_i == `ALU_RDCNTID) ? 1'b1: csr_read_en_i;
+    assign csr_read_addr_o = (aluop_i == `ALU_RDCNTID) ? 14'b01000000 :csr_addr_i;
 
     assign exception_addr_o = mem_addr_i;
 
@@ -339,6 +342,15 @@ module mem (
                 `ALU_CSRXCHG: begin
                     reg_write_data_o = csr_read_data;
                     csr_write_data_o = (csr_read_data & ~csr_mask_i) | (csr_write_data_i & csr_mask_i);
+                end
+                `ALU_RDCNTID: begin
+                    reg_write_data_o = csr_read_data;
+                end
+                `ALU_RDCNTVLW: begin
+                    reg_write_data_o = cnt[31: 0];
+                end
+                `ALU_RDCNTVHW: begin
+                    reg_write_data_o = cnt[63: 32];
                 end
                 default: begin
                 end 
