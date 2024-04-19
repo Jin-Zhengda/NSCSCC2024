@@ -56,15 +56,17 @@ module mem (
     output wire csr_read_en_o,
     output wire[`CSRAddrWidth] csr_read_addr_o,
 
-    // from data ram
-    input wire[`RegWidth] ram_data_i,
-
-    // to data ram
+    // to data ram/ cache
     output reg[`RegWidth] mem_addr_o,
     output reg[`RegWidth] store_data_o,
     output reg mem_write_en_o,
+    output reg mem_read_en_o,
     output reg[3: 0] mem_select_o,
     output reg ram_en_o,
+
+    // from cache
+    input wire[`RegWidth] ram_data_i,
+    input wire is_cache_hit_i,
 
     //from stable counter
     input wire[63: 0] cnt
@@ -82,11 +84,16 @@ module mem (
 
     wire LLbit;
 
+    wire[`RegWidth] ram_data;
+
+    assign ram_data = (is_cache_hit_i) ? ram_data_i : 32'b0;
+
     assign LLbit = (wb_LLbit_write_en_i) ? wb_LLbit_write_data_i : LLbit_i;
 
     reg[`RegWidth] csr_read_data;
+    reg pause_uncache;
 
-    assign pause_mem = (aluop_i == `ALU_IDLE) ? 1'b1 : 1'b0;
+    assign pause_mem = ((aluop_i == `ALU_IDLE) ? 1'b1 : 1'b0) || pause_uncache;
 
     reg mem_is_exception;
     reg[`ExceptionCauseWidth] mem_is_exception_cause;
@@ -117,6 +124,7 @@ module mem (
             mem_addr_o = 32'b0;
             store_data_o = 32'b0;
             mem_write_en_o = 1'b0;
+            mem_read_en_o = 1'b0;
             mem_select_o = 4'b0000;
             ram_en_o = 1'b0;
             LLbit_write_en_o = 1'b0;
@@ -134,6 +142,7 @@ module mem (
             mem_addr_o = 32'b0;
             store_data_o = 32'b0;
             mem_write_en_o = 1'b0;
+            mem_read_en_o = 1'b0;
             mem_select_o = 4'b1111;
             ram_en_o = 1'b0;
             LLbit_write_en_o = 1'b0;
@@ -143,114 +152,143 @@ module mem (
             csr_write_data_o = csr_write_data_i;
             mem_is_exception = 1'b0;
             mem_is_exception_cause = `EXCEPTION_NOP;
+            pause_uncache = 1'b0;
 
             case (aluop_i)
                 `ALU_LDB: begin
                     mem_addr_o = mem_addr_i;
                     mem_write_en_o = 1'b0;
+                    mem_read_en_o = 1'b1;
                     ram_en_o = 1'b1;
-                    case (mem_addr_i[1: 0])
-                        2'b00: begin
-                            reg_write_data_o = {{24{ram_data_i[31]}}, ram_data_i[31: 24]};
-                            mem_select_o = 4'b1000;
-                        end 
-                        2'b01: begin
-                            reg_write_data_o = {{24{ram_data_i[23]}}, ram_data_i[23: 16]};
-                            mem_select_o = 4'b0100;
-                        end
-                        2'b10: begin
-                            reg_write_data_o = {{24{ram_data_i[15]}}, ram_data_i[15: 8]};
-                            mem_select_o = 4'b0010;
-                        end
-                        2'b11: begin
-                            reg_write_data_o = {{24{ram_data_i[7]}}, ram_data_i[7: 0]};
-                            mem_select_o = 4'b0001;
-                        end
-                        default: begin
-                            reg_write_data_o = 32'b0;
-                        end
-                    endcase
+                    if (is_cache_hit_i) begin
+                        pause_uncache = 1'b0;
+                        case (mem_addr_i[1: 0])
+                            2'b00: begin
+                                reg_write_data_o = {{24{ram_data[31]}}, ram_data[7: 0]};
+                                mem_select_o = 4'b1000;
+                            end 
+                            2'b01: begin
+                                reg_write_data_o = {{24{ram_data[23]}}, ram_data[15: 8]};
+                                mem_select_o = 4'b0100;
+                            end
+                            2'b10: begin
+                                reg_write_data_o = {{24{ram_data[15]}}, ram_data[23: 16]};
+                                mem_select_o = 4'b0010;
+                            end
+                            2'b11: begin
+                                reg_write_data_o = {{24{ram_data[7]}}, ram_data[31: 24]};
+                                mem_select_o = 4'b0001;
+                            end
+                            default: begin
+                                reg_write_data_o = 32'b0;
+                            end
+                        endcase
+                    end
+                    else begin
+                        pause_uncache = 1'b1;
+                    end
+                    
                 end
                 `ALU_LDBU: begin
                     mem_addr_o = mem_addr_i;
                     mem_write_en_o = 1'b0;
+                    mem_read_en_o = 1'b1;
                     ram_en_o = 1'b1;
-                    case (mem_addr_i[1: 0])
-                        2'b00: begin
-                            reg_write_data_o = {{24{1'b0}}, ram_data_i[31: 24]};
-                            mem_select_o = 4'b1000;
-                        end 
-                        2'b01: begin
-                            reg_write_data_o = {{24{1'b0}}, ram_data_i[23: 16]};
-                            mem_select_o = 4'b0100;
-                        end
-                        2'b10: begin
-                            reg_write_data_o = {{24{1'b0}}, ram_data_i[15: 8]};
-                            mem_select_o = 4'b0010;
-                        end
-                        2'b11: begin
-                            reg_write_data_o = {{24{1'b0}}, ram_data_i[7: 0]};
-                            mem_select_o = 4'b0001;
-                        end
-                        default: begin
-                            reg_write_data_o = 32'b0;
-                        end
-                    endcase
+                    if (is_cache_hit_i) begin
+                        case (mem_addr_i[1: 0])
+                            2'b00: begin
+                                reg_write_data_o = {{24{1'b0}}, ram_data[7: 0]};
+                                mem_select_o = 4'b1000;
+                            end 
+                            2'b01: begin
+                                reg_write_data_o = {{24{1'b0}}, ram_data[15: 8]};
+                                mem_select_o = 4'b0100;
+                            end
+                            2'b10: begin
+                                reg_write_data_o = {{24{1'b0}}, ram_data[23: 16]};
+                                mem_select_o = 4'b0010;
+                            end
+                            2'b11: begin
+                                reg_write_data_o = {{24{1'b0}}, ram_data[31: 24]};
+                                mem_select_o = 4'b0001;
+                            end
+                            default: begin
+                                reg_write_data_o = 32'b0;
+                            end
+                        endcase
+                    end
+                    else begin
+                        pause_uncache = 1'b1;
+                    end
                 end 
                 `ALU_LDH: begin
+                    mem_is_exception = (mem_addr_i[1: 0] == 2'b01 || mem_addr_i[1: 0] == 2'b11) ? 1'b1 : 1'b0;
+                    mem_is_exception_cause = (mem_addr_i[1: 0] == 2'b01 || mem_addr_i[1: 0] == 2'b11) ? `EXCEPTION_ALE : 7'b0;
                     mem_addr_o = mem_addr_i;
                     mem_write_en_o = 1'b0;
+                    mem_read_en_o = 1'b1;
                     ram_en_o = 1'b1;
-                    case (mem_addr_i[1: 0])
-                        2'b00: begin
-                            reg_write_data_o = {{16{ram_data_i[31]}}, ram_data_i[31: 16]};
-                            mem_select_o = 4'b1100;
-                        end 
-                        2'b10: begin
-                            reg_write_data_o = {{16{ram_data_i[15]}}, ram_data_i[15: 0]};
-                            mem_select_o = 4'b0011;
-                        end
-                        2'b01, 2'b11: begin
-                            reg_write_data_o = 32'b0;
-                            mem_is_exception = 1'b1;
-                            mem_is_exception_cause = `EXCEPTION_ALE;
-                        end
-                        default: begin
-                            reg_write_data_o = 32'b0;
-                        end
-                    endcase
+                    if (is_cache_hit_i) begin
+                        case (mem_addr_i[1: 0])
+                            2'b00: begin
+                                reg_write_data_o = {{16{ram_data[31]}}, ram_data[15: 0]};
+                                mem_select_o = 4'b1100;
+                            end 
+                            2'b10: begin
+                                reg_write_data_o = {{16{ram_data[15]}}, ram_data[31: 16]};
+                                mem_select_o = 4'b0011;
+                            end
+                            default: begin
+                                reg_write_data_o = 32'b0;
+                            end
+                        endcase
+                    end
+                    else begin
+                        pause_uncache = 1'b1;
+                    end
+                    
                 end
                 `ALU_LDHU: begin
+                    mem_is_exception = (mem_addr_i[1: 0] == 2'b01 || mem_addr_i[1: 0] == 2'b11) ? 1'b1 : 1'b0;
+                    mem_is_exception_cause = (mem_addr_i[1: 0] == 2'b01 || mem_addr_i[1: 0] == 2'b11) ? `EXCEPTION_ALE : 7'b0;
                     mem_addr_o = mem_addr_i;
                     mem_write_en_o = 1'b0;
+                    mem_read_en_o = 1'b1;
                     ram_en_o = 1'b1;
-                    case (mem_addr_i[1: 0])
-                        2'b00: begin
-                            reg_write_data_o = {{16{1'b0}}, ram_data_i[31: 16]};
-                            mem_select_o = 4'b1100;
-                        end 
-                        2'b10: begin
-                            reg_write_data_o = {{16{1'b0}}, ram_data_i[15: 0]};
-                            mem_select_o = 4'b0011;
-                        end
-                        2'b01, 2'b11: begin
-                            reg_write_data_o = 32'b0;
-                            mem_is_exception = 1'b1;
-                            mem_is_exception_cause = `EXCEPTION_ALE;
-                        end
-                        default: begin
-                            reg_write_data_o = 32'b0;
-                        end
-                    endcase
+                    if (is_cache_hit_i) begin
+                        case (mem_addr_i[1: 0])
+                            2'b00: begin
+                                reg_write_data_o = {{16{1'b0}}, ram_data[15: 0]};
+                                mem_select_o = 4'b1100;
+                            end 
+                            2'b10: begin
+                                reg_write_data_o = {{16{1'b0}}, ram_data[31: 16]};
+                                mem_select_o = 4'b0011;
+                            end
+                            default: begin
+                                reg_write_data_o = 32'b0;
+                            end
+                        endcase
+                    end
+                    else begin
+                        pause_uncache = 1'b1;
+                    end
                 end
                 `ALU_LDW: begin
-                    mem_addr_o = mem_addr_i;
-                    mem_write_en_o = 1'b0;
-                    ram_en_o = 1'b1;
-                    reg_write_data_o = ram_data_i;
-                    mem_select_o = 4'b1111;
                     mem_is_exception = (mem_addr_i[1: 0] == 2'b00) ? 1'b0 : 1'b1;
                     mem_is_exception_cause = (mem_addr_i[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
+                    mem_addr_o = mem_addr_i;
+                    mem_write_en_o = 1'b0;
+                    mem_read_en_o = 1'b1;
+                    ram_en_o = 1'b1;
+                    if (is_cache_hit_i) begin
+                        reg_write_data_o = ram_data;
+                        mem_select_o = 4'b1111;
+                    end
+                    else begin
+                        pause_uncache = 1'b1;
+                    end
+                    
                 end
                 `ALU_STB: begin
                     mem_addr_o = mem_addr_i;
@@ -259,16 +297,16 @@ module mem (
                     ram_en_o = 1'b1;
                     case (mem_addr_i[1: 0])
                         2'b00: begin
-                            mem_select_o = 4'b1000;
+                            mem_select_o = 4'b0001;
                         end 
                         2'b01: begin
-                            mem_select_o = 4'b0100;
-                        end
-                        2'b10: begin
                             mem_select_o = 4'b0010;
                         end
+                        2'b10: begin
+                            mem_select_o = 4'b0100;
+                        end
                         2'b11: begin
-                            mem_select_o = 4'b0001;
+                            mem_select_o = 4'b1000;
                         end
                         default: begin
                             mem_select_o = 4'b0000;                        
@@ -282,10 +320,10 @@ module mem (
                     ram_en_o = 1'b1;
                     case (mem_addr_i[1: 0])
                         2'b00: begin
-                            mem_select_o = 4'b1100;
+                            mem_select_o = 4'b0011;
                         end 
                         2'b10: begin
-                            mem_select_o = 4'b0011;
+                            mem_select_o = 4'b1100;
                         end
                         2'b01, 2'b11: begin
                             mem_select_o = 4'b0000;

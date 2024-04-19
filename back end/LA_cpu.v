@@ -5,6 +5,7 @@ module LA_cpu (
     input wire rst,
 
     input wire[`InstWidth] rom_inst_i,
+    input wire is_cache_hit,
     input wire[`RegWidth] ram_data_i,
 
     output wire[`InstAddrWidth] rom_inst_addr_o,
@@ -12,6 +13,7 @@ module LA_cpu (
 
     output wire[`RegWidth] ram_addr_o,
     output wire[`RegWidth] ram_data_o,
+    output wire ram_read_en_o,
     output wire ram_write_en_o,
     output wire[3: 0] ram_select_o,
     output wire ram_en_o
@@ -454,6 +456,7 @@ module LA_cpu (
 
         // from ram
         .ram_data_i(ram_data_i),
+        .is_cache_hit_i(is_cache_hit),
 
         // to ram
         .mem_addr_o(ram_addr_o),
@@ -461,6 +464,7 @@ module LA_cpu (
         .mem_write_en_o(ram_write_en_o),
         .mem_select_o(ram_select_o),
         .ram_en_o(ram_en_o),
+        .ram_read_en_o(ram_read_en_o),
 
         // from csr
         .LLbit_i(LLbit_o),
