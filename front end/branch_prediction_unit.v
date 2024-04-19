@@ -45,8 +45,8 @@ module branch_prediction_unit(
     output reg fetch_inst_2_en
     );
 
-    wire branch_judge_1;
-    wire branch_judge_2;
+    wire [5:0] branch_judge_1;
+    wire [5:0] branch_judge_2;
 
     assign branch_judge_1 = inst_1_i[31:26];
     assign branch_judge_2 = inst_2_i[31:26];
