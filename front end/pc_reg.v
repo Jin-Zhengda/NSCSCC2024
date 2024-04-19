@@ -58,7 +58,7 @@ module pc_reg(
             pc_2_o <= pc_2_o;
         end
         else begin
-            if ((is_branch_i_1&is_branch_i_2)&&taken_or_not) begin
+            if ((is_branch_i_1|is_branch_i_2)&&taken_or_not) begin
                 pc_1_o <= branch_target_addr_i;
                 pc_2_o <= branch_target_addr_i+4;
             end
