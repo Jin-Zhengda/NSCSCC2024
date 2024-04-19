@@ -8,6 +8,7 @@ module data_ram (
     input wire[`RegWidth] addr,
     input wire[3: 0] select,
     input wire[`RegWidth] data_i,
+    input wire read_en,
 
     output reg[`RegWidth] data_o
 );
@@ -46,7 +47,7 @@ module data_ram (
         if (~ram_en) begin
             data_o <= 32'b0;
         end
-        else if (~write_en) begin
+        else if (read_en) begin
             data_o <= {ram3[data_addr], ram2[data_addr], ram1[data_addr], ram0[data_addr]};
         end 
         else begin
