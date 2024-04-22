@@ -9,6 +9,7 @@ module id
     input logic[1: 0] CRMD_PLV,
     input csr_push_forward_t csr_push_forward,
 
+    output logic pause_id,
     output id_dispatch_t id_dispatch
 );
 
@@ -40,5 +41,9 @@ module id
     wire[14: 0] code = pc_id.inst[14: 0];
     wire[13: 0] csr = pc_id.inst[23: 10];
     wire[9: 0] level = pc_id.inst[9: 0]; 
+
+
+
+
     
 endmodule
