@@ -3,7 +3,7 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date: 2024/04/15 14:00:56
+// Create Date: 2024/04/22 21:12:50
 // Design Name: 
 // Module Name: pc_reg
 // Project Name: 
@@ -21,22 +21,22 @@
 `define InstAddrWidth 31:0
 
 module pc_reg(
-    input wire clk,
-    input wire rst,
+    input logic clk,
+    input logic rst,
 
-    input wire[5: 0] pause,
-    input wire is_branch_i_1,
-    input wire is_branch_i_2,
-    input wire taken_or_not,
-    input wire[`InstAddrWidth] branch_target_addr_i,
+    input logic [5: 0] pause,
+    input logic is_branch_i_1,
+    input logic is_branch_i_2,
+    input logic taken_or_not,
+    input logic [`InstAddrWidth] branch_target_addr_i,
 
-    output reg[`InstAddrWidth] pc_1_o,
-    output reg[`InstAddrWidth] pc_2_o,
-    output reg inst_en_o_1,
-    output reg inst_en_o_2   
+    output logic [`InstAddrWidth] pc_1_o,
+    output logic [`InstAddrWidth] pc_2_o,
+    output logic inst_en_o_1,
+    output logic inst_en_o_2   
 );
 
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if (rst) begin
             inst_en_o_1 <= 1'b0;
             inst_en_o_2 <= 1'b0;
@@ -48,7 +48,7 @@ module pc_reg(
     end
 
 
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if (rst) begin
             pc_1_o <= 32'h0;
             pc_2_o <= 32'h4;
