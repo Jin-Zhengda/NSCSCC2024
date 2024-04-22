@@ -15,7 +15,7 @@ module if_id
 
 always_ff @(posedge clk) begin
     if (rst) begin
-        id_o <= '{default: 0};
+        id_o <= 0;
     end
     else if (ctrl.exception_flush) begin
         id_o <= 0;
