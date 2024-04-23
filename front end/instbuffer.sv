@@ -3,7 +3,7 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date: 2024/04/09 20:09:09
+// Create Date: 2024/04/22 21:15:41
 // Design Name: 
 // Module Name: instbuffer
 // Project Name: 
@@ -24,46 +24,46 @@
 `define ZeroInstBufferAddr 5'd0
 
 module instbuffer(
-    input clk,
-    input rst,
-    input flush,
+    input logic clk,
+    input logic rst,
+    input logic flush,
 
     //bpu传来的信号
-    input [`InstBus] inst_1_i,
-    input [`InstBus] inst_2_i,
-    input [`InstBus] pc_1_i,
-    input [`InstBus] pc_2_i,
+    input logic [`InstBus] inst_1_i,
+    input logic [`InstBus] inst_2_i,
+    input logic [`InstBus] pc_1_i,
+    input logic [`InstBus] pc_2_i,
 
-    input is_inst1_valid,
-    input is_inst2_valid,
+    input logic is_inst1_valid,
+    input logic is_inst2_valid,
 
     //发射指令的使能信号
-    input send_inst_1_en,
-    input send_inst_2_en,
+    input logic send_inst_1_en,
+    input logic send_inst_2_en,
 
     //从bpu取指令的使能信号
-    input fetch_inst_1_en,
-    input fetch_inst_2_en,
+    input logic fetch_inst_1_en,
+    input logic fetch_inst_2_en,
 
     //输出给if_id的
-    output reg [`InstBus] instbuffer_1_o,
-    output reg [`InstBus] instbuffer_2_o,
-    output reg [`InstBus] pc_1_o,
-    output reg [`InstBus] pc_2_o
+    output logic [`InstBus] instbuffer_1_o,
+    output logic [`InstBus] instbuffer_2_o,
+    output logic [`InstBus] pc_1_o,
+    output logic [`InstBus] pc_2_o
     );
 
     //FIFO for inst
-    reg [`InstBus]FIFO_inst[`InstBufferSize-1:0];
+    logic [`InstBus]FIFO_inst[`InstBufferSize-1:0];
     //FIFO for pc
-    reg [`InstBus]FIFO_pc[`InstBufferSize-1:0];
+    logic [`InstBus]FIFO_pc[`InstBufferSize-1:0];
 
     //头尾指针
-    reg [`InstBufferAddrSize-1:0]tail;
-    reg [`InstBufferAddrSize-1:0]head;
+    logic [`InstBufferAddrSize-1:0]tail;
+    logic [`InstBufferAddrSize-1:0]head;
     //表征FIFO中的指令是否有效,暂时没有使用
-    reg [`InstBufferSize-1:0]FIFO_valid;
+    logic [`InstBufferSize-1:0]FIFO_valid;
 
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if(rst|flush) begin
             head <= `ZeroInstBufferAddr;
             tail <= `ZeroInstBufferAddr;
@@ -98,8 +98,9 @@ module instbuffer(
             end
         end
     end
+        
 
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if(rst|flush) begin
             instbuffer_1_o <= 0;
             instbuffer_2_o <= 0;
