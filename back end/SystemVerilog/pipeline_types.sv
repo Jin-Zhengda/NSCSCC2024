@@ -13,6 +13,13 @@ package pipeline_types;
 
     typedef logic[6: 0] exception_cause_t;
 
+    typedef struct packed {
+        logic pasue_id;
+        logic pasue_dispatch;
+        logic pasue_ex;
+        logic pasue_mem;
+    } pause_t;
+
     // from ctrl
     typedef struct packed {
         logic[6: 0] pause;
@@ -30,8 +37,8 @@ package pipeline_types;
         bus32_t pc;
         bus32_t inst;
 
-        logic[4: 0] is_exception;
-        logic[34: 0] exception_cause;
+        logic[5: 0] is_exception;
+        logic[5: 0][6: 0] exception_cause;
     } pc_id_t;
 
     // id and dispatch
@@ -39,8 +46,8 @@ package pipeline_types;
         bus32_t pc;
         bus32_t inst;
 
-        logic[4: 0] is_exception;
-        logic[34: 0] exception_cause;
+        logic[5: 0] is_exception;
+        logic[5: 0][6: 0] exception_cause;
 
         alu_op_t aluop;
         alu_sel_t alusel;
@@ -80,8 +87,8 @@ package pipeline_types;
         bus32_t pc;
         bus32_t inst;
 
-        logic[4: 0] is_exception;
-        logic[34: 0] exception_cause;
+        logic[5: 0] is_exception;
+        logic[5: 0][6: 0] exception_cause;
 
         alu_op_t aluop;
         alu_sel_t alusel;
@@ -107,10 +114,19 @@ package pipeline_types;
     } data_write_t;
 
     typedef struct packed {
+        logic LLbit_write_en;
+        logic LLbit_write_data;
+
+        logic csr_write_en;
+        csr_addr_t csr_write_addr;
+        bus32_t csr_write_data;
+    } csr_write_t;
+
+    typedef struct packed {
         bus32_t pc;
 
-        logic[4: 0] is_exception;
-        logic[34: 0] exception_cause;
+        logic[5: 0] is_exception;
+        logic[5: 0][6: 0] exception_cause;
 
         logic reg_write_en;
         reg_addr_t reg_write_addr;
@@ -130,25 +146,21 @@ package pipeline_types;
 
     typedef struct packed {
         data_write_t data_write;
-        logic LLbit_write_en_o;
-        logic LLbit_write_data;
-
-        logic csr_write_en;
-        csr_addr_t csr_addr;
-        bus32_t csr_write_data;
+        csr_write_t csr_write;
     } mem_wb_t;
 
     typedef struct packed {
-        logic[4: 0] is_exception;
-        logic[34: 0] exception_cause;
+        logic[5: 0] is_exception;
+        logic[5: 0][6: 0] exception_cause;
 
         bus32_t pc;
         bus32_t exception_addr;
 
         logic is_ertn;
-        logic is_syscall_break;
 
         logic pause_mem;
+
+        alu_op_t aluop;
     } mem_ctrl_t;
 
 

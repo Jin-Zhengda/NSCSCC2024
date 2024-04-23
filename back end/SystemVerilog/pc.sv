@@ -20,10 +20,10 @@ module pc
     output logic inst_en
 );
 
-    assign pc_id.is_exception = {ctrl_pc.is_interrupt, {(pc_id.pc[1: 0] == 2'b00) ? 1'b0 : 1'b1}, 3'b0};
+    assign pc_id.is_exception = {ctrl_pc.is_interrupt, {(pc_id.pc[1: 0] == 2'b00) ? 1'b0 : 1'b1}, 4'b0};
     assign pc_id.exception_cause = {{ctrl_pc.is_interrupt ? `EXCEPTION_INT: `EXCEPTION_NOP}, 
                                 {(pc_id.pc[1: 0] == 2'b00) ?  `EXCEPTION_NOP: `EXCEPTION_ADEF},
-                                {3{`EXCEPTION_NOP}}};
+                                {4{`EXCEPTION_NOP}}};
 
     always_ff @(posedge clk) begin
         if (rst) begin
