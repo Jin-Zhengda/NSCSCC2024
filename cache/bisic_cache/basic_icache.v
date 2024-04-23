@@ -60,43 +60,50 @@ wire [31:0] way0_bank0_dina     ;//数据输入
 wire [31:0] way0_bank0_douta    ;//数据输出
 wire        way0_bank0_ena      ;//使能信号
 wire [ 3:0] way0_bank0_wea      ;
+
 wire [ 7:0] way0_bank1_addra    ;
 wire [31:0] way0_bank1_dina     ;
 wire [31:0] way0_bank1_douta    ;
 wire        way0_bank1_ena      ;
 wire [ 3:0] way0_bank1_wea      ;
+
 wire [ 7:0] way0_bank2_addra    ;
 wire [31:0] way0_bank2_dina     ;
 wire [31:0] way0_bank2_douta    ;
 wire        way0_bank2_ena      ;
 wire [ 3:0] way0_bank2_wea      ;
+
 wire [ 7:0] way0_bank3_addra    ;
 wire [31:0] way0_bank3_dina     ;
 wire [31:0] way0_bank3_douta    ;
 wire        way0_bank3_ena      ;
 wire [ 3:0] way0_bank3_wea      ;
+
 wire [ 7:0] way1_bank0_addra    ;
 wire [31:0] way1_bank0_dina     ;
 wire [31:0] way1_bank0_douta    ;
 wire        way1_bank0_ena      ;
 wire [ 3:0] way1_bank0_wea      ;
+
 wire [ 7:0] way1_bank1_addra    ;
 wire [31:0] way1_bank1_dina     ;
 wire [31:0] way1_bank1_douta    ;
 wire        way1_bank1_ena      ;
 wire [ 3:0] way1_bank1_wea      ;
+
 wire [ 7:0] way1_bank2_addra    ;
 wire [31:0] way1_bank2_dina     ;
 wire [31:0] way1_bank2_douta    ;
 wire        way1_bank2_ena      ;
 wire [ 3:0] way1_bank2_wea      ;
+
 wire [ 7:0] way1_bank3_addra    ;
 wire [31:0] way1_bank3_dina     ;
 wire [31:0] way1_bank3_douta    ;
 wire        way1_bank3_ena      ;
 wire [ 3:0] way1_bank3_wea      ;
 
-wire [ 7:0] way0_tagv_addra     ;//？？？？？？？？？？？？？？？？？？？
+wire [ 7:0] way0_tagv_addra     ;//tagv信号存储
 wire [20:0] way0_tagv_dina      ;
 wire [20:0] way0_tagv_douta     ;
 wire        way0_tagv_ena       ;
