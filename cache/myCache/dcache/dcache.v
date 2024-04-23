@@ -86,7 +86,7 @@ reg [4:0]dcache_current_state,dcache_next_state;
 
 //为dcache_current_state赋值
 always @(posedge clk or negedge rst_n) begin
-    if(reset)dcache_current_state<=5'b0;
+    if(reset)dcache_current_state<=`DCache_IDLE;
     else dcache_current_state<=dcache_next_state;
 end
 
@@ -101,6 +101,7 @@ always @(*) begin
             if(buffer_hit_success)dcache_next_state=`DCache_IDLE;
             else dcache_next_state=`DCacheAskMem;
         end
+        else dcache_next_state=`DCache_IDLE;
     end
     else if(dcache_current_state==`ReadDCache)begin
         dcache_next_state=`DCache_IDLE;
@@ -251,7 +252,8 @@ always @(*) begin
     else dcache_cpu_return_data=`DATA_SIZE'b0;
 end
 //dcache_cpu_return_data_en赋值
-assign dcache_cpu_return_data_en=cpu_receive_dcache_data_ok?1'b0:(dcache_hit_success?1'b1:(mem_dcache_return_data_en?1'b1:1'b0));
+//assign dcache_cpu_return_data_en=cpu_receive_dcache_data_ok?1'b0:(dcache_hit_success?1'b1:(mem_dcache_return_data_en?1'b1:1'b0));
+assign dcache_cpu_return_data_en=(record_read_en&&(!cpu_receive_dcache_data_ok)&&(dcache_hit_success||mem_dcache_return_data_en))?1'b1:1'b0;
 
 /*--------------------------------------WriteDCache---------------------------------------------*/
 //WriteDCache:改写DCache中的数据，下一状态进入IDLE;
