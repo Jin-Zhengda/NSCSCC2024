@@ -3,9 +3,9 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date: 2024/04/12 20:17:53
+// Create Date: 2024/04/22 21:16:38
 // Design Name: 
-// Module Name: branch_prediction_unit
+// Module Name: bpu
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,39 +20,39 @@
 //////////////////////////////////////////////////////////////////////////////////
 `define InstBus 31:0
 
-module branch_prediction_unit(
-    input clk,
-    input rst,
-    input flush,
+module bpu(
+    input logic clk,
+    input logic rst,
+    input logic flush,
     
-    input [`InstBus] pc_1_i,
-    input [`InstBus] pc_2_i,
-    input [`InstBus] inst_1_i,
-    input [`InstBus] inst_2_i,
+    input logic [`InstBus] pc_1_i,
+    input logic [`InstBus] pc_2_i,
+    input logic [`InstBus] inst_1_i,
+    input logic [`InstBus] inst_2_i,
 
    //分支预测的结果
-    output reg [`InstBus] pc_1_o,
-    output reg [`InstBus] pc_2_o,
-    output reg is_branch_1,
-    output reg is_branch_2,
-    output reg taken_or_not,
+    output logic [`InstBus] pc_1_o,
+    output logic [`InstBus] pc_2_o,
+    output logic is_branch_1,
+    output logic is_branch_2,
+    output logic taken_or_not,
 
     //跳转的目标地址，传给pc
-    output reg [`InstBus] branch_target,  
-    output reg [`InstBus] inst_1_o,
-    output reg [`InstBus] inst_2_o,
-    output reg fetch_inst_1_en,
-    output reg fetch_inst_2_en
+    output logic [`InstBus] branch_target,  
+    output logic [`InstBus] inst_1_o,
+    output logic [`InstBus] inst_2_o,
+    output logic fetch_inst_1_en,
+    output logic fetch_inst_2_en
     );
 
-    wire [5:0] branch_judge_1;
-    wire [5:0] branch_judge_2;
+    logic [5:0] branch_judge_1;
+    logic [5:0] branch_judge_2;
 
     assign branch_judge_1 = inst_1_i[31:26];
     assign branch_judge_2 = inst_2_i[31:26];
 
 
-    always @(*) begin
+    always_comb begin
         case(branch_judge_1)
             6'b010010:begin
                 is_branch_1 <= 1'b1;
@@ -90,7 +90,7 @@ module branch_prediction_unit(
         endcase
     end
 
-    always @(*) begin
+    always_comb begin
         case(branch_judge_2)
             6'b010010:begin
                 is_branch_2 <= 1'b1;
@@ -128,13 +128,13 @@ module branch_prediction_unit(
         endcase
     end
 
-    reg [`InstBus] prediction_addr_1;
-    reg [`InstBus] prediction_addr_2;
+    logic [`InstBus] prediction_addr_1;
+    logic [`InstBus] prediction_addr_2;
 
-    reg taken_or_not_1;
-    reg taken_or_not_2;
+    logic taken_or_not_1;
+    logic taken_or_not_2;
 
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if(rst|flush) begin
             fetch_inst_1_en <= 0;
             fetch_inst_2_en <= 0;
@@ -175,7 +175,7 @@ module branch_prediction_unit(
     //     taken_or_not <= taken_or_not_1&taken_or_not_2;
     // end
 
-    always @(*) begin
+    always_comb begin
         taken_or_not <= 0;
     end
 
