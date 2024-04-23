@@ -136,6 +136,43 @@ module cpu_core
         );
     endinterface:mem_cache
 
+    interface ctrl_csr;
+        bus32_t EENTRY_VA;
+        bus32_t ERA_PC;
+        logic[11: 0] ECFG_LIE;
+        logic[11: 0] ESTAT_IS;
+        logic CRMD_IE;
+
+        logic is_exception;
+        exception_cause_t exception_cause;
+        bus32_t exception_pc;
+        bus32_t exception_addr;
+
+        modport master (
+            input EENTRY_VA,
+            input ERA_PC,
+            input ECFG_LIE,
+            input ESTAT_IS,
+            input CRMD_IE,
+            output is_exception,
+            output exception_cause,
+            output exception_pc,
+            output exception_addr
+        );
+
+        modport slave (
+            output EENTRY_VA,
+            output ERA_PC,
+            output ECFG_LIE,
+            output ESTAT_IS,
+            output CRMD_IE,
+            input is_exception,
+            input exception_cause,
+            input exception_pc,
+            input exception_addr
+        );
+    endinterface:ctrl_csr
+
 
     // branch
     logic is_branch;
@@ -151,19 +188,18 @@ module cpu_core
 
     // id
     pc_id_t id_i;
-    logic pause_id;
     id_dispatch_t id_o;
+    logic[1: 0] CRMD_PLV;
+    csr_push_forward_t csr_push_forward;
 
     // dispatch
     id_dispatch_t dispatch_i;
     pipeline_push_forward_t ex_push_forward;
     pipeline_push_forward_t mem_push_forward;
-    logic pause_dispatch;
     dispatch_ex_t dispatch_o;
 
     // ex
     id_dispatch_t ex_i;
-    logic pause_ex;
     ex_div ex_div_io();
     ex_mem_t ex_o;
 
@@ -175,15 +211,16 @@ module cpu_core
     bus64_t cnt;
     mem_wb_t mem_o;
     mem_ctrl_t mem_ctrl;
+    logic is_syscall_break;
 
     // wb 
     mem_wb_t wb;
 
     // ctrl
     ctrl_t ctrl;
+    ctrl_csr ctrl_csr_io();
+    pause_t pause_request;
 
-    // csr
-    csr_push_forward_t csr_push_forward;
 
     pc u_pc (
         .clk,
@@ -219,12 +256,16 @@ module cpu_core
     id u_id (
         .pc_id(id_i),
 
-        .CRMD_PLV(),
+        .CRMD_PLV(CRMD_PLV),
         .csr_push_forward(csr_push_forward),
 
-        .pause_id(pause_id),
+        .pause_id(pause_request.pause_id),
         .id_dispatch(id_o)
     );
+
+    assign csr_push_forward.csr_write_en = wb.csr_write.csr_write_en;
+    assign csr_push_forward.csr_write_addr = wb.csr_write.csr_write_addr;
+    assign csr_push_forward.csr_write_data = wb.csr_write.csr_write_data;
 
     id_dispatch u_id_dispatch (
         .clk,
@@ -247,7 +288,7 @@ module cpu_core
         .ex_push_forward(ex_push_forward),
         .mem_push_forward(mem_push_forward),
 
-        .pause_dispatch(pause_dispatch),
+        .pause_dispatch(pause_request.pause_dispatch),
         .dispatch_ex(dispatch_o)
     );
 
@@ -273,7 +314,7 @@ module cpu_core
     ex u_ex (
         .dispatch_ex(ex_i),
 
-        .pause_id(pause_ex),
+        .pause_id(pause_request.pause_ex),
         .ex_mem(ex_o),
 
         .master(ex_div_io)
@@ -311,8 +352,10 @@ module cpu_core
         
         .cnt(cnt),
 
+        .pasue_mem(pause_request.pause_mem),
         .mem_wb(mem_o),
-        .mem_ctrl(mem_ctrl)
+        .mem_ctrl(mem_ctrl),
+        .is_syscall_break(is_syscall_break)
     );
 
     assign mem_push_forward.aluop = mem_o.aluop;
@@ -330,11 +373,41 @@ module cpu_core
         .wb_o(wb)
     );
 
-    assign wb_push_forward.LLbit_write_en = wb.LLbit_write_en;
-    assign wb_push_forward.LLbit_write_data = wb.LLbit_write_data;
-    assign wb_push_forward.csr_write_en = wb.csr_write_en;
-    assign wb_push_forward.csr_write_addr = wb.csr_write_addr;
-    assign wb_push_forward.csr_write_data = wb.csr_write_data;
+    assign wb_push_forward.LLbit_write_en = wb.csr_write.LLbit_write_en;
+    assign wb_push_forward.LLbit_write_data = wb.csr_write.LLbit_write_data;
+    assign wb_push_forward.csr_write_en = wb.csr_write.csr_write_en;
+    assign wb_push_forward.csr_write_addr = wb.csr_write.csr_write_addr;
+    assign wb_push_forward.csr_write_data = wb.csr_write.csr_write_data;
+
+    ctrl u_ctrl (
+        .pause_request(pause_request),
+        .mem_i(mem_ctrl),
+
+        .wb_push_forward(wb_push_forward),
+        
+        .master(ctrl_csr_io),
+
+        .ctrl_o(ctrl),
+        .ctrl_pc(ctrl_pc)
+    );
+
+    csr u_csr (
+        .clk,
+        .rst,
+
+        .mem_slave(mem_csr_io),
+
+        .wb_i(wb.csr_write),
+
+        .is_ertn(mem_ctrl.is_ertn),
+        .is_syscall_break(is_syscall_break),
+
+        .is_ipi(0),
+        .is_hwi(0),
+
+        .ctrl_slave(ctrl_csr_io),
+        .CRMD_PLV(CRMD_PLV)
+    );
 
     stable_counter u_stable_counter (
         .clk,
