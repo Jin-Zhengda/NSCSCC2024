@@ -139,8 +139,10 @@ end
 wire way0_read_en,way1_read_en,way0_write_en,way1_write_en;
 assign way0_read_en=cpu_icache_read_en?1'b1:1'b0;
 assign way1_read_en=cpu_icache_read_en?1'b1:1'b0;
-assign way0_write_en=hit_result?1'b0:1'b1;
-assign way1_write_en=hit_result?1'b0:1'b1;
+//写使能在后面再次进行了赋值！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+//assign way0_write_en=hit_result?1'b0:1'b1;
+//assign way1_write_en=hit_result?1'b0:1'b1;
+
 //这个地方应该同时考虑mem返回数据，才在更准确的时间进行写？？？？？？？？？？？？？？？？
 
 //将mem返回的数据转换成数组格式，便于读取赋值
@@ -211,7 +213,7 @@ assign icache_cpu_return_data_en=cpu_receive_data_ok?1'b0:(hit_success?1'b1:(mem
 
 
 
-/*------------------------------------ReturnInstruction状态-------------------------------------*/
+/*----------------------------------------ICACHEAskMem状态-----------------------------------------*/
 //ICACHEAskMem:向mem查找数据，然后进入RefreshCache
 always @(*) begin
     if(reset)begin
