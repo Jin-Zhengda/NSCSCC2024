@@ -7,7 +7,9 @@ module dispatch
     input pipeline_push_forward_t ex_push_forward,
     input pipeline_push_forward_t mem_push_forward,
 
-    regfile_dispatch master,
+    input alu_op_t ex_aluop,
+
+    dispatch_regfile master,
 
     output logic pause_dispatch,
     output dispatch_ex_t dispatch_ex,
@@ -25,9 +27,8 @@ module dispatch
     assign dispatch_ex.aluop = id_dispatch.aluop;
     assign dispatch_ex.alusel = id_dispatch.alusel;
 
-    assign dispatch_ex.reg_write_en = id_dispatch.reg_wirte_en;
+    assign dispatch_ex.reg_write_en = id_dispatch.reg_write_en;
     assign dispatch_ex.reg_write_addr = id_dispatch.reg_write_addr;
-    assign dispatch_ex.reg_wirte_data = id_dispatch.reg_write_data;
     
     assign dispatch_ex.csr_read_en = id_dispatch.csr_read_en;
     assign dispatch_ex.csr_write_en = id_dispatch.csr_write_en;
@@ -48,9 +49,9 @@ module dispatch
     logic pause_reg2_load_relate;
     logic load_pre;
 
-    assign load_pre = ((ex_push_forward.aluop == `ALU_LDB) || (ex_push_forward.aluop == `ALU_LDH) || (ex_push_forward.aluop == `ALU_LDW) 
-                    || (ex_push_forward.aluop == `ALU_LDBU) || (ex_push_forward.aluop == `ALU_LDHU) || (ex_push_forward.aluop == `ALU_LLW)
-                    || (ex_push_forward.aluop == `ALU_SCW)) ? 1'b1 : 1'b0;
+    assign load_pre = ((ex_aluop == `ALU_LDB) || (ex_aluop == `ALU_LDH) || (ex_aluop == `ALU_LDW) 
+                    || (ex_aluop == `ALU_LDBU) || (ex_aluop == `ALU_LDHU) || (ex_aluop == `ALU_LLW)
+                    || (ex_aluop == `ALU_SCW)) ? 1'b1 : 1'b0;
 
     assign pause_reg1_load_relate = (load_pre && (ex_push_forward.reg_write_addr == id_dispatch.reg1_read_addr) && id_dispatch.reg1_read_en) ? 1'b1 : 1'b0;
     assign pause_reg2_load_relate = (load_pre && (ex_push_forward.reg_write_addr == id_dispatch.reg2_read_addr) && id_dispatch.reg2_read_en) ? 1'b1 : 1'b0;

@@ -23,23 +23,19 @@ module data_ram
     assign data_addr = addr[11: 2];
 
     always_ff @(posedge clk) begin
-        if (!ram_en) begin
-            data_o <= 32'b0;
-        end
-        else if (write_en) begin
-                if (select[3]) begin
-                    ram3[data_addr] <= data_i[31: 24];
-                end
-                if (select[2]) begin
-                    ram2[data_addr] <= data_i[23: 16];
-                
-                end
-                if (select[1]) begin
-                    ram1[data_addr] <= data_i[15: 8];
-                end
-                if (select[0]) begin
-                    ram0[data_addr] <= data_i[7: 0];
-                end
+        if (write_en) begin
+            if (select[3]) begin
+                ram3[data_addr] <= data_i[31: 24];
+            end
+            if (select[2]) begin
+                ram2[data_addr] <= data_i[23: 16];
+            end
+            if (select[1]) begin
+                ram1[data_addr] <= data_i[15: 8];
+            end
+            if (select[0]) begin
+                ram0[data_addr] <= data_i[7: 0];
+            end
         end
     end
 

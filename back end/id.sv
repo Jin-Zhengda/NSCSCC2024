@@ -17,7 +17,7 @@ module id
   assign id_dispatch.inst = pc_id.inst;
 
   logic [1:0] CRMD_PLV_current;
-  assign CRMD_PLV_current = (csr_push_forward.csr_write_en && csr_push_forward.csr_wirte_addr == `CSR_CRMD) 
+  assign CRMD_PLV_current = (csr_push_forward.csr_write_en && csr_push_forward.csr_write_addr == `CSR_CRMD) 
                                 ? csr_push_forward.csr_write_data : CRMD_PLV;
 
   // select inst feild
