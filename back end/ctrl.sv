@@ -28,7 +28,7 @@ module ctrl
     assign CRMD_IE_current = (wb_push_forward.csr_write_en && (wb_push_forward.csr_write_addr == `CSR_CRMD)) ? wb_push_forward.csr_write_data[2] : master.CRMD_IE;
 
     assign ctrl_pc.exception_new_pc = (mem_i.is_ertn) ? ERA_PC_current: EEBTRY_VA_current;
-    assign ctrl.exception_flush = (mem_i.is_exception != 6'b0 || mem_i.is_ertn) ? 1'b1 : 1'b0;
+    assign ctrl_o.exception_flush = (mem_i.is_exception != 6'b0 || mem_i.is_ertn) ? 1'b1 : 1'b0;
 
     assign master.exception_pc = mem_i.pc;
     assign master.exception_addr = mem_i.exception_addr;
@@ -75,19 +75,19 @@ module ctrl
     // pause[3] dispatch, pause[4] ex, pause[5] mem, pause[6] wb
     always_comb begin: pause_ctrl
         if (pause_request.pause_id) begin
-            ctrl.pause = 7'b0000111;
+            ctrl_o.pause = 7'b0000111;
         end
         else if (pause_request.pause_dispatch) begin
-            ctrl.pause = 7'b0001111;
+            ctrl_o.pause = 7'b0001111;
         end
         else if (pause_request.pause_ex) begin
-            ctrl.pause = 7'b0011111;
+            ctrl_o.pause = 7'b0011111;
         end
         else if (pause_request.pause_mem || pause_idle) begin
-            ctrl.pause = 7'b0111111;
+            ctrl_o.pause = 7'b0111111;
         end
         else begin
-            ctrl.pause = 7'b0;
+            ctrl_o.pause = 7'b0;
         end
     end
 

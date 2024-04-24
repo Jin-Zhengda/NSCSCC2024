@@ -14,10 +14,10 @@ package pipeline_types;
     typedef logic[6: 0] exception_cause_t;
 
     typedef struct packed {
-        logic pasue_id;
-        logic pasue_dispatch;
-        logic pasue_ex;
-        logic pasue_mem;
+        logic pause_id;
+        logic pause_dispatch;
+        logic pause_ex;
+        logic pause_mem;
     } pause_t;
 
     // from ctrl
@@ -69,14 +69,13 @@ package pipeline_types;
     // csr push forward
     typedef struct packed {
         logic csr_write_en;
-        csr_addr_t csr_wirte_addr;
+        csr_addr_t csr_write_addr;
         bus32_t csr_write_data;
     } csr_push_forward_t;
 
 
     // pineline push forward
     typedef struct packed {
-        alu_op_t aluop;
         logic reg_write_en;
         reg_addr_t reg_write_addr;
         bus32_t reg_write_data;
@@ -96,9 +95,8 @@ package pipeline_types;
         bus32_t reg1;
         bus32_t reg2;
 
-        logic reg_wirte_en;
-        reg_addr_t reg_wirte_addr;
-        bus32_t reg_wirte_data;
+        logic reg_write_en;
+        reg_addr_t reg_write_addr;
 
         logic csr_read_en;
         logic csr_write_en;

@@ -21,8 +21,8 @@ module mem
 
     assign mem_ctrl.pc = ex_mem.pc;
 
-    assign mem_wb.csr_write.csr_read_en = (ex_mem.aluop == `ALU_RDCNTID) ? 1'b1: ex_mem.csr_read_en;
-    assign mem_wb.csr_write.csr_read_addr = (ex_mem.aluop == `ALU_RDCNTID) ? 14'b01000000 :ex_mem.csr_addr;
+    assign csr_master.csr_read_en = (ex_mem.aluop == `ALU_RDCNTID) ? 1'b1: ex_mem.csr_read_en;
+    assign csr_master.csr_read_addr = (ex_mem.aluop == `ALU_RDCNTID) ? 14'b01000000 :ex_mem.csr_addr;
     
     assign mem_ctrl.exception_addr = ex_mem.mem_addr;
 
@@ -75,7 +75,7 @@ module mem
         mem_wb.csr_write.LLbit_write_en = 1'b0;
         mem_wb.csr_write.LLbit_write_data = 1'b0;
         mem_wb.csr_write.csr_write_en = ex_mem.csr_write_en;
-        mem_wb.csr_write.csr_addr = ex_mem.csr_addr;
+        mem_wb.csr_write.csr_write_addr = ex_mem.csr_addr;
         mem_wb.csr_write.csr_write_data = ex_mem.csr_write_data;
 
         mem_is_exception = 1'b0;

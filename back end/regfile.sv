@@ -6,15 +6,15 @@ module regfile
 
     input data_write_t data_write,
 
-    regfile_dispatch slave
+    dispatch_regfile slave
 );
 
     logic [31: 0] regs [31: 0];
 
     always_ff @(posedge clk) begin
         if (!rst) begin
-            if (data_write.reg_write_en) begin
-                regs[data_write.reg_write_addr] <= data_write.reg_write_data;
+            if (data_write.write_en) begin
+                regs[data_write.write_addr] <= data_write.write_data;
             end
         end
     end
@@ -26,8 +26,8 @@ module regfile
         else if (slave.reg1_read_addr == 5'b0) begin
             slave.reg1_read_data = 32'b0;        
         end
-        else if (slave.reg1_read_addr == data_write.reg_write_addr && data_write.reg_write_en && slave.reg1_read_en) begin
-            slave.reg1_read_data = data_write.reg_write_data;
+        else if (slave.reg1_read_addr == data_write.write_addr && data_write.write_en && slave.reg1_read_en) begin
+            slave.reg1_read_data = data_write.write_data;
         end
         else if (slave.reg1_read_en) begin
             slave.reg1_read_data = regs[slave.reg1_read_addr];
@@ -44,8 +44,8 @@ module regfile
         else if (slave.reg2_read_addr == 5'b0) begin
             slave.reg2_read_data = 32'b0;        
         end
-        else if (slave.reg2_read_addr == data_write.reg_write_addr && data_write.reg_write_en && slave.reg2_read_en) begin
-            slave.reg2_read_data = data_write.reg_write_data;
+        else if (slave.reg2_read_addr == data_write.write_addr && data_write.write_en && slave.reg2_read_en) begin
+            slave.reg2_read_data = data_write.write_data;
         end
         else if (slave.reg2_read_en) begin
             slave.reg2_read_data = regs[slave.reg2_read_addr];
