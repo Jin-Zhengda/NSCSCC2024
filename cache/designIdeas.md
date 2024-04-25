@@ -172,7 +172,7 @@ $2^{8}*2*2^{5}*2^{3} = 2 ^ {17} Bit = 2^{14}Byte=2^{4}KB= 16KB$
 3. WriteBuffer的实现：WriteBuffer也可以hit!!!当cpu需要读/写的数据在WriteBuffer中时，可直接对WriteBuffer进行读/写操作。有关dcache的结构设计为：cpu-dcache-writebuffer-mem。cpu命令信息同步传给writebuffer，当writebuffer hit时，dcache直接回到IDLE状态，命令由writebuffer负责执行即可。**还要注意考虑是否在writebuffer写回mem的时刻数据被命中，导致错误！！！**
 
 ##### 接口定义：
-`
+```
     input wire clk,
     input wire reset,
     //cpu
@@ -212,4 +212,13 @@ $2^{8}*2*2^{5}*2^{3} = 2 ^ {17} Bit = 2^{14}Byte=2^{4}KB= 16KB$
     output wire dcache_hit_success,//dcache成功命中
     output wire dcache_hit_fail,//dcache未命中
     output reg dcache_hit_result//dcache的命中结果
-`
+```
+
+# 第二代cache——SystemVerilog实现，确定好了接口，目标成功对接
+### icache
+##### 状态定义
+- ICacheIDLE:空闲等待状态，接收到使能则保存命令信息，判断是否命中，若命中则向CPU返回数据，下一状态为ICacheIDLE;否则进入下一状态ICacheAskMem
+- ICacheAskMem:向mem查找数据，然后进入RefreshCache
+- ICacheRefresh:当总线将数据传回时，向cpu输出数据，并更新cache中的数据，然后进入IDLE。
+
+ICacheIDLE:当front传来信号，记录信号信息，当个周期内用记录的信息判断是否hit。若hit则下一个进入ICacheIDLE，同时考虑在下一个时钟周期向cpu返回信号。
