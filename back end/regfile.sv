@@ -9,7 +9,7 @@ module regfile
     dispatch_regfile slave
 );
 
-    logic [31: 0] regs [31: 0];
+    logic [31: 0] regs [0: 31];
 
     always_ff @(posedge clk) begin
         if (!rst) begin

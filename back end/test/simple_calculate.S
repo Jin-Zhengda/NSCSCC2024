@@ -5,7 +5,7 @@ _start:
 .org 0x100
     nop
     ori $t1, $zero, 0x1
-    andi $t2, $t1, 0x10
+    ori $t2, $zero, 0x10
     add.w $t3, $t1, $t2
     sub.w $t4, $t3, $t1
     xor $t4, $t4, $t3
@@ -30,7 +30,7 @@ _start:
     sll.w $t3, $t2, $t1
     srl.w $t3, $t2, $t1
     
-    // t1 1, 2, 3, ffffffff, 4
-    // t2 10, 4, 0, 1, 87654321
+    // t1 1, 2000, 3000, ffffffff, 4
+    // t2 10, 3001, 0, 1, 87654321
     // t3 11, 5, f8765432, 87654320, 08765432
     // t4 10, 1

@@ -20,9 +20,6 @@ module cpu_core
     output logic ram_en
 );
 
-    
-
-
     // branch
     logic is_branch;
     bus32_t branch_target_addr;
@@ -48,7 +45,7 @@ module cpu_core
     dispatch_ex_t dispatch_o;
 
     // ex
-    id_dispatch_t ex_i;
+    dispatch_ex_t ex_i;
     ex_div ex_div_io();
     ex_mem_t ex_o;
 
@@ -210,6 +207,15 @@ module cpu_core
     assign mem_push_forward.reg_write_en = mem_o.data_write.write_en;
     assign mem_push_forward.reg_write_addr = mem_o.data_write.write_addr;
     assign mem_push_forward.reg_write_data = mem_o.data_write.write_data;
+
+    assign mem_cache_io.master.is_cache_hit = is_cache_hit;
+    assign mem_cache_io.master.cache_data = ram_read_data;
+    assign ram_addr = mem_cache_io.master.cache_addr;
+    assign ram_write_data = mem_cache_io.master.store_data;
+    assign ram_write_en = mem_cache_io.master.write_en;
+    assign ram_read_en = mem_cache_io.master.read_en;
+    assign ram_select = mem_cache_io.master.select;
+    assign ram_en = mem_cache_io.master.cache_en;
 
     mem_wb u_mem_wb (
         .clk,

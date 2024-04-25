@@ -55,7 +55,7 @@ module ex
                 logic_res = dispatch_ex.reg1 | dispatch_ex.reg2;
             end
             `ALU_NOR: begin
-                logic_res = !(dispatch_ex.reg1 | dispatch_ex.reg2);
+                logic_res = ~(dispatch_ex.reg1 | dispatch_ex.reg2);
             end
             `ALU_AND, `ALU_ANDI: begin
                 logic_res = dispatch_ex.reg1 & dispatch_ex.reg2;
@@ -92,12 +92,12 @@ module ex
     bus32_t reg1_i_not;
     bus32_t sum_result;
 
-    assign reg2_i_mux= ((dispatch_ex.aluop == `ALU_SUBW) || (dispatch_ex.aluop == `ALU_SLT)) ? !dispatch_ex.reg2 + 1 : dispatch_ex.reg2;
+    assign reg2_i_mux= ((dispatch_ex.aluop == `ALU_SUBW) || (dispatch_ex.aluop == `ALU_SLT)) ? ~dispatch_ex.reg2 + 1 : dispatch_ex.reg2;
     assign sum_result = dispatch_ex.reg1 + reg2_i_mux;
     assign reg1_lt_reg2 = ((dispatch_ex.aluop == `ALU_SLT) || (dispatch_ex.aluop == `ALU_SLTI)) ?
                             ((dispatch_ex.reg1[31] && !dispatch_ex.reg2[31]) || (!dispatch_ex.reg1[31] && !dispatch_ex.reg2[31] && sum_result[31]) || (dispatch_ex.reg1[31] && dispatch_ex.reg2[31] && sum_result[31])) 
                             : (dispatch_ex.reg1 < dispatch_ex.reg2);
-    assign reg1_i_not = !dispatch_ex.reg1;
+    assign reg1_i_not = ~dispatch_ex.reg1;
 
     bus32_t mul_data1;
     bus32_t mul_data2;
