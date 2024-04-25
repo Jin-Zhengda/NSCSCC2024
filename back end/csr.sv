@@ -56,10 +56,11 @@ module csr
 
     assign CRMD_PLV = crmd[1: 0];
 
-    assign EENTRY_VA = {eentry[31: 6], 6'b0};
-    assign ERA_PC = era;
-    assign ECFG_LIE = {ecfg[12: 11], ecfg[9: 0]};
-    assign ESTAT_IS = {estat[12: 11], estat[9: 0]};
+    assign ctrl_slave.CRMD_IE = crmd[2];
+    assign ctrl_slave.EENTRY_VA = {eentry[31: 6], 6'b0};
+    assign ctrl_slave.ERA_PC = era;
+    assign ctrl_slave.ECFG_LIE = {ecfg[12: 11], ecfg[9: 0]};
+    assign ctrl_slave.ESTAT_IS = {estat[12: 11], estat[9: 0]};
 
     // CRMD write
     always_ff @(posedge clk) begin

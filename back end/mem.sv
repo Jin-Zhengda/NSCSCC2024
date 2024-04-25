@@ -87,24 +87,21 @@ module mem
                 cache_master.write_en = 1'b0;
                 cache_master.read_en = 1'b1;
                 cache_master.cache_en = 1'b1;
+
                 if (cache_master.is_cache_hit) begin
                     pause_uncache = 1'b0;
                     case (ex_mem.mem_addr[1: 0])
                         2'b00: begin
-                            mem_wb.data_write.write_data = {{24{cache_data[31]}}, cache_data[7: 0]};
-                            cache_master.select = 4'b1000;
+                            mem_wb.data_write.write_data = {{24{cache_data[7]}}, cache_data[7: 0]};
                         end 
                         2'b01: begin
-                            mem_wb.data_write.write_data = {{24{cache_data[23]}}, cache_data[15: 8]};
-                            cache_master.select = 4'b0100;
+                            mem_wb.data_write.write_data = {{24{cache_data[15]}}, cache_data[15: 8]};
                         end
                         2'b10: begin
-                            mem_wb.data_write.write_data = {{24{cache_data[15]}}, cache_data[23: 16]};
-                            cache_master.select = 4'b0010;
+                            mem_wb.data_write.write_data = {{24{cache_data[23]}}, cache_data[23: 16]};
                         end
                         2'b11: begin
-                            mem_wb.data_write.write_data = {{24{cache_data[7]}}, cache_data[31: 24]};
-                            cache_master.select = 4'b0001;
+                            mem_wb.data_write.write_data = {{24{cache_data[31]}}, cache_data[31: 24]};
                         end
                         default: begin
                             mem_wb.data_write.write_data = 32'b0;
@@ -121,23 +118,20 @@ module mem
                 cache_master.write_en = 1'b0;
                 cache_master.read_en = 1'b1;
                 cache_master.cache_en = 1'b1;
+
                 if (cache_master.is_cache_hit) begin
                     case (ex_mem.mem_addr[1: 0])
                         2'b00: begin
                             mem_wb.data_write.write_data = {{24{1'b0}}, cache_data[7: 0]};
-                            cache_master.select = 4'b1000;
                         end 
                         2'b01: begin
                             mem_wb.data_write.write_data = {{24{1'b0}}, cache_data[15: 8]};
-                            cache_master.select = 4'b0100;
                         end
                         2'b10: begin
                             mem_wb.data_write.write_data = {{24{1'b0}}, cache_data[23: 16]};
-                            cache_master.select = 4'b0010;
                         end
                         2'b11: begin
                             mem_wb.data_write.write_data = {{24{1'b0}}, cache_data[31: 24]};
-                            cache_master.select = 4'b0001;
                         end
                         default: begin
                             mem_wb.data_write.write_data = 32'b0;
@@ -155,15 +149,14 @@ module mem
                 cache_master.write_en = 1'b0;
                 cache_master.read_en = 1'b1;
                 cache_master.cache_en = 1'b1;
+
                 if (cache_master.is_cache_hit) begin
                     case (ex_mem.mem_addr[1: 0])
                         2'b00: begin
-                            mem_wb.data_write.write_data = {{16{cache_data[31]}}, cache_data[15: 0]};
-                            cache_master.select = 4'b1100;
+                            mem_wb.data_write.write_data = {{16{cache_data[15]}}, cache_data[15: 0]};
                         end 
                         2'b10: begin
                             mem_wb.data_write.write_data = {{16{cache_data[15]}}, cache_data[31: 16]};
-                            cache_master.select = 4'b0011;
                         end
                         default: begin
                             mem_wb.data_write.write_data = 32'b0;
@@ -182,15 +175,14 @@ module mem
                 cache_master.write_en = 1'b0;
                 cache_master.read_en = 1'b1;
                 cache_master.cache_en = 1'b1;
+
                 if (cache_master.is_cache_hit) begin
                     case (ex_mem.mem_addr[1: 0])
                         2'b00: begin
                             mem_wb.data_write.write_data = {{16{1'b0}}, cache_data[15: 0]};
-                            cache_master.select = 4'b1100;
                         end 
                         2'b10: begin
                             mem_wb.data_write.write_data = {{16{1'b0}}, cache_data[31: 16]};
-                            cache_master.select = 4'b0011;
                         end
                         default: begin
                             mem_wb.data_write.write_data = 32'b0;
@@ -208,9 +200,9 @@ module mem
                 cache_master.write_en = 1'b0;
                 cache_master.read_en = 1'b1;
                 cache_master.cache_en = 1'b1;
+                cache_master.select = 4'b1111;
                 if (cache_master.is_cache_hit) begin
                     mem_wb.data_write.write_data = cache_data;
-                    cache_master.select = 4'b1111;
                 end
                 else begin
                     pause_uncache = 1'b1;

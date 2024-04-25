@@ -37,7 +37,7 @@ module ctrl
 
     assign int_vec = CRMD_IE_current ? ECFG_LIE_current & ESTAT_IS_current: 12'b0;
  
-    assign is_interrupt_o = (int_vec != 12'b0) ? 1'b1 : 1'b0;
+    assign ctrl_pc.is_interrupt = (int_vec != 12'b0) ? 1'b1 : 1'b0;
 
     always_comb begin: exception
         if (mem_i.pc != 32'h100 && mem_i.is_exception != 6'b0) begin
