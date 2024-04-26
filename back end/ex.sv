@@ -24,10 +24,13 @@ module ex
     assign ex_mem.aluop = dispatch_ex.aluop;
     assign ex_mem.store_data = dispatch_ex.reg2;
 
-    logic[11: 0] si12 = dispatch_ex.inst[21: 10];
-    logic[13: 9] si14 = dispatch_ex.inst[14: 10];
+    logic[11: 0] si12;
+    logic[13: 9] si14;
 
-    always_comb begin: mem_addr_calculate
+    assign si12 = dispatch_ex.inst[21: 10];
+    assign si14 = dispatch_ex.inst[14: 10];
+    
+    always_comb begin
         case (dispatch_ex.aluop)
             `ALU_LDB, `ALU_LDBU, `ALU_LDH, `ALU_LDHU, `ALU_LDW, `ALU_LLW: begin
                 ex_mem.mem_addr = dispatch_ex.reg1 + dispatch_ex.reg2;

@@ -12,7 +12,7 @@ _start:
     ld.w $t1, $zero, 0x0
 
     ori $t1, $zero, 0x0
-    ll.w $t1
+    ll.w $t1, $zero, 0x0
     addi.w $t1, $t1, 0x1
     sc.w $t1, $zero, 0x0
 

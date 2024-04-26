@@ -70,13 +70,11 @@ module dispatch
         reg1_lt_reg2 = (dispatch_ex.reg1[31] && !dispatch_ex.reg2[31]) || (!dispatch_ex.reg1[31] && !dispatch_ex.reg2[31] && (dispatch_ex.reg1 < dispatch_ex.reg2)) 
                                     || (dispatch_ex.reg1[31] && dispatch_ex.reg2[31] && (dispatch_ex.reg1 > dispatch_ex.reg2));
 
-        case (id_dispatch) 
+        case (id_dispatch.aluop) 
             `ALU_BEQ: begin
                 if (dispatch_ex.reg1 == dispatch_ex.reg2) begin
                     is_branch = 1'b1;
                     branch_target_addr = id_dispatch.pc + branch16_addr;
-                end
-                else begin
                     branch_flush = 1'b1;
                 end
             end
@@ -84,8 +82,6 @@ module dispatch
                 if (dispatch_ex.reg1 != dispatch_ex.reg2) begin
                     is_branch = 1'b1;
                     branch_target_addr = id_dispatch.pc + branch16_addr;
-                end
-                else begin
                     branch_flush = 1'b1;
                 end
             end
@@ -93,8 +89,6 @@ module dispatch
                 if (reg1_lt_reg2) begin
                     is_branch = 1'b1;
                     branch_target_addr = id_dispatch.pc + branch16_addr;
-                end
-                else begin
                     branch_flush = 1'b1;
                 end
             end
@@ -102,8 +96,6 @@ module dispatch
                 if (!reg1_lt_reg2) begin
                     is_branch = 1'b1;
                     branch_target_addr = id_dispatch.pc + branch16_addr;
-                end
-                else begin
                     branch_flush = 1'b1;
                 end
             end
@@ -114,7 +106,13 @@ module dispatch
             end
             `ALU_BL, `ALU_JIRL: begin
                 is_branch = 1'b1;
-                branch_target_addr = dispatch_ex.reg1;
+                branch_target_addr = id_dispatch.pc + branch26_addr;
+                branch_flush = 1'b1;
+                dispatch_ex.reg_write_branch_data = id_dispatch.pc + 4'h4;
+            end
+            `ALU_JIRL: begin
+                is_branch = 1'b1;
+                branch_target_addr = dispatch_ex.reg1 + branch26_addr;
                 branch_flush = 1'b1;
                 dispatch_ex.reg_write_branch_data = id_dispatch.pc + 4'h4;
             end
@@ -122,7 +120,10 @@ module dispatch
     end
 
     always_comb begin : reg1_read
-        if (id_dispatch.reg1_read_en && (id_dispatch.aluop == `ALU_PCADDU12I)) begin
+        if (pause_dispatch) begin
+            dispatch_ex.reg1 = 32'b0;
+        end 
+        else if (id_dispatch.reg1_read_en && (id_dispatch.aluop == `ALU_PCADDU12I)) begin
             dispatch_ex.reg1 = id_dispatch.pc;
         end
         else if (id_dispatch.reg1_read_en && ex_push_forward.reg_write_en && (ex_push_forward.reg_write_addr == id_dispatch.reg1_read_addr)) begin
@@ -143,7 +144,10 @@ module dispatch
     end
 
     always_comb begin : reg2_read
-        if (id_dispatch.reg2_read_en && ex_push_forward.reg_write_en&& (ex_push_forward.reg_write_addr == id_dispatch.reg2_read_addr)) begin
+        if (pause_dispatch) begin
+            dispatch_ex.reg2 = 32'b0;
+        end 
+        else if (id_dispatch.reg2_read_en && ex_push_forward.reg_write_en&& (ex_push_forward.reg_write_addr == id_dispatch.reg2_read_addr)) begin
             dispatch_ex.reg2 = ex_push_forward.reg_write_data;
         end
         else if (id_dispatch.reg2_read_en && mem_push_forward.reg_write_en && (mem_push_forward.reg_write_addr == id_dispatch.reg2_read_addr)) begin

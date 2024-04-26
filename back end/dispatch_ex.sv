@@ -18,7 +18,7 @@ module dispatch_ex
             ex_o <= 0;
         end
         else if (ctrl.pause[3] && !ctrl.pause[4]) begin
-            ex_o <= dispatch_i;
+            ex_o <= 0;
         end
         else if (!ctrl.pause[3]) begin
             ex_o <= dispatch_i;

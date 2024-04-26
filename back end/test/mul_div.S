@@ -15,12 +15,12 @@ _start:
     // div
     li.w $t1, 0xfffffff1
     ori $t2, $zero, 0x11
-    div.w $t4, $t2, $t1
-    mod.w $t4, $t2, $t1
-    div.wu $t4, $t2, $t1
-    mod.wu $t4, $t2, $t1
     div.w $t4, $t1, $t2
     mod.w $t4, $t1, $t2
+    div.wu $t4, $t1, $t2
+    mod.wu $t4, $t1, $t2
+    div.w $t4, $t2, $t1
+    mod.w $t4, $t2, $t1
 
     // t1 fffffffb, fffffff1
     // t2 6, 11

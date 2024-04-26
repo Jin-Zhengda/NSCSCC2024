@@ -21,7 +21,7 @@ always_ff @(posedge clk) begin
         id_o <= 0;
     end
     else if (ctrl.pause[1] && !ctrl.pause[2]) begin
-        id_o <= pc_i;
+        id_o <= 0;
     end
     else if (!ctrl.pause[1]) begin
         if (branch_flush) begin
