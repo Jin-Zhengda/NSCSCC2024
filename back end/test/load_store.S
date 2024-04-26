@@ -4,16 +4,16 @@
 _start:
 .org 0x100
     nop
-    ori $t1, 0xff
+    ori $t1, $zero, 0xff
     st.b $t1, $zero, 0x3
 
-    ori $t1, 0xee
+    ori $t1, $zero, 0xee
     st.b $t1, $zero, 0x2
 
-    ori $t1, 0xdd
+    ori $t1, $zero, 0xdd
     st.b $t1, $zero, 0x1
 
-    ori $t1, 0xcc
+    ori $t1, $zero, 0xcc
     st.b $t1, $zero, 0x0
 
     ld.b $t2, $zero, 0x3
@@ -42,6 +42,6 @@ _start:
     // t1 ff, ee, dd, cc
     // t2 ffffffff, ee
     // t3 aabb, 8899
-    // t4 aabb, ffffaabb, 8899, ffff8899
+    // t4 aabb, ffffaabb, ffff8899, 8899
     // t5 44556677
     // t6 44556677

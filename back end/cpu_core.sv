@@ -136,7 +136,11 @@ module cpu_core
         .ex_aluop(ex_o.aluop), 
 
         .pause_dispatch(pause_request.pause_dispatch),
-        .dispatch_ex(dispatch_o)
+        .dispatch_ex(dispatch_o),
+
+        .is_branch(is_branch),
+        .branch_target_addr(branch_target_addr),
+        .branch_flush(branch_flush)
     );
 
     regfile u_regfile (

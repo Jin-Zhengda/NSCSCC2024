@@ -20,7 +20,7 @@ module id_dispatch
             dispatch_o <= 0;
         end
         else if (ctrl.pause[2] && !ctrl.pause[3]) begin
-            dispatch_o <= id_i;
+            dispatch_o <= 0;
         end
         else if (!ctrl.pause[2]) begin
             if (branch_flush) begin

@@ -12,19 +12,19 @@ module ex_mem
 
     always_ff @(posedge clk) begin
         if (rst) begin
-            mem_o = 0;
+            mem_o <= 0;
         end 
         else if (ctrl.exception_flush) begin
-            mem_o = 0;
+            mem_o <= 0;
         end
         else if (ctrl.pause[4] && !ctrl.pause[5]) begin
-            mem_o = 0;
+            mem_o <= 0;
         end
         else if (!ctrl.pause[4]) begin
-            mem_o = ex_i;
+            mem_o <= ex_i;
         end
         else begin
-            mem_o = mem_o;
+            mem_o <= mem_o;
         end
     end
     
