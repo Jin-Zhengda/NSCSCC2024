@@ -19,22 +19,27 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 `define InstAddrWidth 31:0
+`include "csr_define.sv"
 
-module pc_reg(
+module pc_reg
+import pipeline_type::*;
+(
     input logic clk,
     input logic rst,
 
-    input logic [5: 0] pause,
     input logic is_branch_i_1,
     input logic is_branch_i_2,
     input logic taken_or_not,
     input logic [`InstAddrWidth] branch_target_addr_i,
 
-    output logic [`InstAddrWidth] pc_1_o,
-    output logic [`InstAddrWidth] pc_2_o,
+    input ctrl_t ctrl,
+    input ctrl_pc_t ctrl_pc,
+
+    output pc_out pc,
     output logic inst_en_o_1,
-    output logic inst_en_o_2   
+    output logic inst_en_o_2
 );
+
 
     always_ff @(posedge clk) begin
         if (rst) begin
@@ -43,28 +48,53 @@ module pc_reg(
         end
         else begin
             inst_en_o_1 <= 1'b1;
-            inst_en_o_2 <= 1'b1;
+            inst_en_o_2 <= 1'b0;
         end
     end
 
 
+    // always_ff @(posedge clk) begin
+    //     if (rst) begin
+    //         pc_1_o <= 32'h0;
+    //         pc_2_o <= 32'h4;
+    //     end
+    //     else if (pause[0]) begin
+    //         pc_1_o <= pc_1_o;
+    //         pc_2_o <= pc_2_o;
+    //     end
+    //     else begin
+    //         if ((is_branch_i_1|is_branch_i_2)&&taken_or_not) begin
+    //             pc_1_o <= branch_target_addr_i;
+    //             pc_2_o <= branch_target_addr_i+4;
+    //         end
+    //         else begin
+    //         pc_1_o <= pc_1_o + 4'h8;
+    //         pc_2_o <= pc_2_o + 4'h8;
+    //         end
+    //     end
+    // end
+    assign pc.is_exception = {ctrl_pc.is_interrupt, {(pc.pc_o_1[1: 0] == 2'b00) ? 1'b0 : 1'b1}, 4'b0};
+    assign pc.exception_cause = {{ctrl_pc.is_interrupt ? `EXCEPTION_INT: `EXCEPTION_NOP}, 
+                                {(pc.pc_o_1[1: 0] == 2'b00) ?  `EXCEPTION_NOP: `EXCEPTION_ADEF},
+                                {4{`EXCEPTION_NOP}}};
+
     always_ff @(posedge clk) begin
-        if (rst) begin
-            pc_1_o <= 32'h0;
-            pc_2_o <= 32'h4;
+        if(rst) begin
+            pc.pc_o_1 <= 32'h0;
+            pc.pc_o_2 <= 32'h4;
         end
-        else if (pause[0]) begin
-            pc_1_o <= pc_1_o;
-            pc_2_o <= pc_2_o;
+        else if(ctrl.exception_flush) begin
+            pc.pc_o_1 <= ctrl_pc.exception_new_pc;
+        end
+        else if(ctrl.pause[0]) begin
+            pc.pc_o_1 <= pc.pc_o_1;
         end
         else begin
-            if ((is_branch_i_1|is_branch_i_2)&&taken_or_not) begin
-                pc_1_o <= branch_target_addr_i;
-                pc_2_o <= branch_target_addr_i+4;
+            if(is_branch_i_1&&taken_or_not) begin
+                pc.pc_o_1 <= branch_target_addr_i;
             end
             else begin
-            pc_1_o <= pc_1_o + 4'h8;
-            pc_2_o <= pc_2_o + 4'h8;
+            pc.pc_o_1 <= pc.pc_o_1 + 4'h4;
             end
         end
     end
