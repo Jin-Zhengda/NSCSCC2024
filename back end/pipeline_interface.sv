@@ -92,6 +92,10 @@ import pipeline_types::*;
         logic[3: 0] select;
 
         logic cache_en;
+        logic is_preld;
+
+        logic is_cacop; 
+        logic[4: 0] cacop_code; 
 
         modport master (
             input cache_data,
@@ -101,7 +105,10 @@ import pipeline_types::*;
             output write_en,
             output read_en,
             output select,
-            output cache_en
+            output cache_en,
+            output is_preld,
+            output is_cacop,
+            output cacop_code
         );
 
         modport slave (
@@ -112,7 +119,10 @@ import pipeline_types::*;
             input write_en,
             input read_en,
             input select,
-            input cache_en
+            input cache_en,
+            input is_preld,
+            input is_cacop,
+            input cacop_code
         );
     endinterface:mem_cache
 
