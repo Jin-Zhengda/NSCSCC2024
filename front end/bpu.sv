@@ -25,21 +25,25 @@ import pipeline_type::*;
 (
     input logic clk,
     input logic rst,
-    input logic flush,
+    input logic branch_flush,
     
     input pc_out pc_i,
     input logic [`InstBus] inst_1_i,
     input logic [`InstBus] inst_2_i,
+    input logic inst_en_1,
+    input logic inst_en_2,
 
     output inst_and_pc_t inst_and_pc,
    
    //分支预测的结果
     output logic is_branch_1,
     output logic is_branch_2,
-    output logic taken_or_not,
+    output logic pre_taken_or_not,
 
     //跳转的目标地址，传给pc
-    output logic [`InstBus] branch_target,  
+    output logic [`InstBus] pre_branch_addr,  
+
+
     output logic fetch_inst_1_en,
     output logic fetch_inst_2_en
     );
@@ -134,11 +138,11 @@ import pipeline_type::*;
     logic [`InstBus] prediction_addr_1;
     logic [`InstBus] prediction_addr_2;
 
-    logic taken_or_not_1;
-    logic taken_or_not_2;
+    logic pre_taken_or_not_1;
+    logic pre_taken_or_not_2;
 
     always_ff @(posedge clk) begin
-        if(rst|flush) begin
+        if(rst|branch_flush) begin
             fetch_inst_1_en <= 0;
             fetch_inst_2_en <= 0;
             inst_and_pc.inst_o_1 <= 0;
@@ -149,20 +153,20 @@ import pipeline_type::*;
             is_branch_2 <= 0;
         end
         else begin
-            if(is_branch_1&&taken_or_not_1)begin
+            if(is_branch_1&&pre_taken_or_not_1&&inst_en_1)begin
                 fetch_inst_1_en <= 1'b1;
                 fetch_inst_2_en <= 1'b0;
                 inst_and_pc.inst_o_1 <= inst_1_i;
                 inst_and_pc.pc_o_1 <= pc_i.pc_o_1;
-                branch_target <= prediction_addr_1;
-            end else if(is_branch_2&&taken_or_not_2) begin
+                pre_branch_addr <= prediction_addr_1;
+            end else if(is_branch_2&&pre_taken_or_not_2&&inst_en_2) begin
                 fetch_inst_1_en <= 1'b1;
                 fetch_inst_2_en <= 1'b1;
                 inst_and_pc.inst_o_1 <= inst_1_i;
                 inst_and_pc.inst_o_2 <= inst_2_i;
                 inst_and_pc.pc_o_1 <= pc_i.pc_o_1;
                 inst_and_pc.pc_o_2 <= pc_i.pc_o_2;
-                branch_target <= prediction_addr_2;
+                pre_branch_addr <= prediction_addr_2;
             end else begin
                 fetch_inst_1_en <= 1'b1;
                 fetch_inst_2_en <= 1'b1;
@@ -175,11 +179,13 @@ import pipeline_type::*;
     end
 
     // always @(*) begin
-    //     taken_or_not <= taken_or_not_1&taken_or_not_2;
+    //     pre_taken_or_not <= pre_taken_or_not_1&pre_taken_or_not_2;
     // end
 
     always_comb begin
-        taken_or_not <= 0;
+        pre_taken_or_not <= 0;
+        pre_taken_or_not_1 <= 0;
+        pre_taken_or_not_2 <= 0;
     end
 
 

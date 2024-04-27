@@ -48,4 +48,10 @@ package pipeline_type;
         logic [5:0][6:0] exception_cause;
     } pc_out;
 
+    typedef struct packed {
+        logic is_branch;
+        logic pre_taken_or_not;
+        logic [31:0] pre_branch_addr;
+    } branch_info;
+
 endpackage
