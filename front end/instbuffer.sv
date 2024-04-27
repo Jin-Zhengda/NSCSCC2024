@@ -23,16 +23,16 @@
 `define InstBufferAddrSize 5
 `define ZeroInstBufferAddr 5'd0
 
-module instbuffer(
+
+module instbuffer
+import pipeline_type::*;
+(
     input logic clk,
     input logic rst,
     input logic flush,
 
     //bpu传来的信号
-    input logic [`InstBus] inst_1_i,
-    input logic [`InstBus] inst_2_i,
-    input logic [`InstBus] pc_1_i,
-    input logic [`InstBus] pc_2_i,
+    input inst_and_pc_t inst_and_pc_i,
 
     input logic is_inst1_valid,
     input logic is_inst2_valid,
@@ -46,10 +46,7 @@ module instbuffer(
     input logic fetch_inst_2_en,
 
     //输出给if_id的
-    output logic [`InstBus] instbuffer_1_o,
-    output logic [`InstBus] instbuffer_2_o,
-    output logic [`InstBus] pc_1_o,
-    output logic [`InstBus] pc_2_o
+    output inst_and_pc_t inst_and_pc_o
     );
 
     //FIFO for inst
@@ -63,6 +60,9 @@ module instbuffer(
     //表征FIFO中的指令是否有效,暂时没有使用
     logic [`InstBufferSize-1:0]FIFO_valid;
 
+    assign inst_and_pc_o.is_exception = inst_and_pc_i.is_exception;
+    assign inst_and_pc_o.exception_cause = inst_and_pc_i.exception_cause;
+
     always_ff @(posedge clk) begin
         if(rst|flush) begin
             head <= `ZeroInstBufferAddr;
@@ -71,22 +71,22 @@ module instbuffer(
         end
         else begin
             if(fetch_inst_1_en&&fetch_inst_2_en) begin
-                FIFO_inst[tail] <= inst_1_i;
-                FIFO_pc[tail] <= pc_1_i;
+                FIFO_inst[tail] <= inst_and_pc_i.inst_o_1;
+                FIFO_pc[tail] <= inst_and_pc_i.pc_o_1;
                 FIFO_valid[tail] <= 1'b1;
-                FIFO_inst[tail+1] <= inst_2_i;
-                FIFO_pc[tail+1] <= pc_2_i;
+                FIFO_inst[tail+1] <= inst_and_pc_i.inst_o_2;
+                FIFO_pc[tail+1] <= inst_and_pc_i.pc_o_2;
                 FIFO_valid[tail+1] <= 1'b1;
                 tail <= tail + 2;
             end else begin
                 if(fetch_inst_1_en) begin
-                    FIFO_inst[tail] <= inst_1_i;
-                    FIFO_pc[tail] <= pc_1_i;
+                    FIFO_inst[tail] <= inst_and_pc_i.inst_o_1;
+                    FIFO_pc[tail] <= inst_and_pc_i.pc_o_1;
                     FIFO_valid[tail] <= 1'b1;
                     tail <= tail + 1;
                 end else if(fetch_inst_2_en) begin
-                    FIFO_inst[tail] <= inst_2_i;
-                    FIFO_pc[tail] <= pc_2_i;
+                    FIFO_inst[tail] <= inst_and_pc_i.inst_o_2;
+                    FIFO_pc[tail] <= inst_and_pc_i.pc_o_2;
                     FIFO_valid[tail] <= 1'b1;
                     tail <= tail + 1;
                 end else begin
@@ -102,29 +102,29 @@ module instbuffer(
 
     always_ff @(posedge clk) begin
         if(rst|flush) begin
-            instbuffer_1_o <= 0;
-            instbuffer_2_o <= 0;
-            pc_1_o <= 0;
-            pc_2_o <= 0;
+            inst_and_pc_o.inst_o_1 <= 0;
+            inst_and_pc_o.inst_o_2 <= 0;
+            inst_and_pc_o.pc_o_1 <= 0;
+            inst_and_pc_o.pc_o_2 <= 0;
         end
         else begin
             if(send_inst_1_en && send_inst_2_en) begin
-                instbuffer_1_o <= FIFO_inst[head];
-                pc_1_o <= FIFO_pc[head];
-                instbuffer_2_o <= FIFO_inst[head+1];
-                pc_2_o <= FIFO_pc[head+1];
+                inst_and_pc_o.inst_o_1 <= FIFO_inst[head];
+                inst_and_pc_o.pc_o_1 <= FIFO_pc[head];
+                inst_and_pc_o.inst_o_2 <= FIFO_inst[head+1];
+                inst_and_pc_o.pc_o_2 <= FIFO_pc[head+1];
                 head <= head + 2;
             end else if(send_inst_1_en|send_inst_2_en) begin
-                instbuffer_1_o <= FIFO_inst[head];
-                pc_1_o <= FIFO_pc[head];
-                instbuffer_2_o <= 0;
-                pc_2_o <= 0;
+                inst_and_pc_o.inst_o_1 <= FIFO_inst[head];
+                inst_and_pc_o.pc_o_1 <= FIFO_pc[head];
+                inst_and_pc_o.inst_o_2 <= 0;
+                inst_and_pc_o.pc_o_2 <= 0;
                 head <= head + 1;
             end else begin
-                instbuffer_1_o <= 0;
-                instbuffer_2_o <= 0;
-                pc_1_o <= 0;
-                pc_2_o <= 0;
+                inst_and_pc_o.inst_o_1 <= 0;
+                inst_and_pc_o.inst_o_2 <= 0;
+                inst_and_pc_o.pc_o_1 <= 0;
+                inst_and_pc_o.pc_o_2 <= 0;
             end
         end
     end

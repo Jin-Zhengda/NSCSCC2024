@@ -20,27 +20,26 @@
 //////////////////////////////////////////////////////////////////////////////////
 `define InstBus 31:0
 
-module bpu(
+module bpu
+import pipeline_type::*;
+(
     input logic clk,
     input logic rst,
     input logic flush,
     
-    input logic [`InstBus] pc_1_i,
-    input logic [`InstBus] pc_2_i,
+    input pc_out pc_i,
     input logic [`InstBus] inst_1_i,
     input logic [`InstBus] inst_2_i,
 
+    output inst_and_pc_t inst_and_pc,
+   
    //分支预测的结果
-    output logic [`InstBus] pc_1_o,
-    output logic [`InstBus] pc_2_o,
     output logic is_branch_1,
     output logic is_branch_2,
     output logic taken_or_not,
 
     //跳转的目标地址，传给pc
     output logic [`InstBus] branch_target,  
-    output logic [`InstBus] inst_1_o,
-    output logic [`InstBus] inst_2_o,
     output logic fetch_inst_1_en,
     output logic fetch_inst_2_en
     );
@@ -50,6 +49,10 @@ module bpu(
 
     assign branch_judge_1 = inst_1_i[31:26];
     assign branch_judge_2 = inst_2_i[31:26];
+
+    //异常
+    assign inst_and_pc.is_exception = pc_i.is_exception;
+    assign inst_and_pc.exception_cause = pc_i.exception_cause;
 
 
     always_comb begin
@@ -138,10 +141,10 @@ module bpu(
         if(rst|flush) begin
             fetch_inst_1_en <= 0;
             fetch_inst_2_en <= 0;
-            inst_1_o <= 0;
-            inst_2_o <= 0;
-            pc_1_o <= 0;
-            pc_2_o <= 0;
+            inst_and_pc.inst_o_1 <= 0;
+            inst_and_pc.inst_o_2 <= 0;
+            inst_and_pc.pc_o_1 <= 0;
+            inst_and_pc.pc_o_2 <= 0;
             is_branch_1 <= 0;
             is_branch_2 <= 0;
         end
@@ -149,24 +152,24 @@ module bpu(
             if(is_branch_1&&taken_or_not_1)begin
                 fetch_inst_1_en <= 1'b1;
                 fetch_inst_2_en <= 1'b0;
-                inst_1_o <= inst_1_i;
-                pc_1_o <= pc_1_i;
+                inst_and_pc.inst_o_1 <= inst_1_i;
+                inst_and_pc.pc_o_1 <= pc_i.pc_o_1;
                 branch_target <= prediction_addr_1;
             end else if(is_branch_2&&taken_or_not_2) begin
                 fetch_inst_1_en <= 1'b1;
                 fetch_inst_2_en <= 1'b1;
-                inst_1_o <= inst_1_i;
-                inst_2_o <= inst_2_i;
-                pc_1_o <= pc_1_i;
-                pc_2_o <= pc_2_i;
+                inst_and_pc.inst_o_1 <= inst_1_i;
+                inst_and_pc.inst_o_2 <= inst_2_i;
+                inst_and_pc.pc_o_1 <= pc_i.pc_o_1;
+                inst_and_pc.pc_o_2 <= pc_i.pc_o_2;
                 branch_target <= prediction_addr_2;
             end else begin
                 fetch_inst_1_en <= 1'b1;
                 fetch_inst_2_en <= 1'b1;
-                inst_1_o <= inst_1_i;
-                inst_2_o <= inst_2_i;
-                pc_1_o <= pc_1_i;
-                pc_2_o <= pc_2_i;
+                inst_and_pc.inst_o_1 <= inst_1_i;
+                inst_and_pc.inst_o_2 <= inst_2_i;
+                inst_and_pc.pc_o_1 <= pc_i.pc_o_1;
+                inst_and_pc.pc_o_2 <= pc_i.pc_o_2;
             end
         end
     end
