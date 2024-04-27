@@ -35,6 +35,8 @@ import pipeline_type::*;
     input logic inst_2_i,
     output logic inst_en_1_o,
     output logic inst_en_2_o,
+    output logic [31:0] pc1,
+    output logic [31:0] pc2,
 
     //id_if给的发射使能信号
     input logic send_inst_1_en,
@@ -59,6 +61,9 @@ import pipeline_type::*;
     inst_and_pc_t inst_and_pc;
     logic fetch_inst_1_en;
     logic fetch_inst_2_en;
+
+    assign pc1 = pc.pc_o_1;
+    assign pc2 = pc.pc_o_2;
 
 
     pc_reg u_pc_reg(
