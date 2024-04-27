@@ -25,7 +25,7 @@ import pipeline_type::*;
 (
     input logic clk,
     input logic rst,
-    input logic flush,
+    input logic branch_flush,
     
     input pc_out pc_i,
     input logic [`InstBus] inst_1_i,
@@ -138,7 +138,7 @@ import pipeline_type::*;
     logic taken_or_not_2;
 
     always_ff @(posedge clk) begin
-        if(rst|flush) begin
+        if(rst|branch_flush) begin
             fetch_inst_1_en <= 0;
             fetch_inst_2_en <= 0;
             inst_and_pc.inst_o_1 <= 0;

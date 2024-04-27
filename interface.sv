@@ -1,5 +1,34 @@
 import pipeline_types::*;
 
+    interface mem_dcache;
+        logic valid;                // 请求有效
+        logic op;                   // 操作类型，读-0，写-1
+        logic[2:0]  size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
+        logic[31:0] virtual_addr;   // 虚拟地址
+        logic tlb_excp_cancel_req;
+        logic[3:0]  wstrb;          //写使能，1表示对应的8位数据需要写
+        logic[31:0] wdata;          //需要写的数据
+        
+        logic addr_ok;              //该次请求的地址传输OK，读：地址被接收；写：地址和数据被接收
+        logic data_ok;              //该次请求的数据传输OK，读：数据返回；写：数据写入完成
+        logic[31:0] rdata;          //读DCache的结果
+        logic cache_miss;           //cache未命中
+
+        modport master (
+            input addr_ok, data_ok, rdata, cache_miss,
+            output valid, op, size, virtual_addr, tlb_excp_cancel_req, wstrb, wdata
+        );
+
+        modport slave (
+            output addr_ok, data_ok, rdata, cache_miss,
+            input valid, op, size, virtual_addr, tlb_excp_cancel_req, wstrb, wdata
+        );
+    endinterface: mem_dcache
+
+    interface pc_icache;
+    
+    endinterface: pc_icache
+
     interface dispatch_regfile;
         bus32_t reg1_read_data;
         bus32_t reg2_read_data;
@@ -80,52 +109,6 @@ import pipeline_types::*;
         
     endinterface:mem_csr
 
-    interface mem_cache;
-        logic is_cache_hit;
-        bus32_t cache_data;
-
-        bus32_t cache_addr;
-        bus32_t store_data;
-        logic write_en;
-        logic read_en;
-
-        logic[3: 0] select;
-
-        logic cache_en;
-        logic is_preld;
-
-        logic is_cacop; 
-        logic[4: 0] cacop_code; 
-
-        modport master (
-            input cache_data,
-            input is_cache_hit,
-            output cache_addr,
-            output store_data,
-            output write_en,
-            output read_en,
-            output select,
-            output cache_en,
-            output is_preld,
-            output is_cacop,
-            output cacop_code
-        );
-
-        modport slave (
-            output cache_data,
-            output is_cache_hit,
-            input cache_addr,
-            input store_data,
-            input write_en,
-            input read_en,
-            input select,
-            input cache_en,
-            input is_preld,
-            input is_cacop,
-            input cacop_code
-        );
-    endinterface:mem_cache
-
     interface ctrl_csr;
         bus32_t EENTRY_VA;
         bus32_t ERA_PC;
@@ -162,3 +145,4 @@ import pipeline_types::*;
             input exception_addr
         );
     endinterface:ctrl_csr
+

@@ -15,6 +15,9 @@ module id
 
   assign id_dispatch.pc   = pc_id.pc;
   assign id_dispatch.inst = pc_id.inst;
+  assign id_dispatch.pre_is_branch = pc_id.pre_is_branch;
+  assign id_dispatch.pre_is_branch_taken = pc_id.pre_is_branch_taken;
+  assign id_dispatch.pre_branch_addr = pc_id.pre_branch_addr;
 
   logic [1:0] CRMD_PLV_current;
   assign CRMD_PLV_current = (csr_push_forward.csr_write_en && csr_push_forward.csr_write_addr == `CSR_CRMD) 
