@@ -24,6 +24,8 @@ module ex
     assign ex_mem.aluop = dispatch_ex.aluop;
     assign ex_mem.store_data = dispatch_ex.reg2;
 
+    assign ex_mem.cacop_code = dispatch_ex.cacop_code;
+
     logic[11: 0] si12;
     logic[13: 9] si14;
 
@@ -32,7 +34,7 @@ module ex
     
     always_comb begin
         case (dispatch_ex.aluop)
-            `ALU_LDB, `ALU_LDBU, `ALU_LDH, `ALU_LDHU, `ALU_LDW, `ALU_LLW: begin
+            `ALU_LDB, `ALU_LDBU, `ALU_LDH, `ALU_LDHU, `ALU_LDW, `ALU_LLW, `ALU_PRELD: begin
                 ex_mem.mem_addr = dispatch_ex.reg1 + dispatch_ex.reg2;
             end
             `ALU_STB, `ALU_STH, `ALU_STW: begin

@@ -72,6 +72,9 @@ module mem
         cache_master.read_en = 1'b0;
         cache_master.select = 4'b1111;
         cache_master.cache_en = 1'b0;
+        cache_master.is_preld = 1'b0;
+        cache_master.is_cacop = 1'b0;
+        cache_master.cacop_code = 5'b0;
 
         mem_wb.csr_write.LLbit_write_en = 1'b0;
         mem_wb.csr_write.LLbit_write_data = 1'b0;
@@ -303,6 +306,10 @@ module mem
             end
             default: begin
             end 
+            `ALU_CACOP: begin
+                cache_master.is_cacop = 1'b1;
+                cache_master.cacop_code = ex_mem.cacop_code;
+            end
         endcase
     end
 endmodule

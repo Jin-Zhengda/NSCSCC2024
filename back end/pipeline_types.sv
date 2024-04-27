@@ -64,6 +64,8 @@ package pipeline_types;
         logic csr_read_en;
         logic csr_write_en;
         csr_addr_t csr_addr;
+
+        logic[4: 0] cacop_code;
     } id_dispatch_t;
 
     // csr push forward
@@ -103,6 +105,8 @@ package pipeline_types;
         csr_addr_t csr_addr;
 
         bus32_t reg_write_branch_data;
+
+        logic[4: 0] cacop_code;
     } dispatch_ex_t;
 
     typedef struct packed {
@@ -140,6 +144,8 @@ package pipeline_types;
         csr_addr_t csr_addr;
         bus32_t csr_write_data;
         bus32_t csr_mask;
+
+        logic[4: 0] cacop_code;
     } ex_mem_t;
 
     typedef struct packed {

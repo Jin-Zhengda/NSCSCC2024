@@ -21,26 +21,26 @@ module id
                                 ? csr_push_forward.csr_write_data : CRMD_PLV;
 
   // select inst feild
-  wire [9:0] opcode1 = pc_id.inst[31:22];
-  wire [16:0] opcode2 = pc_id.inst[31:15];
-  wire [6:0] opcode3 = pc_id.inst[31:25];
-  wire [7:0] opcode4 = pc_id.inst[31:24];
-  wire [5:0] opcode5 = pc_id.inst[31:26];
-  wire [21:0] opcode6 = pc_id.inst[31:10];
-  wire [26:0] opcode7 = pc_id.inst[31:5];
+  logic [9:0] opcode1 = pc_id.inst[31:22];
+  logic [16:0] opcode2 = pc_id.inst[31:15];
+  logic [6:0] opcode3 = pc_id.inst[31:25];
+  logic [7:0] opcode4 = pc_id.inst[31:24];
+  logic [5:0] opcode5 = pc_id.inst[31:26];
+  logic [21:0] opcode6 = pc_id.inst[31:10];
+  logic [26:0] opcode7 = pc_id.inst[31:5];
 
-  wire [19:0] si20 = pc_id.inst[24:5];
-  wire [11:0] ui12 = pc_id.inst[21:10];
-  wire [11:0] si12 = pc_id.inst[21:10];
-  wire [13:0] si14 = pc_id.inst[23:10];
-  wire [4:0] ui5 = pc_id.inst[14:10];
+  logic [19:0] si20 = pc_id.inst[24:5];
+  logic [11:0] ui12 = pc_id.inst[21:10];
+  logic [11:0] si12 = pc_id.inst[21:10];
+  logic [13:0] si14 = pc_id.inst[23:10];
+  logic [4:0] ui5 = pc_id.inst[14:10];
 
-  wire [4:0] rk = pc_id.inst[14:10];
-  wire [4:0] rj = pc_id.inst[9:5];
-  wire [4:0] rd = pc_id.inst[4:0];
-  wire [14:0] code = pc_id.inst[14:0];
-  wire [13:0] csr = pc_id.inst[23:10];
-  wire [9:0] level = pc_id.inst[9:0];
+  logic [4:0] rk = pc_id.inst[14:10];
+  logic [4:0] rj = pc_id.inst[9:5];
+  logic [4:0] rd = pc_id.inst[4:0];
+  logic [14:0] code = pc_id.inst[14:0];
+  logic [13:0] csr = pc_id.inst[23:10];
+  logic [9:0] level = pc_id.inst[9:0];
 
   logic inst_valid;
   logic id_exception;
@@ -73,6 +73,7 @@ module id
       id_dispatch.csr_addr = csr;
       id_exception = 1'b0;
       id_exception_cause = `EXCEPTION_NOP;
+      id_dispatch.cacop_code = 5'b0;
 
       case (opcode1)
         `SLTI_OPCODE: begin
@@ -210,6 +211,27 @@ module id
           id_dispatch.reg1_read_en = 1'b1;
           id_dispatch.reg2_read_en = 1'b1;
           id_dispatch.reg2_read_addr = rd;
+          inst_valid = 1'b1;
+        end
+        `PRELD_OPCODE: begin
+          id_dispatch.reg_write_en = 1'b0;
+          id_dispatch.aluop = `ALU_PRELD;
+          id_dispatch.alusel = `ALU_SEL_LOAD_STORE;
+          id_dispatch.reg1_read_en = 1'b1;
+          id_dispatch.reg2_read_en = 1'b0;
+          id_dispatch.imm = {{20{si12[11]}}, si12};
+          inst_valid = 1'b1;
+        end
+        `CACOP_OPCODE: begin
+          id_exception = (CRMD_PLV_current == 2'b00) ? 1'b0 : 1'b1;
+          id_exception_cause = (CRMD_PLV_current == 2'b00) ? 7'b0 : `EXCEPTION_IPE;
+          id_dispatch.reg_write_en = 1'b0;
+          id_dispatch.aluop = `ALU_CACOP;
+          id_dispatch.alusel = `ALU_SEL_NOP;
+          id_dispatch.reg1_read_en = 1'b1;
+          id_dispatch.reg2_read_en = 1'b0;
+          id_dispatch.imm = {{20{si12[11]}}, si12};
+          id_dispatch.cacop_code = rd;
           inst_valid = 1'b1;
         end
         default: begin
