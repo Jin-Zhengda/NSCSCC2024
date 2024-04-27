@@ -14,8 +14,7 @@ module dispatch
     output logic pause_dispatch,
     output dispatch_ex_t dispatch_ex,
 
-    output logic is_branch,
-    output bus32_t branch_target_addr,
+    output bus32_t branch_target_addr_actual,
     output logic branch_flush
 );
     assign dispatch_ex.pc = id_dispatch.pc; 
@@ -61,60 +60,74 @@ module dispatch
 
     logic reg1_lt_reg2;
 
+    bus32_t branch_target_addr;
+    logic is_branch;
+
     // branch
     always_comb begin : branch
         is_branch = 1'b0;
         branch_target_addr = 32'b0;
         branch_flush = 1'b0;
         dispatch_ex.reg_write_branch_data = 32'b0;
+        branch_target_addr_actual = 32'b0;
 
         reg1_lt_reg2 = (dispatch_ex.reg1[31] && !dispatch_ex.reg2[31]) || (!dispatch_ex.reg1[31] && !dispatch_ex.reg2[31] && (dispatch_ex.reg1 < dispatch_ex.reg2)) 
                                     || (dispatch_ex.reg1[31] && dispatch_ex.reg2[31] && (dispatch_ex.reg1 > dispatch_ex.reg2));
+
+        if (is_branch && id_dispatch.pre_is_branch_taken) begin
+            if (id_dispatch.pre_branch_addr == branch_target_addr) begin
+                branch_flush = 1'b0;
+            end
+            else begin
+                branch_flush = 1'b1;
+                branch_target_addr_actual = branch_target_addr;
+            end
+        end
+        else if (!is_branch && id_dispatch.pre_is_branch_taken) begin
+            branch_flush = 1'b1;
+            branch_target_addr_actual = id_dispatch.pc + 4'h4;
+        end
+        else begin
+            branch_flush = 1'b0;
+        end
 
         case (id_dispatch.aluop) 
             `ALU_BEQ: begin
                 if (dispatch_ex.reg1 == dispatch_ex.reg2) begin
                     is_branch = 1'b1;
                     branch_target_addr = id_dispatch.pc + branch16_addr;
-                    branch_flush = 1'b1;
                 end
             end
             `ALU_BNE: begin
                 if (dispatch_ex.reg1 != dispatch_ex.reg2) begin
                     is_branch = 1'b1;
                     branch_target_addr = id_dispatch.pc + branch16_addr;
-                    branch_flush = 1'b1;
                 end
             end
             `ALU_BLT, `ALU_BLTU: begin
                 if (reg1_lt_reg2) begin
                     is_branch = 1'b1;
                     branch_target_addr = id_dispatch.pc + branch16_addr;
-                    branch_flush = 1'b1;
                 end
             end
             `ALU_BGE, `ALU_BGEU: begin
                 if (!reg1_lt_reg2) begin
                     is_branch = 1'b1;
                     branch_target_addr = id_dispatch.pc + branch16_addr;
-                    branch_flush = 1'b1;
                 end
             end
             `ALU_B: begin
                 is_branch = 1'b1;
                 branch_target_addr = id_dispatch.pc + branch26_addr;
-                branch_flush = 1'b1;
             end
             `ALU_BL, `ALU_JIRL: begin
                 is_branch = 1'b1;
                 branch_target_addr = id_dispatch.pc + branch26_addr;
-                branch_flush = 1'b1;
                 dispatch_ex.reg_write_branch_data = id_dispatch.pc + 4'h4;
             end
             `ALU_JIRL: begin
                 is_branch = 1'b1;
                 branch_target_addr = dispatch_ex.reg1 + branch26_addr;
-                branch_flush = 1'b1;
                 dispatch_ex.reg_write_branch_data = id_dispatch.pc + 4'h4;
             end
         endcase

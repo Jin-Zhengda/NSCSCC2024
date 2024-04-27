@@ -26,6 +26,22 @@ package pipeline_types;
         logic exception_flush;
     } ctrl_t;
 
+    typedef struct packed {
+        bus32_t inst_o_1;
+        bus32_t inst_o_2;
+        bus32_t pc_o_1;
+        bus32_t pc_o_2;
+        logic [5:0] is_exception;
+        logic [5:0][6:0] exception_cause;
+    } inst_and_pc_t;
+
+    typedef struct packed {
+        logic [31:0] pc_o_1;
+        logic [31:0] pc_o_2;
+        logic [5:0] is_exception;
+        logic [5:0][6:0] exception_cause;
+    } pc_out;
+
     // ctrl and pc
     typedef struct packed {
         bus32_t exception_new_pc;
@@ -39,6 +55,10 @@ package pipeline_types;
 
         logic[5: 0] is_exception;
         logic[5: 0][6: 0] exception_cause;
+
+        logic pre_is_branch;
+        logic pre_is_branch_taken;
+        bus32_t pre_branch_addr;
     } pc_id_t;
 
     // id and dispatch
@@ -66,6 +86,10 @@ package pipeline_types;
         csr_addr_t csr_addr;
 
         logic[4: 0] cacop_code;
+
+        logic pre_is_branch;
+        logic pre_is_branch_taken;
+        bus32_t pre_branch_addr;
     } id_dispatch_t;
 
     // csr push forward

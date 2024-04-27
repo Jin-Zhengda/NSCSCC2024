@@ -1,39 +1,26 @@
-module cpu_core 
+module backend
     import pipeline_types::*;
 (
     input logic clk,
     input logic rst,
 
-    input bus32_t rom_inst,
-    
-    output logic inst_en,
-    output bus32_t pc,
+    input pc_id_t id_i,
 
-    input is_cache_hit,
-    input bus32_t ram_read_data,
+    // to front
+    output bus32_t branch_target_addr_actual,
+    output logic branch_flush,
 
-    output bus32_t ram_addr,
-    output bus32_t ram_write_data,
-    output logic ram_write_en,
-    output logic ram_read_en,
-    output logic[3: 0] ram_select,
-    output logic ram_en
+    output ctrl_t ctrl,
+    output ctrl_pc_t ctrl_pc,
+
+    // to dcache
+    mem_dcache dcache_master
 );
-
-    // branch
-    logic is_branch;
-    bus32_t branch_target_addr;
-    logic branch_flush;
 
     // regfile
     dispatch_regfile dispatch_regfile_io();
 
-    // pc 
-    ctrl_pc_t ctrl_pc;
-    pc_id_t pc_o;
-
     // id
-    pc_id_t id_i;
     id_dispatch_t id_o;
     logic[1: 0] CRMD_PLV;
     csr_push_forward_t csr_push_forward;
@@ -52,7 +39,7 @@ module cpu_core
     // mem
     ex_mem_t mem_i;
     mem_csr mem_csr_io();
-    mem_cache mem_cache_io();
+    mem_dcache mem_cache_io();
     wb_push_forward_t wb_push_forward;
     bus64_t cnt;
     mem_wb_t mem_o;
@@ -63,41 +50,9 @@ module cpu_core
     mem_wb_t wb;
 
     // ctrl
-    ctrl_t ctrl;
     ctrl_csr ctrl_csr_io();
     pause_t pause_request;
 
-
-    pc u_pc (
-        .clk,
-        .rst,
-
-        .is_branch(is_branch),
-        .branch_target_addr(branch_target_addr),
-
-        .ctrl(ctrl),
-        .ctrl_pc(ctrl_pc),
-
-        .pc_id(pc_o),
-
-        .inst_en(inst_en)
-    );
-
-    assign pc = pc_o.pc;
-    assign pc_o.inst = rom_inst;
-
-    if_id u_if_id (
-        .clk,
-        .rst,
-
-        .branch_flush(branch_flush),
-
-        .ctrl(ctrl),
-
-        .pc_i(pc_o),
-
-        .id_o(id_i)
-    );
 
     id u_id (
         .pc_id(id_i),
@@ -211,15 +166,6 @@ module cpu_core
     assign mem_push_forward.reg_write_en = mem_o.data_write.write_en;
     assign mem_push_forward.reg_write_addr = mem_o.data_write.write_addr;
     assign mem_push_forward.reg_write_data = mem_o.data_write.write_data;
-
-    assign mem_cache_io.master.is_cache_hit = is_cache_hit;
-    assign mem_cache_io.master.cache_data = ram_read_data;
-    assign ram_addr = mem_cache_io.master.cache_addr;
-    assign ram_write_data = mem_cache_io.master.store_data;
-    assign ram_write_en = mem_cache_io.master.write_en;
-    assign ram_read_en = mem_cache_io.master.read_en;
-    assign ram_select = mem_cache_io.master.select;
-    assign ram_en = mem_cache_io.master.cache_en;
 
     mem_wb u_mem_wb (
         .clk,
