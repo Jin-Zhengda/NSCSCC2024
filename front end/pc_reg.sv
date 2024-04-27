@@ -29,26 +29,28 @@ import pipeline_type::*;
 
     input logic is_branch_i_1,
     input logic is_branch_i_2,
-    input logic taken_or_not,
-    input logic [`InstAddrWidth] branch_target_addr_i,
+    input logic pre_taken_or_not,
+    input logic [`InstAddrWidth] pre_branch_addr,
+    input logic [`InstAddrWidth] branch_actual_addr,
+    input logic branch_flush,
 
     input ctrl_t ctrl,
     input ctrl_pc_t ctrl_pc,
 
     output pc_out pc,
-    output logic inst_en_o_1,
-    output logic inst_en_o_2
+    output logic inst_en_1,
+    output logic inst_en_2
 );
 
 
     always_ff @(posedge clk) begin
         if (rst) begin
-            inst_en_o_1 <= 1'b0;
-            inst_en_o_2 <= 1'b0;
+            inst_en_1 <= 1'b0;
+            inst_en_2 <= 1'b0;
         end
         else begin
-            inst_en_o_1 <= 1'b1;
-            inst_en_o_2 <= 1'b0;
+            inst_en_1 <= 1'b1;
+            inst_en_2 <= 1'b0;
         end
     end
 
@@ -63,9 +65,9 @@ import pipeline_type::*;
     //         pc_2_o <= pc_2_o;
     //     end
     //     else begin
-    //         if ((is_branch_i_1|is_branch_i_2)&&taken_or_not) begin
-    //             pc_1_o <= branch_target_addr_i;
-    //             pc_2_o <= branch_target_addr_i+4;
+    //         if ((is_branch_i_1|is_branch_i_2)&&pre_taken_or_not) begin
+    //             pc_1_o <= pre_branch_addr;
+    //             pc_2_o <= pre_branch_addr+4;
     //         end
     //         else begin
     //         pc_1_o <= pc_1_o + 4'h8;
@@ -90,8 +92,11 @@ import pipeline_type::*;
             pc.pc_o_1 <= pc.pc_o_1;
         end
         else begin
-            if(is_branch_i_1&&taken_or_not) begin
-                pc.pc_o_1 <= branch_target_addr_i;
+            if(branch_flush) begin
+                pc.pc_o_1 <= branch_actual_addr;
+            end
+            else if(is_branch_i_1&&pre_taken_or_not) begin
+                pc.pc_o_1 <= pre_branch_addr;
             end
             else begin
             pc.pc_o_1 <= pc.pc_o_1 + 4'h4;
