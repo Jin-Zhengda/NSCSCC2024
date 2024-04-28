@@ -37,7 +37,7 @@ import pipeline_types::*;
     input logic is_branch_1,
     input logic is_branch_2,
     input logic pre_taken_or_not,
-    input logic pre_branch_addr,
+    input logic [31:0] pre_branch_addr,
 
     // input logic is_inst1_valid,
     // input logic is_inst2_valid,

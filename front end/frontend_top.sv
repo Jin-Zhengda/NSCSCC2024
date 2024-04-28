@@ -66,7 +66,7 @@ import pipeline_types::*;
     assign pc2 = pc.pc_o_2;
     assign inst_en_1_o = inst_en_1;
     assign inst_en_2_o = inst_en_2;
-
+  
     pc_reg u_pc_reg(
         .clk,
         .rst,
@@ -96,6 +96,7 @@ import pipeline_types::*;
         .inst_2_i,
         .inst_en_1,
         .inst_en_2,
+        .ctrl,
 
         .inst_and_pc,
         .is_branch_1(is_branch_i_1),

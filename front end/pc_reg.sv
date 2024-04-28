@@ -36,6 +36,7 @@ import pipeline_types::*;
 
     input ctrl_t ctrl,
     input ctrl_pc_t ctrl_pc,
+    input hit_or_not,
 
     output pc_out pc,
     output logic inst_en_1,
@@ -103,4 +104,6 @@ import pipeline_types::*;
             end
         end
     end
+
+
 endmodule
