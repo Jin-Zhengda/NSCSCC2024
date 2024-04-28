@@ -32,6 +32,7 @@ import pipeline_type::*;
     input logic [`InstBus] inst_2_i,
     input logic inst_en_1,
     input logic inst_en_2,
+    input ctrl_t ctrl,
 
     output inst_and_pc_t inst_and_pc,
    
@@ -62,37 +63,37 @@ import pipeline_type::*;
     always_comb begin
         case(branch_judge_1)
             6'b010010:begin
-                is_branch_1 <= 1'b1;
+                is_branch_1 = 1'b1;
             end
             6'b010011:begin
-                is_branch_1 <= 1'b1;
+                is_branch_1 = 1'b1;
             end
             6'b010100:begin
-                is_branch_1 <= 1'b1;
+                is_branch_1 = 1'b1;
             end
             6'b010101:begin
-                is_branch_1 <= 1'b1;
+                is_branch_1 = 1'b1;
             end
             6'b010110:begin
-                is_branch_1 <= 1'b1;
+                is_branch_1 = 1'b1;
             end
             6'b010111:begin
-                is_branch_1 <= 1'b1;
+                is_branch_1 = 1'b1;
             end
             6'b011000:begin
-                is_branch_1 <= 1'b1;
+                is_branch_1 = 1'b1;
             end
             6'b011001:begin
-                is_branch_1 <= 1'b1;
+                is_branch_1 = 1'b1;
             end
             6'b011010:begin
-                is_branch_1 <= 1'b1;
+                is_branch_1 = 1'b1;
             end
             6'b011011:begin
-                is_branch_1 <= 1'b1;
+                is_branch_1 = 1'b1;
             end
             default:begin
-                is_branch_1 <= 1'b0;
+                is_branch_1 = 1'b0;
             end
         endcase
     end
@@ -100,37 +101,37 @@ import pipeline_type::*;
     always_comb begin
         case(branch_judge_2)
             6'b010010:begin
-                is_branch_2 <= 1'b1;
+                is_branch_2 = 1'b1;
             end
             6'b010011:begin
-                is_branch_2 <= 1'b1;
+                is_branch_2 = 1'b1;
             end
             6'b010100:begin
-                is_branch_2 <= 1'b1;
+                is_branch_2 = 1'b1;
             end
             6'b010101:begin
-                is_branch_2 <= 1'b1;
+                is_branch_2 = 1'b1;
             end
             6'b010110:begin
-                is_branch_2 <= 1'b1;
+                is_branch_2 = 1'b1;
             end
             6'b010111:begin
-                is_branch_2 <= 1'b1;
+                is_branch_2 = 1'b1;
             end
             6'b011000:begin
-                is_branch_2 <= 1'b1;
+                is_branch_2 = 1'b1;
             end
             6'b011001:begin
-                is_branch_2 <= 1'b1;
+                is_branch_2 = 1'b1;
             end
             6'b011010:begin
-                is_branch_2 <= 1'b1;
+                is_branch_2 = 1'b1;
             end
             6'b011011:begin
-                is_branch_2 <= 1'b1;
+                is_branch_2 = 1'b1;
             end
             default:begin
-                is_branch_2 <= 1'b0;
+                is_branch_2 = 1'b0;
             end
         endcase
     end
@@ -142,15 +143,13 @@ import pipeline_type::*;
     logic pre_taken_or_not_2;
 
     always_ff @(posedge clk) begin
-        if(rst|branch_flush) begin
+        if(rst|branch_flush|ctrl.pause[0]) begin
             fetch_inst_1_en <= 0;
             fetch_inst_2_en <= 0;
             inst_and_pc.inst_o_1 <= 0;
             inst_and_pc.inst_o_2 <= 0;
             inst_and_pc.pc_o_1 <= 0;
             inst_and_pc.pc_o_2 <= 0;
-            is_branch_1 <= 0;
-            is_branch_2 <= 0;
         end
         else begin
             if(is_branch_1&&pre_taken_or_not_1&&inst_en_1)begin
@@ -169,11 +168,11 @@ import pipeline_type::*;
                 pre_branch_addr <= prediction_addr_2;
             end else begin
                 fetch_inst_1_en <= 1'b1;
-                fetch_inst_2_en <= 1'b1;
+                fetch_inst_2_en <= 1'b0;
                 inst_and_pc.inst_o_1 <= inst_1_i;
-                inst_and_pc.inst_o_2 <= inst_2_i;
+                // inst_and_pc.inst_o_2 <= inst_2_i;
                 inst_and_pc.pc_o_1 <= pc_i.pc_o_1;
-                inst_and_pc.pc_o_2 <= pc_i.pc_o_2;
+                // inst_and_pc.pc_o_2 <= pc_i.pc_o_2;
             end
         end
     end
@@ -183,9 +182,9 @@ import pipeline_type::*;
     // end
 
     always_comb begin
-        pre_taken_or_not <= 0;
-        pre_taken_or_not_1 <= 0;
-        pre_taken_or_not_2 <= 0;
+        pre_taken_or_not = 0;
+        pre_taken_or_not_1 = 0;
+        pre_taken_or_not_2 = 0;
     end
 
 

@@ -36,6 +36,7 @@ import pipeline_type::*;
 
     input ctrl_t ctrl,
     input ctrl_pc_t ctrl_pc,
+    input hit_or_not,
 
     output pc_out pc,
     output logic inst_en_1,
@@ -82,8 +83,8 @@ import pipeline_type::*;
 
     always_ff @(posedge clk) begin
         if(rst) begin
-            pc.pc_o_1 <= 32'h0;
-            pc.pc_o_2 <= 32'h4;
+            pc.pc_o_1 <= 32'h100;
+            pc.pc_o_2 <= 32'h104;
         end
         else if(ctrl.exception_flush) begin
             pc.pc_o_1 <= ctrl_pc.exception_new_pc;
@@ -103,4 +104,6 @@ import pipeline_type::*;
             end
         end
     end
+
+
 endmodule

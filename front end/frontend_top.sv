@@ -31,8 +31,8 @@ import pipeline_type::*;
     input logic [31:0] branch_actual_addr,
 
     //icache
-    input logic inst_1_i,
-    input logic inst_2_i,
+    input logic [31:0] inst_1_i,
+    input logic [31:0] inst_2_i,
     output logic inst_en_1_o,
     output logic inst_en_2_o,
     output logic [31:0] pc1,
@@ -64,6 +64,8 @@ import pipeline_type::*;
 
     assign pc1 = pc.pc_o_1;
     assign pc2 = pc.pc_o_2;
+    assign inst_en_1_o = inst_en_1;
+    assign inst_en_2_o = inst_en_2;
 
 
     pc_reg u_pc_reg(
@@ -95,6 +97,7 @@ import pipeline_type::*;
         .inst_2_i,
         .inst_en_1,
         .inst_en_2,
+        .ctrl,
 
         .inst_and_pc,
         .is_branch_1(is_branch_i_1),
