@@ -13,7 +13,7 @@ module id
     output id_dispatch_t id_dispatch
 );
 
-  assign id_dispatch.pc   = pc_id.pc;
+  assign id_dispatch.pc = pc_id.pc;
   assign id_dispatch.inst = pc_id.inst;
   assign id_dispatch.pre_is_branch = pc_id.pre_is_branch;
   assign id_dispatch.pre_is_branch_taken = pc_id.pre_is_branch_taken;
@@ -24,26 +24,47 @@ module id
                                 ? csr_push_forward.csr_write_data : CRMD_PLV;
 
   // select inst feild
-  logic [9:0] opcode1 = pc_id.inst[31:22];
-  logic [16:0] opcode2 = pc_id.inst[31:15];
-  logic [6:0] opcode3 = pc_id.inst[31:25];
-  logic [7:0] opcode4 = pc_id.inst[31:24];
-  logic [5:0] opcode5 = pc_id.inst[31:26];
-  logic [21:0] opcode6 = pc_id.inst[31:10];
-  logic [26:0] opcode7 = pc_id.inst[31:5];
+  logic [9:0] opcode1;
+  logic [16:0] opcode2;
+  logic [6:0] opcode3;
+  logic [7:0] opcode4;
+  logic [5:0] opcode5;
+  logic [21:0] opcode6;
+  logic [26:0] opcode7;
 
-  logic [19:0] si20 = pc_id.inst[24:5];
-  logic [11:0] ui12 = pc_id.inst[21:10];
-  logic [11:0] si12 = pc_id.inst[21:10];
-  logic [13:0] si14 = pc_id.inst[23:10];
-  logic [4:0] ui5 = pc_id.inst[14:10];
+  logic [19:0] si20;
+  logic [11:0] ui12;
+  logic [11:0] si12;
+  logic [13:0] si14;
+  logic [4:0] ui5;
 
-  logic [4:0] rk = pc_id.inst[14:10];
-  logic [4:0] rj = pc_id.inst[9:5];
-  logic [4:0] rd = pc_id.inst[4:0];
-  logic [14:0] code = pc_id.inst[14:0];
-  logic [13:0] csr = pc_id.inst[23:10];
-  logic [9:0] level = pc_id.inst[9:0];
+  logic [4:0] rk;
+  logic [4:0] rj;
+  logic [4:0] rd;
+  logic [14:0] code;
+  logic [13:0] csr;
+  logic [9:0] level;
+
+  assign opcode1 = pc_id.inst[31:22];
+  assign opcode2 = pc_id.inst[31:15];
+  assign opcode3 = pc_id.inst[31:25];
+  assign opcode4 = pc_id.inst[31:24];
+  assign opcode5 = pc_id.inst[31:26];
+  assign opcode6 = pc_id.inst[31:10];
+  assign opcode7 = pc_id.inst[31:5];
+
+  assign si20 = pc_id.inst[24:5];
+  assign ui12 = pc_id.inst[21:10];
+  assign si12 = pc_id.inst[21:10];
+  assign si14 = pc_id.inst[23:10];
+  assign ui5 = pc_id.inst[14:10];
+
+  assign rk = pc_id.inst[14:10];
+  assign rj = pc_id.inst[9:5];
+  assign rd = pc_id.inst[4:0];
+  assign code = pc_id.inst[14:0];
+  assign csr = pc_id.inst[23:10];
+  assign level = pc_id.inst[9:0];
 
   logic inst_valid;
   logic id_exception;

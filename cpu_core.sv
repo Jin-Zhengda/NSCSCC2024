@@ -3,6 +3,7 @@ module cpu_core
 (
     input logic clk,
     input logic rst,
+    input logic continue_idle,
     
     mem_dcache dcache_master,
     pc_icache icache_master
@@ -14,6 +15,7 @@ module cpu_core
     logic branch_flush;
     ctrl_t ctrl;
     ctrl_pc_t ctrl_pc;
+    logic send_inst1_en;
 
 
     backend u_backend (
@@ -39,7 +41,7 @@ module cpu_core
         .inst_en_1_o(inst_en),
         .pc1(pc),
 
-        .send_inst_1_en(1'b1),
+        .send_inst_1_en(send_inst1_en),
         .send_inst_2_en(1'b0),
 
         .branch_info1(front_branch_info),

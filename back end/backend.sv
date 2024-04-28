@@ -6,12 +6,16 @@ module backend
 
     input pc_id_t id_i,
 
+    input logic continue_idle,
+
     // to front
     output bus32_t branch_target_addr_actual,
     output logic branch_flush,
 
     output ctrl_t ctrl,
     output ctrl_pc_t ctrl_pc,
+
+    output logic send_inst1_en,
 
     // to dcache
     mem_dcache dcache_master
@@ -39,7 +43,6 @@ module backend
     // mem
     ex_mem_t mem_i;
     mem_csr mem_csr_io();
-    mem_dcache mem_cache_io();
     wb_push_forward_t wb_push_forward;
     bus64_t cnt;
     mem_wb_t mem_o;
@@ -150,7 +153,7 @@ module backend
         .ex_mem(mem_i),
 
         .csr_master(mem_csr_io.master),
-        .cache_master(mem_cache_io.master),
+        .dcache_master(dcache_master),
 
         .wb_push_forward(wb_push_forward),
         
@@ -186,12 +189,15 @@ module backend
         .pause_request(pause_request),
         .mem_i(mem_ctrl),
 
+        .continue_idle(continue_idle),
+
         .wb_push_forward(wb_push_forward),
         
         .master(ctrl_csr_io.master),
 
         .ctrl_o(ctrl),
-        .ctrl_pc(ctrl_pc)
+        .ctrl_pc(ctrl_pc),
+        .send_inst1_en(send_inst1_en)
     );
 
     csr u_csr (

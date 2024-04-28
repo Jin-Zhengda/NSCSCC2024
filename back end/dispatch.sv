@@ -64,32 +64,13 @@ module dispatch
     logic is_branch;
 
     // branch
-    always_comb begin : branch
+    always_comb begin : branch_info
         is_branch = 1'b0;
         branch_target_addr = 32'b0;
-        branch_flush = 1'b0;
         dispatch_ex.reg_write_branch_data = 32'b0;
-        branch_target_addr_actual = 32'b0;
 
         reg1_lt_reg2 = (dispatch_ex.reg1[31] && !dispatch_ex.reg2[31]) || (!dispatch_ex.reg1[31] && !dispatch_ex.reg2[31] && (dispatch_ex.reg1 < dispatch_ex.reg2)) 
                                     || (dispatch_ex.reg1[31] && dispatch_ex.reg2[31] && (dispatch_ex.reg1 > dispatch_ex.reg2));
-
-        if (is_branch && id_dispatch.pre_is_branch_taken) begin
-            if (id_dispatch.pre_branch_addr == branch_target_addr) begin
-                branch_flush = 1'b0;
-            end
-            else begin
-                branch_flush = 1'b1;
-                branch_target_addr_actual = branch_target_addr;
-            end
-        end
-        else if (!is_branch && id_dispatch.pre_is_branch_taken) begin
-            branch_flush = 1'b1;
-            branch_target_addr_actual = id_dispatch.pc + 4'h4;
-        end
-        else begin
-            branch_flush = 1'b0;
-        end
 
         case (id_dispatch.aluop) 
             `ALU_BEQ: begin
@@ -131,6 +112,31 @@ module dispatch
                 dispatch_ex.reg_write_branch_data = id_dispatch.pc + 4'h4;
             end
         endcase
+    end
+
+    always_comb begin: branch_target
+        if (is_branch && id_dispatch.pre_is_branch_taken) begin
+            if (id_dispatch.pre_branch_addr == branch_target_addr) begin
+                branch_flush = 1'b0;
+                branch_target_addr_actual = 32'b0;
+            end
+            else begin
+                branch_flush = 1'b1;
+                branch_target_addr_actual = branch_target_addr;
+            end
+        end
+        else if (is_branch && !id_dispatch.pre_is_branch_taken) begin
+            branch_flush = 1'b1;
+            branch_target_addr_actual = branch_target_addr;
+        end
+        else if (!is_branch && id_dispatch.pre_is_branch_taken) begin
+            branch_flush = 1'b1;
+            branch_target_addr_actual = id_dispatch.pc + 4'h4;
+        end
+        else begin
+            branch_flush = 1'b0;
+            branch_target_addr_actual = 32'b0;
+        end
     end
 
     always_comb begin : reg1_read
