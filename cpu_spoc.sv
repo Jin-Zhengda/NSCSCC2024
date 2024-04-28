@@ -2,7 +2,8 @@ module cpu_spoc
     import pipeline_types::*;
 (
     input logic clk,
-    input logic rst
+    input logic rst,
+    input logic continue_idle
 );
 
     bus32_t inst_addr;
@@ -26,8 +27,9 @@ module cpu_spoc
     assign addr = dcache.master.virtual_addr;
     assign select = dcache.master.wstrb;
     assign data_i = dcache.master.wdata;
-    assign data_o = dcache.master.rdata;
+    assign dcache.master.rdata = data_o;
     assign dcache.master.cache_miss = 1'b0;
+    assign dcache.master.data_ok = 1'b1;
 
     assign inst_addr = icache.master.pc;
     assign inst_en = icache.master.inst_en;
@@ -37,6 +39,7 @@ module cpu_spoc
     cpu_core u_cpu_core (
         .clk,
         .rst,
+        .continue_idle,
         
         .icache_master(icache.master),
         .dcache_master(dcache.master)

@@ -9,10 +9,14 @@ module ctrl
 
     input wb_push_forward_t wb_push_forward,
 
+    input logic continue_idle,
+
     ctrl_csr master,
 
     output ctrl_t ctrl_o,
-    output ctrl_pc_t ctrl_pc
+    output ctrl_pc_t ctrl_pc,
+
+    output logic send_inst1_en
 );
 
     bus32_t EEBTRY_VA_current;
@@ -69,9 +73,9 @@ module ctrl
 
     logic pause_idle;
 
-    assign pause_idle = (mem_i.aluop == `ALU_IDLE) && (int_vec == 12'b0);
+    assign pause_idle = mem_i.is_idle && (int_vec == 12'b0) && !continue_idle;
 
-    // pause[0] PC, pause[1] if, pause[2] id
+    // pause[0] PC, pause[1] instBuffer, pause[2] id
     // pause[3] dispatch, pause[4] ex, pause[5] mem, pause[6] wb
     always_comb begin: pause_ctrl
         if (pause_request.pause_id) begin
@@ -90,6 +94,8 @@ module ctrl
             ctrl_o.pause = 7'b0;
         end
     end
+
+    assign send_inst1_en = ctrl_o.pause[1] ? 1'b0 : 1'b1;
 
     
 endmodule

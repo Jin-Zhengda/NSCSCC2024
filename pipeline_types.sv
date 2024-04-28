@@ -191,10 +191,9 @@ package pipeline_types;
         bus32_t exception_addr;
 
         logic is_ertn;
+        logic is_idle;
 
         logic pause_mem;
-
-        alu_op_t aluop;
     } mem_ctrl_t;
 
 
