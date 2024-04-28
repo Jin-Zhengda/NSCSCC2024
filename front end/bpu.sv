@@ -21,7 +21,7 @@
 `define InstBus 31:0
 
 module bpu
-import pipeline_type::*;
+import pipeline_types::*;
 (
     input logic clk,
     input logic rst,

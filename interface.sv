@@ -3,7 +3,7 @@ import pipeline_types::*;
     interface mem_dcache;
         logic valid;                // 请求有效
         logic op;                   // 操作类型，读-0，写-1
-        logic[2:0]  size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
+        logic[2:0] size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
         logic[31:0] virtual_addr;   // 虚拟地址
         logic tlb_excp_cancel_req;
         logic[3:0]  wstrb;          //写使能，1表示对应的8位数据需要写
@@ -26,7 +26,19 @@ import pipeline_types::*;
     endinterface: mem_dcache
 
     interface pc_icache;
-    
+        bus32_t pc;
+        logic inst_en;
+        bus32_t inst;
+
+        modport master (
+            input inst,
+            output pc, inst_en
+        );
+
+        modport slave (
+            output inst,
+            input pc, inst_en
+        );
     endinterface: pc_icache
 
     interface dispatch_regfile;

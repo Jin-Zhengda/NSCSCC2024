@@ -93,8 +93,7 @@ module backend
         .pause_dispatch(pause_request.pause_dispatch),
         .dispatch_ex(dispatch_o),
 
-        .is_branch(is_branch),
-        .branch_target_addr(branch_target_addr),
+        .branch_target_addr_actual(branch_target_addr_actual),
         .branch_flush(branch_flush)
     );
 
