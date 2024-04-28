@@ -19,10 +19,10 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 `define InstAddrWidth 31:0
-`include "csr_define.sv"
+`include "csr_defines.sv"
 
 module pc_reg
-import pipeline_type::*;
+import pipeline_types::*;
 (
     input logic clk,
     input logic rst,
@@ -82,8 +82,8 @@ import pipeline_type::*;
 
     always_ff @(posedge clk) begin
         if(rst) begin
-            pc.pc_o_1 <= 32'h0;
-            pc.pc_o_2 <= 32'h4;
+            pc.pc_o_1 <= 32'h100;
+            pc.pc_o_2 <= 32'h104;
         end
         else if(ctrl.exception_flush) begin
             pc.pc_o_1 <= ctrl_pc.exception_new_pc;

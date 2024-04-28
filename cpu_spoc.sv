@@ -17,22 +17,30 @@ module cpu_spoc
     bus32_t data_i;
     bus32_t data_o;
 
+    mem_dcache dcache();
+    pc_icache icache();
+
+    assign ram_en = dcache.master.valid;
+    assign write_en = dcache.master.op;
+    assign read_en = ~dcache.master.op;
+    assign addr = dcache.master.virtual_addr;
+    assign select = dcache.master.wstrb;
+    assign data_i = dcache.master.wdata;
+    assign data_o = dcache.master.rdata;
+    assign dcache.master.cache_miss = 1'b0;
+
+    assign inst_addr = icache.master.pc;
+    assign inst_en = icache.master.inst_en;
+    assign icache.master.inst = inst;
+
+
     cpu_core u_cpu_core (
         .clk,
         .rst,
-        .rom_inst(inst),
-        .inst_en(inst_en),
-        .pc(inst_addr),
-
-        .is_cache_hit(1'b1),
-        .ram_read_data(data_o),
-
-        .ram_addr(addr),
-        .ram_write_data(data_i),
-        .ram_write_en(write_en),
-        .ram_read_en(read_en),
-        .ram_select(select),
-        .ram_en(ram_en)
+        
+        .icache_master(icache.master),
+        .dcache_master(dcache.master)
+        
     );
 
     inst_rom u_inst_rom (
