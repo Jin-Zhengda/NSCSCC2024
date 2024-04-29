@@ -218,7 +218,46 @@ $2^{8}*2*2^{5}*2^{3} = 2 ^ {17} Bit = 2^{14}Byte=2^{4}KB= 16KB$
 ### icache
 ##### 状态定义
 - ICacheIDLE:空闲等待状态，接收到使能则保存命令信息，判断是否命中，若命中则向CPU返回数据，下一状态为ICacheIDLE;否则进入下一状态ICacheAskMem
-- ICacheAskMem:向mem查找数据，然后进入RefreshCache
+- ICacheAskMem:向mem查找数据，然后进入ICacheRefresh
 - ICacheRefresh:当总线将数据传回时，向cpu输出数据，并更新cache中的数据，然后进入IDLE。
 
 ICacheIDLE:当front传来信号，记录信号信息，当个周期内用记录的信息判断是否hit。若hit则下一个进入ICacheIDLE，同时考虑在下一个时钟周期向cpu返回信号。
+
+
+
+
+
+
+
+### dcache
+##### 状态定义
+- DCacheIDLE:空闲等待状态，接收到使能则保存命令信息，判断是否命中。若命中则执行对应任务，下一状态进入DCacheIDLE。若未命中则进入下一状态DCacheAskMem
+- DCacheAskMem:向mem查找数据，然后进入DCacheRefresh
+- DCacheRefresh:等待直到总线将数据传回，执行对应的读写，向cpu返回信号，下一状态进入DCacheIDLE
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ICache信号到底怎么给？
+
+第一个时钟上升沿：front给使能和地址
+
+第一个时钟周期：接收信号，记录信号，给addr_ok
+
+第二个时钟上升沿：从ram读到数据
+
+第二个时钟周期：判断命中与否，若命中则返回数据
