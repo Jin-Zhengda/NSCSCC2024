@@ -26,17 +26,19 @@ import pipeline_types::*;
     endinterface: mem_dcache
 
     interface pc_icache;
-        bus32_t pc;
-        logic inst_en;
-        bus32_t inst;
+        bus32_t pc; // 读 icache 的地址
+        logic inst_en; // 读 icache 使能
+        bus32_t inst; // 读 icache 的结果，即给出的指令
+        logic cache_miss; // cache 未命中
+        logic data_ok; // 数据传输完成
 
         modport master (
-            input inst,
+            input inst, cache_miss, data_ok,
             output pc, inst_en
         );
 
         modport slave (
-            output inst,
+            output inst, cache_miss, data_ok,
             input pc, inst_en
         );
     endinterface: pc_icache
