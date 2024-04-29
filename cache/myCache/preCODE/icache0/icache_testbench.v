@@ -2,7 +2,8 @@
 `define PHYSICAL_ADDR_SIZE 32//物理地址的位数
 `define VIRTUAL_ADDR_SIZE 32//虚拟地址的位数
 `define INSTRUCTION_DATA_SIZE 32//所取指令的位数
-`define PACKED_DATA_SIZE `BANK_SIZE*`BANK_NUM//总线传回数据位宽
+`define PACKED_DATA_SIZE 256//总线传回数据位宽
+`define INSTRUCTION_ADDR_SIZE 32
 
 //cache_define
 
@@ -23,57 +24,84 @@
 
 module icache_testbench ();
 
-reg clk,reset,cpu_icache_en,mem_icache_return_en;
-wire icache_free,icache_hit,icache_cpu_data_en,cache_mem_read_en;
-reg[`VIRTUAL_ADDR_SIZE-1:0] virtual_addr;
-reg[`PHYSICAL_ADDR_SIZE-1:0] physical_addr;
-wire [`INSTRUCTION_DATA_SIZE-1:0] icache_cpu_data;
-reg[`PACKED_DATA_SIZE-1:0]mem_icache_return_data;
-wire [`PHYSICAL_ADDR_SIZE-1:0]cache_mem_read_addr;
+reg clk,reset,cpu_icache_read_en,cpu_receive_data_ok,mem_ready_to_read,mem_read_addr_ok,mem_return_en;
+reg[`INSTRUCTION_ADDR_SIZE-1:0] virtual_addr,physical_addr;
+wire cpu_icache_addr_request_ok,icache_cpu_return_data_en ,icache_mem_read_request,read_data_from_mem_ok,cache_hit_fail_output;
+wire [31:0]icache_cpu_return_data,icache_mem_read_addr;
+reg [`PACKED_DATA_SIZE-1:0]mem_return_data;
+
+
+
+
+initial begin
+    clk=1'b0;reset=1'b1;cpu_icache_read_en=1'b0;cpu_receive_data_ok=1'b0;mem_ready_to_read=1'b0;
+    mem_read_addr_ok=1'b0;mem_return_en=1'b0;
+    virtual_addr=`VIRTUAL_ADDR_SIZE'b0;physical_addr=`PHYSICAL_ADDR_SIZE'b0;
+    mem_return_data=`PACKED_DATA_SIZE'b0;
+    #20 begin reset=1'b0;end
+    #10 begin 
+        cpu_icache_read_en=1'b1;virtual_addr=`VIRTUAL_ADDR_SIZE'b1;
+        physical_addr=`PHYSICAL_ADDR_SIZE'b1000_0000_0000_0000_0000_0000_0000_0000;
+        mem_ready_to_read=1'b1;
+    end
+    #100begin 
+        cpu_icache_read_en=1'b1;virtual_addr=`VIRTUAL_ADDR_SIZE'b1;
+        physical_addr=`PHYSICAL_ADDR_SIZE'b1000_0000_0000_0000_0000_0000_0000_0000;
+        mem_ready_to_read=1'b1;
+    end
+    #160 $finish;
+end
+
+reg flag_cpu_en;
+always @(posedge clk) begin
+    if(reset)flag_cpu_en<=1'b0;
+    if(cpu_icache_addr_request_ok)flag_cpu_en<=1'b1;
+    else flag_cpu_en<=1'b0;
+    if(flag_cpu_en)cpu_icache_read_en<=1'b0;
+end
+
+
+
+reg [`PACKED_DATA_SIZE-1:0]data;
+always @(posedge clk) begin
+    if(reset)data<=`PACKED_DATA_SIZE'h1601600808048848022016088416;
+    else if(icache_mem_read_request)begin
+        mem_return_en<=1'b1;
+        mem_read_addr_ok<=1'b1;
+        mem_return_data<=data;
+        data<=data*2;
+    end
+    else begin
+        mem_read_addr_ok<=1'b0;
+        mem_return_en<=1'b0;
+    end
+end
+
 
 icache u_icache(
     .clk(clk),
     .reset(reset),
-    .cpu_icache_en(cpu_icache_en),
+    .cpu_icache_read_en(cpu_icache_read_en),
+    .cpu_receive_data_ok(cpu_receive_data_ok),
     .virtual_addr(virtual_addr),
     .physical_addr(physical_addr),
-    .icache_free(icache_free),
-    .icache_hit(icache_hit),
-    .icache_cpu_data(icache_cpu_data),
-    .icache_cpu_data_en(icache_cpu_data_en),
-    //AXI
-    .mem_icache_return_en(mem_icache_return_en),
-    .mem_icache_return_data(mem_icache_return_data),
-    .cache_mem_read_en(cache_mem_read_en),
-    .cache_mem_read_addr(cache_mem_read_addr)
+    .cpu_icache_addr_request_ok(cpu_icache_addr_request_ok),
+    .icache_cpu_return_data_en(icache_cpu_return_data_en),
+    .icache_cpu_return_data(icache_cpu_return_data),
+    //to from axi
+    .icache_mem_read_request(icache_mem_read_request),
+    .read_data_from_mem_ok(read_data_from_mem_ok),
+    .icache_mem_read_addr(icache_mem_read_addr),
+    .mem_ready_to_read(mem_ready_to_read),
+    .mem_read_addr_ok(mem_read_addr_ok),
+    .mem_return_en(mem_return_en),
+    .mem_return_data(mem_return_data),
+
+    .cache_hit_fail_output(cache_hit_fail_output) 
 );
 
-reg [`PACKED_DATA_SIZE-1:0]test_mem_return_data;
 
-initial begin
-    clk=1'b0;reset=1'b1;cpu_icache_en=1'b1;
-    virtual_addr=`VIRTUAL_ADDR_SIZE'b0;physical_addr=`PHYSICAL_ADDR_SIZE'b0;
-    mem_icache_return_en=1'b0;mem_icache_return_data=`PACKED_DATA_SIZE'b0;
-    test_mem_return_data=`PACKED_DATA_SIZE'h32;
-    #20 begin reset=1'b0;end
-    #20 begin cpu_icache_en=1'b1;virtual_addr=`VIRTUAL_ADDR_SIZE'h4;physical_addr=`PHYSICAL_ADDR_SIZE'h40;end
-    #100 begin cpu_icache_en=1'b0;end
-    #20 begin cpu_icache_en=1'b1;virtual_addr=`VIRTUAL_ADDR_SIZE'h4;physical_addr=`PHYSICAL_ADDR_SIZE'h40;end
-    
-    #160 $finish;
-end
 
-always @(posedge clk) begin
-    if(cache_mem_read_en)begin
-        mem_icache_return_en<=1'b1;
-        mem_icache_return_data<=test_mem_return_data;
-        test_mem_return_data=test_mem_return_data*2;
-    end
-    else begin
-        mem_icache_return_en<=1'b0;
-        mem_icache_return_data<=`PACKED_DATA_SIZE'b0;
-    end
-end
 
 always #10 clk=~clk;
     

@@ -30,15 +30,14 @@ package dcache_types;
         logic[2:0]  rd_type;//3’b000——字节，3’b001——半字，3’b010——字，3’b100——Cache行。
         logic[31:0] rd_addr;//要读的数据所在的物理地址
         logic       wr_req;//写请求有效
-        logic[2:0]  wr_type;//写的类型，3’b000——字节，3’b001——半字，3’b010——字，3'b100——一个cache路，32*4位
         logic[31:0] wr_addr;//要写的数据所在的物理地址
         logic[3:0]  wr_wstrb;//4位的写使能信号，决定4个8位中，每个8位是否要写入
-        logic[127:0]wr_data;//4个32位的数据为1路
+        logic[256:0]wr_data;//8个32位的数据为1路
     } DCACHE_AXI_SIGNALS;
     //axi -> dcache
     typedef struct packed {
-        logic       wr_rdy;//写操作完成(你给这个信号告诉我，你写完了，我才能更新我这里的数据。即使后续我加writebuffer你应该也需要给writebuffer这个信号的)
-        logic       rd_rdy;//读操作完成
+        logic       wr_rdy;//能接收写操作
+        logic       rd_rdy;//能接收读操作
         logic       ret_valid;//返回数据信号有效
         logic       ret_last;//返回数据为最后一个
         logic[31:0] ret_data;//返回的数据
