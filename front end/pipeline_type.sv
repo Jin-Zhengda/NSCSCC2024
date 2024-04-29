@@ -18,15 +18,15 @@
 // Additional Comments:
 // 
 //////////////////////////////////////////////////////////////////////////////////
-`define InstBus 31:0
+
 
 package pipeline_type;
 
     typedef struct packed {
-        logic [`InstBus] inst_o_1;
-        logic [`InstBus] inst_o_2;
-        logic [`InstBus] pc_o_1;
-        logic [`InstBus] pc_o_2;
+        logic [31:0] inst_o_1;
+        logic [31:0] inst_o_2;
+        logic [31:0] pc_o_1;
+        logic [31:0] pc_o_2;
         logic [5:0] is_exception;
         logic [5:0][6:0] exception_cause;
     } inst_and_pc_t;
@@ -53,5 +53,8 @@ package pipeline_type;
         logic pre_taken_or_not;
         logic [31:0] pre_branch_addr;
     } branch_info;
+
+    typedef logic [31:0] bus32_t;
+    typedef logic [63:0] bus64_t;
 
 endpackage
