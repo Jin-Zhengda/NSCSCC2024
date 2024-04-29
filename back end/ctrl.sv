@@ -78,7 +78,10 @@ module ctrl
     // pause[0] PC, pause[1] instBuffer, pause[2] id
     // pause[3] dispatch, pause[4] ex, pause[5] mem, pause[6] wb
     always_comb begin: pause_ctrl
-        if (pause_request.pause_id) begin
+        if (pause_request.pause_if) begin
+            ctrl_o.pause = 7'b0000001;
+        end
+        else if (pause_request.pause_id) begin
             ctrl_o.pause = 7'b0000111;
         end
         else if (pause_request.pause_dispatch) begin

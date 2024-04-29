@@ -14,6 +14,7 @@ package pipeline_types;
     typedef logic[6: 0] exception_cause_t;
 
     typedef struct packed {
+        logic pause_if;
         logic pause_id;
         logic pause_dispatch;
         logic pause_ex;

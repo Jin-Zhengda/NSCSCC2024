@@ -1,5 +1,6 @@
 module cpu_spoc 
     import pipeline_types::*;
+    import icache_types::*;
 (
     input logic clk,
     input logic rst,
@@ -31,9 +32,19 @@ module cpu_spoc
     assign dcache.master.cache_miss = 1'b0;
     assign dcache.master.data_ok = 1'b1;
 
-    assign inst_addr = icache.master.pc;
-    assign inst_en = icache.master.inst_en;
-    assign icache.master.inst = inst;
+    assign front_icache_signals.virtual_addr = icache.master.pc;
+    assign front_icache_signals.valid = icache.master.inst_en;
+    assign icache.master.inst = icache_front_signals.rdata;
+    assign icache.master.cache_miss = icache_front_signals.cache_miss;
+    assign icache.master.data_ok = icache_front_signals.data_ok;
+
+    assign inst_en = icache_axi_signals.rd_req;
+    assign inst_addr = icache_axi_signals.rd_addr;
+
+    assign axi_icache_signals.rd_rdy = 1'b1;
+    assign axi_icache_signals.ret_valid = 1'b1;
+    assign axi_icache_signals.ret_last = 1'b1;
+    assign axi_icache_signals.ret_data = inst;
 
 
     cpu_core u_cpu_core (
@@ -44,6 +55,22 @@ module cpu_spoc
         .icache_master(icache.master),
         .dcache_master(dcache.master)
         
+    );
+
+    // icache
+    FRONT_ICACHE_SIGNALS front_icache_signals;
+    ICACHE_FRONT_SIGNALS icache_front_signals;
+    AXI_ICACHE_SIGNALS axi_icache_signals;
+    ICACHE_AXI_SIGNALS icache_axi_signals;
+
+
+    icache u_icache(
+        .clk,
+        .reset(rst),
+        .front_icache_signals,
+        .icache_front_signals,
+        .axi_icache_signals,
+        .icache_axi_signals
     );
 
     inst_rom u_inst_rom (
