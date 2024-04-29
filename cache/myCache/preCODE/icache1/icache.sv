@@ -127,18 +127,7 @@ assign way1_read_en=front_icache_signals.valid?1'b1:1'b0;
 //将mem返回的数据转换成数组格式，便于读取赋值
 logic [`DATA_SIZE-1:0]data_record_from_mem[`BANK_NUM-1:0];
 integer mycounter;
-/*
-always_ff @( posedge clk ) begin
-    if(reset)mycounter<=-1;
-    else if(axi_icache_signals.ret_valid)mycounter<=mycounter+1;
-    else mycounter<=-1;
-end
-*/
-/*
-always_ff @( posedge clk ) begin
-    if(mycounter>=0&&mycounter<=7)data_record_from_mem[mycounter]<=axi_icache_signals.ret_data;
-end
-*/
+
 
 always_ff @( posedge clk ) begin
     if(reset)mycounter<=0;
@@ -149,12 +138,6 @@ always_ff @( posedge clk ) begin
     else mycounter<=0;
 end
 
-/*
-always_comb begin
-    if(mycounter!=-1)data_record_from_mem[mycounter]=axi_icache_signals.ret_data;
-    else data_record_from_mem[mycounter]=`ADDR_SIZE'hffffffff;
-end
-*/
 logic [`BANK_SIZE-1:0]way0_cache[`BANK_NUM-1:0];//读中的那一组第0路数据的数组
 simple_dual_ram WAY0_BANK0(.reset(reset),.clk_read(clk),.read_en(way0_read_en),.read_addr(pre_index),.read_data(way0_cache[0]),.clk_write(clk),.write_en(way0_write_en),.write_addr(cur_index),.write_data(data_record_from_mem[0]));
 simple_dual_ram WAY0_BANK1(.reset(reset),.clk_read(clk),.read_en(way0_read_en),.read_addr(pre_index),.read_data(way0_cache[1]),.clk_write(clk),.write_en(way0_write_en),.write_addr(cur_index),.write_data(data_record_from_mem[1]));
@@ -186,7 +169,6 @@ assign hit_way0=((tagv_way0_cache[19:0]==cur_tag)&&(tagv_way0_cache[20]==1'b1))?
 assign hit_way1=(tagv_way1_cache[19:0]==cur_tag&&tagv_way1_cache[20]==1'b1)?1'b1:1'b0;
 assign hit_success=(hit_way0|hit_way1)&front_icache_signals.valid;
 assign hit_fail=~(hit_success)&front_icache_signals.valid;
-//hit_result赋值 这么@可不可以？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？？
 always @(posedge clk) begin
     if(reset)hit_result<=1'b0;
     else if(hit_success)hit_result<=1'b1;

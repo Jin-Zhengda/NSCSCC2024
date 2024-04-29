@@ -69,6 +69,8 @@ import pipeline_type::*;
         logic inst_en; // 读 icache 使能
         bus32_t inst; // 读 icache 的结果，即给出的指令
         logic stall;
+        //logic cache_miss; // cache 未命中
+        //logic data_ok; // 数据传输完成
 
         modport master (
             input inst, stall,
