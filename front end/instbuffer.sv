@@ -25,7 +25,7 @@
 
 
 module instbuffer
-import pipeline_types::*;
+import pipeline_type::*;
 (
     input logic clk,
     input logic rst,
@@ -141,7 +141,7 @@ import pipeline_types::*;
             branch_info2 <= 0;
         end
         else begin
-            if(send_inst_1_en && send_inst_2_en && FIFO_valid[head] && FIFO_valid[head + 1]) begin
+            if(send_inst_1_en && send_inst_2_en && FIFO_valid[head] && FIFO_valid[head+1]) begin
                 inst_and_pc_o.inst_o_1 <= FIFO_inst[head];
                 inst_and_pc_o.pc_o_1 <= FIFO_pc[head];
                 inst_and_pc_o.inst_o_2 <= FIFO_inst[head+1];
@@ -151,7 +151,7 @@ import pipeline_types::*;
                 branch_info2 <= FIFO_branch_info[head+1];
 
                 head <= head + 2;
-            end else if((send_inst_1_en && FIFO_valid[head])|(send_inst_2_en && FIFO_valid[head])) begin
+            end else if((send_inst_1_en&&FIFO_valid[head])|(send_inst_2_en&&FIFO_valid[head])) begin
                 inst_and_pc_o.inst_o_1 <= FIFO_inst[head];
                 inst_and_pc_o.pc_o_1 <= FIFO_pc[head];
                 inst_and_pc_o.inst_o_2 <= 0;
@@ -168,10 +168,10 @@ import pipeline_types::*;
                 inst_and_pc_o.pc_o_2 <= 0;
             end
             else begin
-                inst_and_pc_o.inst_o_1 <= inst_and_pc_o.inst_o_1;
-                inst_and_pc_o.inst_o_2 <= inst_and_pc_o.inst_o_2;
-                inst_and_pc_o.pc_o_1 <= inst_and_pc_o.pc_o_1;
-                inst_and_pc_o.pc_o_2 <= inst_and_pc_o.pc_o_2;
+                inst_and_pc_o.inst_o_1 <= 0;
+                inst_and_pc_o.inst_o_2 <= 0;
+                inst_and_pc_o.pc_o_1 <= 0;
+                inst_and_pc_o.pc_o_2 <= 0;
             end
         end
     end

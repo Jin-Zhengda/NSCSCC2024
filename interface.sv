@@ -1,4 +1,26 @@
-import pipeline_types::*;
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 2024/04/29 21:16:22
+// Design Name: 
+// Module Name: interface
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+import pipeline_type::*;
 
     interface mem_dcache;
         logic valid;                // 请求有效
@@ -24,6 +46,23 @@ import pipeline_types::*;
             input valid, op, size, virtual_addr, tlb_excp_cancel_req, wstrb, wdata
         );
     endinterface: mem_dcache
+
+    interface frontend_backend;
+        ctrl_t ctrl;
+        ctrl_pc_t ctrl_pc;
+        logic branch_flush;
+        logic [31:0] branch_actual_addr;
+        logic send_inst_en;
+        branch_info branch_info;
+        inst_and_pc_t inst_and_pc_o;
+
+        modport master (
+            input ctrl, ctrl_pc, branch_flush, branch_actual_addr,send_inst_en,
+            output branch_info,inst_and_pc_o
+        );
+
+        
+    endinterface: frontend_backend
 
     interface pc_icache;
         bus32_t pc; // 读 icache 的地址
@@ -160,4 +199,3 @@ import pipeline_types::*;
             input exception_addr
         );
     endinterface:ctrl_csr
-
