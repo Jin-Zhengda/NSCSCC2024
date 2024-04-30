@@ -4,20 +4,12 @@ module backend
     input logic clk,
     input logic rst,
 
-    input pc_id_t id_i,
-
     input logic continue_idle,
 
-    // to front
-    output bus32_t branch_target_addr_actual,
-    output logic branch_flush,
+    // with front
+    frontend_backend fb_slave,
 
-    output ctrl_t ctrl,
-    output ctrl_pc_t ctrl_pc,
-
-    output logic send_inst1_en,
-
-    // to dcache
+    // with dcache
     mem_dcache dcache_master
 );
 
@@ -25,6 +17,7 @@ module backend
     dispatch_regfile dispatch_regfile_io();
 
     // id
+    pc_id_t id_i;
     id_dispatch_t id_o;
     logic[1: 0] CRMD_PLV;
     csr_push_forward_t csr_push_forward;
@@ -56,6 +49,14 @@ module backend
     ctrl_csr ctrl_csr_io();
     pause_t pause_request;
 
+    assign id_i.pc = fb_slave.inst_and_pc_o.pc_o_1;
+    assign id_i.inst = fb_slave.inst_and_pc_o.inst_o_1;
+    assign id_i.is_exception = fb_slave.inst_and_pc_o.is_exception;
+    assign id_i.exception_cause = fb_slave.inst_and_pc_o.exception_cause;
+    assign id_i.is_branch = fb_slave.branch_info.is_branch;
+    assign id_i.pre_is_branch_taken = fb_slave.branch_info.pre_taken_or_not;
+    assign id_i.pre_branch_addr = fb_slave.branch_info.pre_branch_addr;
+
 
     id u_id (
         .pc_id(id_i),
@@ -75,9 +76,9 @@ module backend
         .clk,
         .rst,
 
-        .branch_flush(branch_flush),
+        .branch_flush(fb_slave.branch_flush),
 
-        .ctrl(ctrl),
+        .ctrl(fb_slave.ctrl),
 
         .id_i(id_o),
 
@@ -96,8 +97,8 @@ module backend
         .pause_dispatch(pause_request.pause_dispatch),
         .dispatch_ex(dispatch_o),
 
-        .branch_target_addr_actual(branch_target_addr_actual),
-        .branch_flush(branch_flush)
+        .branch_target_addr_actual(fb_slave.branch_actual_addr),
+        .branch_flush(fb_slave.branch_flush)
     );
 
     regfile u_regfile (
@@ -113,7 +114,7 @@ module backend
         .clk,
         .rst,
 
-        .ctrl(ctrl),
+        .ctrl(fb_slave.ctrl),
 
         .dispatch_i(dispatch_o),
         .ex_o(ex_i)
@@ -143,7 +144,7 @@ module backend
         .clk,
         .rst,
 
-        .ctrl(ctrl),
+        .ctrl(fb_slave.ctrl),
 
         .ex_i(ex_o),
         .mem_o(mem_i)
@@ -173,7 +174,7 @@ module backend
         .clk,
         .rst,
 
-        .ctrl(ctrl),
+        .ctrl(fb_slave.ctrl),
 
         .mem_i(mem_o),
         .wb_o(wb)
@@ -195,9 +196,9 @@ module backend
         
         .master(ctrl_csr_io.master),
 
-        .ctrl_o(ctrl),
-        .ctrl_pc(ctrl_pc),
-        .send_inst1_en(send_inst1_en)
+        .ctrl_o(fb_slave.ctrl),
+        .ctrl_pc(fb_slave.ctrl_pc),
+        .send_inst1_en(fb_slave.send_inst1_en)
     );
 
     csr u_csr (

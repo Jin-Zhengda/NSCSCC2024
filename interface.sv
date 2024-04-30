@@ -1,26 +1,4 @@
-`timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 2024/04/29 21:16:22
-// Design Name: 
-// Module Name: interface
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
-
-
-import pipeline_type::*;
+import pipeline_types::*;
 
     interface mem_dcache;
         logic valid;                // 请求有效
@@ -59,6 +37,11 @@ import pipeline_type::*;
         modport master (
             input ctrl, ctrl_pc, branch_flush, branch_actual_addr,send_inst_en,
             output branch_info,inst_and_pc_o
+        );
+
+        modport slave (
+            output ctrl, ctrl_pc, branch_flush, branch_actual_addr,send_inst_en,
+            input branch_info,inst_and_pc_o
         );
 
         
