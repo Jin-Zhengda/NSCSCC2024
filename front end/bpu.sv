@@ -25,7 +25,9 @@ import pipeline_types::*;
 (
     input logic clk,
     input logic rst,
-    input logic branch_flush,
+    input branch_update update_info,
+    input logic stall,
+    
     
     input pc_out pc_i,
     input logic [`InstBus] inst_1_i,
@@ -34,9 +36,10 @@ import pipeline_types::*;
     input logic inst_en_2,
     input ctrl_t ctrl,
 
-    output inst_and_pc_t inst_and_pc,
+    output logic is_valid_in,
+
    
-   //分支预测的结果
+    //分支预测的结果
     output logic is_branch_1,
     output logic is_branch_2,
     output logic pre_taken_or_not,
@@ -44,9 +47,12 @@ import pipeline_types::*;
     //跳转的目标地址，传给pc
     output logic [`InstBus] pre_branch_addr,  
 
-
+    //传给instbuffer
     output logic fetch_inst_1_en,
-    output logic fetch_inst_2_en
+    output logic fetch_inst_2_en,
+    output logic is_exception,
+    output logic exception_cause
+
     );
 
     logic [5:0] branch_judge_1;
@@ -56,8 +62,10 @@ import pipeline_types::*;
     assign branch_judge_2 = inst_2_i[31:26];
 
     //异常
-    assign inst_and_pc.is_exception = pc_i.is_exception;
-    assign inst_and_pc.exception_cause = pc_i.exception_cause;
+    always_ff @(posedge clk) begin
+        is_exception = pc_i.is_exception;
+        exception_cause = pc_i.exception_cause;
+    end
 
 
     always_comb begin
@@ -142,37 +150,23 @@ import pipeline_types::*;
     logic pre_taken_or_not_1;
     logic pre_taken_or_not_2;
 
-    always_ff @(posedge clk) begin
-        if(rst|branch_flush|ctrl.pause[0]) begin
+    always_comb begin
+        if(rst|update_info.branch_flush|ctrl.pause[0]|stall) begin
             fetch_inst_1_en <= 0;
             fetch_inst_2_en <= 0;
-            inst_and_pc.inst_o_1 <= 0;
-            inst_and_pc.inst_o_2 <= 0;
-            inst_and_pc.pc_o_1 <= 0;
-            inst_and_pc.pc_o_2 <= 0;
         end
         else begin
             if(is_branch_1&&pre_taken_or_not_1&&inst_en_1)begin
                 fetch_inst_1_en <= 1'b1;
                 fetch_inst_2_en <= 1'b0;
-                inst_and_pc.inst_o_1 <= inst_1_i;
-                inst_and_pc.pc_o_1 <= pc_i.pc_o_1;
                 pre_branch_addr <= prediction_addr_1;
             end else if(is_branch_2&&pre_taken_or_not_2&&inst_en_2) begin
                 fetch_inst_1_en <= 1'b1;
                 fetch_inst_2_en <= 1'b1;
-                inst_and_pc.inst_o_1 <= inst_1_i;
-                inst_and_pc.inst_o_2 <= inst_2_i;
-                inst_and_pc.pc_o_1 <= pc_i.pc_o_1;
-                inst_and_pc.pc_o_2 <= pc_i.pc_o_2;
                 pre_branch_addr <= prediction_addr_2;
             end else begin
                 fetch_inst_1_en <= 1'b1;
                 fetch_inst_2_en <= 1'b0;
-                inst_and_pc.inst_o_1 <= inst_1_i;
-                // inst_and_pc.inst_o_2 <= inst_2_i;
-                inst_and_pc.pc_o_1 <= pc_i.pc_o_1;
-                // inst_and_pc.pc_o_2 <= pc_i.pc_o_2;
             end
         end
     end
@@ -186,6 +180,26 @@ import pipeline_types::*;
         pre_taken_or_not_1 = 0;
         pre_taken_or_not_2 = 0;
     end
+
+    always_comb begin
+        if(is_branch_1&pre_taken_or_not_1) begin
+            is_valid_in = 0;
+        end else begin
+            is_valid_in = 1;
+        end
+    end
+
+    // bht u_bht(
+    //     .clk,
+    //     .rst,
+
+    //     .pc(pc_i.pc_o_1),
+    //     .update_en(update_info.update_en),
+    //     .pc_dispatch(update_info.pc_dispatch),
+    //     .taken_actual(update_info.taken_actual),
+
+    //     .taken_or_not(pre_taken_or_not_1)
+    // );
 
 
 endmodule
