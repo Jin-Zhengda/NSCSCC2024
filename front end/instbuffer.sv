@@ -25,22 +25,27 @@
 
 
 module instbuffer
-import pipeline_type::*;
+import pipeline_types::*;
 (
     input logic clk,
     input logic rst,
     input logic branch_flush,
     input ctrl_t ctrl,
+    input logic stall,
+
+    //icache传来的信号
+    input logic [31:0] inst,
+    input logic [31:0] pc,
+    input logic is_valid_out,
 
     //bpu传来的信号
-    input inst_and_pc_t inst_and_pc_i,
     input logic is_branch_1,
     input logic is_branch_2,
     input logic pre_taken_or_not,
     input logic [31:0] pre_branch_addr,
+    input logic is_exception,
+    input logic exception_cause,
 
-    // input logic is_inst1_valid,
-    // input logic is_inst2_valid,
 
     //发射指令的使能信号
     input logic send_inst_1_en,
@@ -66,11 +71,13 @@ import pipeline_type::*;
     //头尾指针
     logic [`InstBufferAddrSize-1:0]tail;
     logic [`InstBufferAddrSize-1:0]head;
-    //表征FIFO中的指令是否有效,暂时没有使用
     logic [`InstBufferSize-1:0]FIFO_valid;
 
-    assign inst_and_pc_o.is_exception = inst_and_pc_i.is_exception;
-    assign inst_and_pc_o.exception_cause = inst_and_pc_i.exception_cause;
+    always_ff @(posedge clk) begin
+        inst_and_pc_o.is_exception = is_exception;
+        inst_and_pc_o.exception_cause = exception_cause;
+    end
+
 
     always_ff @(posedge clk) begin
         if(rst|branch_flush|ctrl.exception_flush) begin
@@ -81,28 +88,29 @@ import pipeline_type::*;
         end
         else begin
             if(fetch_inst_1_en&&fetch_inst_2_en) begin
-                FIFO_inst[tail] <= inst_and_pc_i.inst_o_1;
-                FIFO_pc[tail] <= inst_and_pc_i.pc_o_1;
+                FIFO_inst[tail] <= inst;
+                FIFO_pc[tail] <= pc;
 
                 FIFO_branch_info[tail].is_branch <= is_branch_1;
                 FIFO_branch_info[tail].pre_taken_or_not <= 0;
                 FIFO_branch_info[tail].pre_branch_addr <= 0;
 
                 FIFO_valid[tail] <= 1'b1;
-                FIFO_inst[tail+1] <= inst_and_pc_i.inst_o_2;
-                FIFO_pc[tail+1] <= inst_and_pc_i.pc_o_2;
 
-                FIFO_branch_info[tail+1].is_branch <= is_branch_2;
-                FIFO_branch_info[tail+1].pre_taken_or_not <= pre_taken_or_not;
-                FIFO_branch_info[tail+1].pre_branch_addr <= pre_branch_addr;
+                // FIFO_inst[tail+1] <= inst_and_pc_i.inst_o_2;
+                // FIFO_pc[tail+1] <= inst_and_pc_i.pc_o_2;
 
-                FIFO_valid[tail+1] <= 1'b1;
+                // FIFO_branch_info[tail+1].is_branch <= is_branch_2;
+                // FIFO_branch_info[tail+1].pre_taken_or_not <= pre_taken_or_not;
+                // FIFO_branch_info[tail+1].pre_branch_addr <= pre_branch_addr;
+
+                // FIFO_valid[tail+1] <= 1'b1;
                 tail <= tail + 2;
             end else begin
                 if(fetch_inst_1_en) begin
-                    FIFO_inst[tail] <= inst_and_pc_i.inst_o_1;
-                    FIFO_pc[tail] <= inst_and_pc_i.pc_o_1;
-                    FIFO_valid[tail] <= 1'b1;
+                    FIFO_inst[tail] <= inst;
+                    FIFO_pc[tail] <= pc;
+                    FIFO_valid[tail] <= is_valid_out;
                     
                     FIFO_branch_info[tail].is_branch <= is_branch_1;
                     FIFO_branch_info[tail].pre_taken_or_not <= pre_taken_or_not;
@@ -110,13 +118,13 @@ import pipeline_type::*;
 
                     tail <= tail + 1;
                 end else if(fetch_inst_2_en) begin
-                    FIFO_inst[tail] <= inst_and_pc_i.inst_o_2;
-                    FIFO_pc[tail] <= inst_and_pc_i.pc_o_2;
-                    FIFO_valid[tail] <= 1'b1;
+                    // FIFO_inst[tail] <= inst_and_pc_i.inst_o_2;
+                    // FIFO_pc[tail] <= inst_and_pc_i.pc_o_2;
+                    // FIFO_valid[tail] <= 1'b1;
 
-                    FIFO_branch_info[tail].is_branch <= is_branch_2;
-                    FIFO_branch_info[tail].pre_taken_or_not <= pre_taken_or_not;
-                    FIFO_branch_info[tail].pre_branch_addr <= pre_branch_addr;
+                    // FIFO_branch_info[tail].is_branch <= is_branch_2;
+                    // FIFO_branch_info[tail].pre_taken_or_not <= pre_taken_or_not;
+                    // FIFO_branch_info[tail].pre_branch_addr <= pre_branch_addr;
 
                     tail <= tail + 1;
                 end else begin
@@ -161,7 +169,7 @@ import pipeline_type::*;
                 branch_info2 <= 0;
 
                 head <= head + 1;
-            end else if (ctrl.pause[1] && !ctrl.pause[2]) begin
+            end else if ((ctrl.pause[1] && !ctrl.pause[2])|stall) begin
                 inst_and_pc_o.inst_o_1 <= 0;
                 inst_and_pc_o.inst_o_2 <= 0;
                 inst_and_pc_o.pc_o_1 <= 0;

@@ -21,7 +21,7 @@
 
 
 module frontend_top
-import pipeline_type::*;
+import pipeline_types::*;
 (
     input logic clk,
     input logic rst,
@@ -57,6 +57,8 @@ import pipeline_type::*;
     inst_and_pc_t inst_and_pc;
     logic fetch_inst_1_en;
     logic fetch_inst_2_en;
+    logic is_exception;
+    logic exception_cause;
 
     assign pi_master.pc = pc.pc_o_1;
     assign pi_master.inst_en = inst_en_1;
@@ -68,13 +70,14 @@ import pipeline_type::*;
     pc_reg u_pc_reg(
         .clk,
         .rst,
+        .stall(pi_master.stall),
         
         .is_branch_i_1,
         .is_branch_i_2,
         .pre_taken_or_not,
         .pre_branch_addr,
-        .branch_actual_addr(fb_master.branch_actual_addr),
-        .branch_flush(fb_master.branch_flush),
+        .branch_actual_addr(fb_master.update_info.branch_actual_addr),
+        .branch_flush(fb_master.update_info.branch_flush),
 
         .ctrl(fb_master.ctrl),
         .ctrl_pc(fb_master.ctrl_pc),
@@ -87,36 +90,47 @@ import pipeline_type::*;
     bpu u_bpu(
         .clk,
         .rst,
-        .branch_flush(fb_master.branch_flush),
+        .update_info(fb_master.update_info),
+        .stall(pi_master.stall),
 
         .pc_i(pc),
-        .inst_2_1(pi_master.inst),
+        .inst_1_i(pi_master.inst),
         .inst_2_i,
         .inst_en_1,
         .inst_en_2,
         .ctrl(fb_master.ctrl),
 
-        .inst_and_pc,
+        .is_valid_in(pi_master.is_valid_in),
+
         .is_branch_1(is_branch_i_1),
         .is_branch_2(is_branch_i_2),
         .pre_taken_or_not,
 
         .pre_branch_addr,
+
         .fetch_inst_1_en,
-        .fetch_inst_2_en
+        .fetch_inst_2_en,
+        .is_exception,
+        .exception_cause
     );
 
     instbuffer u_instbuffer(
         .clk,
         .rst,
-        .branch_flush(fb_master.branch_flush),
+        .branch_flush(fb_master.update_info.branch_flush),
         .ctrl(fb_master.ctrl),
+        .stall(pi_master.stall),
 
-        .inst_and_pc_i(inst_and_pc),
+        .inst(pi_master.inst),
+        .pc(pi_master.pc),
+        .is_valid_out(pi_master.is_valid_out),
+
         .is_branch_1(is_branch_i_1),
         .is_branch_2(is_branch_i_2),
         .pre_taken_or_not,
         .pre_branch_addr,
+        .is_exception,
+        .exception_cause,
 
         .send_inst_1_en(fb_master.send_inst_en),
         .send_inst_2_en,
