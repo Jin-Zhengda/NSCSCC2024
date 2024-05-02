@@ -30,4 +30,6 @@ module cpu_core
         .fb_master(fb.master)
     );
 
+    assign icache_master.is_valid = 1'b1;
+
 endmodule
