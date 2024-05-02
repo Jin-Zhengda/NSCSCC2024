@@ -1,6 +1,7 @@
+`timescale 1ns/1ps
+
 module cpu_spoc 
     import pipeline_types::*;
-    import icache_types::*;
 (
     input logic clk,
     input logic rst,
@@ -8,8 +9,9 @@ module cpu_spoc
 );
 
     bus32_t inst_addr;
-    bus32_t inst;
+    bus256_t inst;
     logic inst_en;
+    logic inst_valid;
 
     logic ram_en;
     logic write_en;
@@ -19,32 +21,24 @@ module cpu_spoc
     bus32_t data_i;
     bus32_t data_o;
 
-    mem_dcache dcache();
-    pc_icache icache();
+    mem_dcache mem_dcache_io();
+    pc_icache pc_icache_io();
+    icache_mem icache_mem_io();
 
-    assign ram_en = dcache.master.valid;
-    assign write_en = dcache.master.op;
-    assign read_en = ~dcache.master.op;
-    assign addr = dcache.master.virtual_addr;
-    assign select = dcache.master.wstrb;
-    assign data_i = dcache.master.wdata;
-    assign dcache.master.rdata = data_o;
-    assign dcache.master.cache_miss = 1'b0;
-    assign dcache.master.data_ok = 1'b1;
+    assign ram_en = mem_dcache_io.master.valid;
+    assign write_en = mem_dcache_io.master.op;
+    assign read_en = ~mem_dcache_io.master.op;
+    assign addr = mem_dcache_io.master.virtual_addr;
+    assign select = mem_dcache_io.master.wstrb;
+    assign data_i = mem_dcache_io.master.wdata;
+    assign mem_dcache_io.master.rdata = data_o;
+    assign mem_dcache_io.master.cache_miss = 1'b0;
+    assign mem_dcache_io.master.data_ok = 1'b1;
 
-    assign front_icache_signals.virtual_addr = icache.master.pc;
-    assign front_icache_signals.valid = icache.master.inst_en;
-    assign icache.master.inst = icache_front_signals.rdata;
-    assign icache.master.cache_miss = icache_front_signals.cache_miss;
-    assign icache.master.data_ok = icache_front_signals.data_ok;
-
-    assign inst_en = icache_axi_signals.rd_req;
-    assign inst_addr = icache_axi_signals.rd_addr;
-
-    assign axi_icache_signals.rd_rdy = 1'b1;
-    assign axi_icache_signals.ret_valid = 1'b1;
-    assign axi_icache_signals.ret_last = 1'b1;
-    assign axi_icache_signals.ret_data = inst;
+    assign inst_addr = icache_mem_io.master.rd_addr;
+    assign inst_en = icache_mem_io.master.rd_req;
+    assign icache_mem_io.master.ret_data = inst;
+    assign icache_mem_io.master.ret_valid = inst_valid;
 
 
     cpu_core u_cpu_core (
@@ -52,32 +46,31 @@ module cpu_spoc
         .rst,
         .continue_idle,
         
-        .icache_master(icache.master),
-        .dcache_master(dcache.master)
-        
+        .icache_master(pc_icache_io.master),
+        .dcache_master(mem_dcache_io.master)  
     );
 
-    // icache
-    FRONT_ICACHE_SIGNALS front_icache_signals;
-    ICACHE_FRONT_SIGNALS icache_front_signals;
-    AXI_ICACHE_SIGNALS axi_icache_signals;
-    ICACHE_AXI_SIGNALS icache_axi_signals;
-
-
-    icache u_icache(
+    icache u_icache (
         .clk,
         .reset(rst),
-        .front_icache_signals,
-        .icache_front_signals,
-        .axi_icache_signals,
-        .icache_axi_signals
+        .inst_en(pc_icache_io.slave.inst_en),
+        .pc(pc_icache_io.slave.pc),
+        .stall(pc_icache_io.slave.stall),
+        .inst(pc_icache_io.slave.inst),
+        .rd_req(icache_mem_io.master.rd_req),
+        .rd_addr(icache_mem_io.master.rd_addr),
+        .ret_valid(icache_mem_io.master.ret_valid),
+        .ret_data(icache_mem_io.master.ret_data)
     );
 
     inst_rom u_inst_rom (
+        .clk,
+        .rst,
         .rom_inst_en(inst_en),
         .rom_inst_addr(inst_addr),
 
-        .rom_inst(inst)
+        .rom_inst(inst),
+        .rom_inst_valid(inst_valid)
     );
 
     data_ram u_data_ram (

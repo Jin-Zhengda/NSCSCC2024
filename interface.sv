@@ -1,25 +1,3 @@
-`timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 2024/04/29 21:16:22
-// Design Name: 
-// Module Name: interface
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
-
-
 import pipeline_types::*;
 
     interface mem_dcache;
@@ -50,15 +28,21 @@ import pipeline_types::*;
     interface frontend_backend;
         ctrl_t ctrl;
         ctrl_pc_t ctrl_pc;
-        branch_update update_info;
         logic send_inst_en;
         branch_info branch_info;
         inst_and_pc_t inst_and_pc_o;
+        branch_update update_info;
 
         modport master (
-            input ctrl, ctrl_pc, update_info,send_inst_en,
+            input ctrl, ctrl_pc,send_inst_en, update_info,
             output branch_info,inst_and_pc_o
         );
+
+        modport slave (
+            output ctrl, ctrl_pc,send_inst_en, 
+            input branch_info,inst_and_pc_o, update_info
+        );
+
         
     endinterface: frontend_backend
 
@@ -67,17 +51,18 @@ import pipeline_types::*;
         logic inst_en; // 读 icache 使能
         bus32_t inst; // 读 icache 的结果，即给出的指令
         logic stall;
-        logic is_valid_in;
-        logic is_valid_out;
+        logic is_valid;
+        //logic cache_miss; // cache 未命中
+        //logic data_ok; // 数据传输完成
 
         modport master (
-            input inst, stall,is_valid_in,
-            output pc, inst_en,is_valid_out
+            input inst, stall, is_valid,
+            output pc, inst_en
         );
 
         modport slave (
-            output inst, stall,is_valid_in,
-            input pc, inst_en,is_valid_out
+            output inst, stall,
+            input pc, inst_en, is_valid
         );
     endinterface: pc_icache
 
@@ -198,7 +183,6 @@ import pipeline_types::*;
         );
     endinterface:ctrl_csr
 
-    
     interface icache_mem;
         logic rd_req,ret_valid;
         bus32_t rd_addr;

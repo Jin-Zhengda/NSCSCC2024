@@ -53,7 +53,7 @@ module backend
     assign id_i.inst = fb_slave.inst_and_pc_o.inst_o_1;
     assign id_i.is_exception = fb_slave.inst_and_pc_o.is_exception;
     assign id_i.exception_cause = fb_slave.inst_and_pc_o.exception_cause;
-    assign id_i.is_branch = fb_slave.branch_info.is_branch;
+    assign id_i.pre_is_branch = fb_slave.branch_info.is_branch;
     assign id_i.pre_is_branch_taken = fb_slave.branch_info.pre_taken_or_not;
     assign id_i.pre_branch_addr = fb_slave.branch_info.pre_branch_addr;
 
@@ -97,8 +97,7 @@ module backend
         .pause_dispatch(pause_request.pause_dispatch),
         .dispatch_ex(dispatch_o),
 
-        .branch_target_addr_actual(fb_slave.branch_actual_addr),
-        .branch_flush(fb_slave.branch_flush)
+        .branch_update_info(fb_slave.update_info)
     );
 
     regfile u_regfile (
@@ -198,7 +197,7 @@ module backend
 
         .ctrl_o(fb_slave.ctrl),
         .ctrl_pc(fb_slave.ctrl_pc),
-        .send_inst1_en(fb_slave.send_inst1_en)
+        .send_inst1_en(fb_slave.send_inst_en)
     );
 
     csr u_csr (
@@ -212,7 +211,7 @@ module backend
         .is_ertn(mem_ctrl.is_ertn),
         .is_syscall_break(is_syscall_break),
 
-        .is_ipi(0),
+        .is_ipi(32'b0),
         .is_hwi(0),
 
         .ctrl_slave(ctrl_csr_io.slave),

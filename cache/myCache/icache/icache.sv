@@ -17,10 +17,6 @@ typedef logic[255:0] bus256_t;
 `define SET_SIZE 128
 `define TAGV_SIZE 21
 
-
-
-    
-
 module icache (
     input logic clk,
     input logic reset,

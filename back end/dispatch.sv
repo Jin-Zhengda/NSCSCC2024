@@ -14,8 +14,7 @@ module dispatch
     output logic pause_dispatch,
     output dispatch_ex_t dispatch_ex,
 
-    output bus32_t branch_target_addr_actual,
-    output logic branch_flush
+    output branch_update branch_update_info
 );
     assign dispatch_ex.pc = id_dispatch.pc; 
     assign dispatch_ex.inst = id_dispatch.inst;
@@ -116,26 +115,40 @@ module dispatch
 
     always_comb begin: branch_target
         if (is_branch && id_dispatch.pre_is_branch_taken) begin
+            branch_update_info.update_en = 1'b1;
+            branch_update_info.taken_or_not_actual = 1'b1;
             if (id_dispatch.pre_branch_addr == branch_target_addr) begin
-                branch_flush = 1'b0;
-                branch_target_addr_actual = 32'b0;
+                branch_update_info.branch_flush = 1'b0;
+                branch_update_info.branch_actual_addr = 32'b0;
             end
             else begin
-                branch_flush = 1'b1;
-                branch_target_addr_actual = branch_target_addr;
+                branch_update_info.branch_flush = 1'b1;
+                branch_update_info.branch_actual_addr = branch_target_addr;
             end
         end
         else if (is_branch && !id_dispatch.pre_is_branch_taken) begin
-            branch_flush = 1'b1;
-            branch_target_addr_actual = branch_target_addr;
+            branch_update_info.update_en = 1'b1;
+            branch_update_info.taken_or_not_actual = 1'b1;
+            branch_update_info.branch_flush = 1'b1;
+            branch_update_info.branch_actual_addr = branch_target_addr;
         end
         else if (!is_branch && id_dispatch.pre_is_branch_taken) begin
-            branch_flush = 1'b1;
-            branch_target_addr_actual = id_dispatch.pc + 4'h4;
+            branch_update_info.update_en = 1'b1;
+            branch_update_info.taken_or_not_actual = 1'b0;
+            branch_update_info.branch_flush = 1'b1;
+            branch_update_info.branch_actual_addr = id_dispatch.pc + 4'h4;
+        end
+        else if (!is_branch && !id_dispatch.pre_is_branch_taken) begin
+            branch_update_info.update_en = 1'b1;
+            branch_update_info.taken_or_not_actual = 1'b0;
+            branch_update_info.branch_flush = 1'b0;
+            branch_update_info.branch_actual_addr = 32'b0;
         end
         else begin
-            branch_flush = 1'b0;
-            branch_target_addr_actual = 32'b0;
+            branch_update_info.update_en = 1'b0;
+            branch_update_info.taken_or_not_actual = 1'b0;
+            branch_update_info.branch_flush = 1'b0;
+            branch_update_info.branch_actual_addr = 32'b0;
         end
     end
 

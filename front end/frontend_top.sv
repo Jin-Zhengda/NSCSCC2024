@@ -100,7 +100,7 @@ import pipeline_types::*;
         .inst_en_2,
         .ctrl(fb_master.ctrl),
 
-        .is_valid_in(pi_master.is_valid_in),
+        .is_valid_in(pi_master.is_valid),
 
         .is_branch_1(is_branch_i_1),
         .is_branch_2(is_branch_i_2),
