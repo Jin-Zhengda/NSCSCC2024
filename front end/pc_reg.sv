@@ -26,6 +26,7 @@ import pipeline_types::*;
 (
     input logic clk,
     input logic rst,
+    input logic stall,
 
     input logic is_branch_i_1,
     input logic is_branch_i_2,
@@ -36,7 +37,6 @@ import pipeline_types::*;
 
     input ctrl_t ctrl,
     input ctrl_pc_t ctrl_pc,
-    input hit_or_not,
 
     output pc_out pc,
     output logic inst_en_1,
@@ -89,7 +89,7 @@ import pipeline_types::*;
         else if(ctrl.exception_flush) begin
             pc.pc_o_1 <= ctrl_pc.exception_new_pc;
         end
-        else if(ctrl.pause[0]) begin
+        else if(ctrl.pause[0]|stall) begin
             pc.pc_o_1 <= pc.pc_o_1;
         end
         else begin

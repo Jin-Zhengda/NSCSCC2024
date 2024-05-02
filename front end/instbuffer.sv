@@ -3,9 +3,9 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date: 2024/04/22 21:12:50
+// Create Date: 2024/04/22 21:15:41
 // Design Name: 
-// Module Name: pc_reg
+// Module Name: instbuffer
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -18,92 +18,170 @@
 // Additional Comments:
 // 
 //////////////////////////////////////////////////////////////////////////////////
-`define InstAddrWidth 31:0
-`include "csr_define.sv"
+`define InstBus 31:0
+`define InstBufferSize 32
+`define InstBufferAddrSize 5
+`define ZeroInstBufferAddr 5'd0
 
-module pc_reg
+
+module instbuffer
 import pipeline_types::*;
 (
     input logic clk,
     input logic rst,
+    input logic branch_flush,
+    input ctrl_t ctrl,
     input logic stall,
 
-    input logic is_branch_i_1,
-    input logic is_branch_i_2,
+    //icache传来的信号
+    input logic [31:0] inst,
+    input logic [31:0] pc,
+    input logic is_valid_out,
+
+    //bpu传来的信号
+    input logic is_branch_1,
+    input logic is_branch_2,
     input logic pre_taken_or_not,
-    input logic [`InstAddrWidth] pre_branch_addr,
-    input logic [`InstAddrWidth] branch_actual_addr,
-    input logic branch_flush,
+    input logic [31:0] pre_branch_addr,
+    input logic is_exception,
+    input logic exception_cause,
 
-    input ctrl_t ctrl,
-    input ctrl_pc_t ctrl_pc,
 
-    output pc_out pc,
-    output logic inst_en_1,
-    output logic inst_en_2
-);
+    //发射指令的使能信号
+    input logic send_inst_1_en,
+    input logic send_inst_2_en,
 
+    //从bpu取指令的使能信号
+    input logic fetch_inst_1_en,
+    input logic fetch_inst_2_en,
+
+    //输出给if_id的
+    output inst_and_pc_t inst_and_pc_o,
+    output branch_info branch_info1,
+    output branch_info branch_info2
+    );
+
+    //FIFO for inst
+    logic [`InstBus]FIFO_inst[`InstBufferSize-1:0];
+    //FIFO for pc
+    logic [`InstBus]FIFO_pc[`InstBufferSize-1:0];
+
+    branch_info FIFO_branch_info[`InstBufferSize-1:0];
+
+    //头尾指针
+    logic [`InstBufferAddrSize-1:0]tail;
+    logic [`InstBufferAddrSize-1:0]head;
+    logic [`InstBufferSize-1:0]FIFO_valid;
 
     always_ff @(posedge clk) begin
-        if (rst) begin
-            inst_en_1 <= 1'b0;
-            inst_en_2 <= 1'b0;
-        end
-        else begin
-            inst_en_1 <= 1'b1;
-            inst_en_2 <= 1'b0;
-        end
+        inst_and_pc_o.is_exception = is_exception;
+        inst_and_pc_o.exception_cause = exception_cause;
     end
 
 
-    // always_ff @(posedge clk) begin
-    //     if (rst) begin
-    //         pc_1_o <= 32'h0;
-    //         pc_2_o <= 32'h4;
-    //     end
-    //     else if (pause[0]) begin
-    //         pc_1_o <= pc_1_o;
-    //         pc_2_o <= pc_2_o;
-    //     end
-    //     else begin
-    //         if ((is_branch_i_1|is_branch_i_2)&&pre_taken_or_not) begin
-    //             pc_1_o <= pre_branch_addr;
-    //             pc_2_o <= pre_branch_addr+4;
-    //         end
-    //         else begin
-    //         pc_1_o <= pc_1_o + 4'h8;
-    //         pc_2_o <= pc_2_o + 4'h8;
-    //         end
-    //     end
-    // end
-    assign pc.is_exception = {ctrl_pc.is_interrupt, {(pc.pc_o_1[1: 0] == 2'b00) ? 1'b0 : 1'b1}, 4'b0};
-    assign pc.exception_cause = {{ctrl_pc.is_interrupt ? `EXCEPTION_INT: `EXCEPTION_NOP}, 
-                                {(pc.pc_o_1[1: 0] == 2'b00) ?  `EXCEPTION_NOP: `EXCEPTION_ADEF},
-                                {4{`EXCEPTION_NOP}}};
-
     always_ff @(posedge clk) begin
-        if(rst) begin
-            pc.pc_o_1 <= 32'h100;
-            pc.pc_o_2 <= 32'h104;
-        end
-        else if(ctrl.exception_flush) begin
-            pc.pc_o_1 <= ctrl_pc.exception_new_pc;
-        end
-        else if(ctrl.pause[0]|stall) begin
-            pc.pc_o_1 <= pc.pc_o_1;
+        if(rst|branch_flush|ctrl.exception_flush) begin
+            head <= 5'b0;
+            tail <= `ZeroInstBufferAddr;
+            FIFO_valid <= `InstBufferSize'd0;
+            // FIFO_inst <= '{32'b0};
         end
         else begin
-            if(branch_flush) begin
-                pc.pc_o_1 <= branch_actual_addr;
+            if(fetch_inst_1_en&&fetch_inst_2_en) begin
+                FIFO_inst[tail] <= inst;
+                FIFO_pc[tail] <= pc;
+
+                FIFO_branch_info[tail].is_branch <= is_branch_1;
+                FIFO_branch_info[tail].pre_taken_or_not <= 0;
+                FIFO_branch_info[tail].pre_branch_addr <= 0;
+
+                FIFO_valid[tail] <= 1'b1;
+
+                // FIFO_inst[tail+1] <= inst_and_pc_i.inst_o_2;
+                // FIFO_pc[tail+1] <= inst_and_pc_i.pc_o_2;
+
+                // FIFO_branch_info[tail+1].is_branch <= is_branch_2;
+                // FIFO_branch_info[tail+1].pre_taken_or_not <= pre_taken_or_not;
+                // FIFO_branch_info[tail+1].pre_branch_addr <= pre_branch_addr;
+
+                // FIFO_valid[tail+1] <= 1'b1;
+                tail <= tail + 2;
+            end else begin
+                if(fetch_inst_1_en) begin
+                    FIFO_inst[tail] <= inst;
+                    FIFO_pc[tail] <= pc;
+                    FIFO_valid[tail] <= is_valid_out;
+                    
+                    FIFO_branch_info[tail].is_branch <= is_branch_1;
+                    FIFO_branch_info[tail].pre_taken_or_not <= pre_taken_or_not;
+                    FIFO_branch_info[tail].pre_branch_addr <= pre_branch_addr;
+
+                    tail <= tail + 1;
+                end else if(fetch_inst_2_en) begin
+                    // FIFO_inst[tail] <= inst_and_pc_i.inst_o_2;
+                    // FIFO_pc[tail] <= inst_and_pc_i.pc_o_2;
+                    // FIFO_valid[tail] <= 1'b1;
+
+                    // FIFO_branch_info[tail].is_branch <= is_branch_2;
+                    // FIFO_branch_info[tail].pre_taken_or_not <= pre_taken_or_not;
+                    // FIFO_branch_info[tail].pre_branch_addr <= pre_branch_addr;
+
+                    tail <= tail + 1;
+                end else begin
+                    FIFO_inst[tail] <= FIFO_inst[tail];
+                    FIFO_pc[tail] <= FIFO_pc[tail];
+                    FIFO_valid[tail] <= FIFO_valid[tail];
+                    FIFO_branch_info[tail] <= FIFO_branch_info[tail];
+                    tail <= tail;
+                end
             end
-            else if(is_branch_i_1&&pre_taken_or_not) begin
-                pc.pc_o_1 <= pre_branch_addr;
+        end
+    end
+        
+
+    always_ff @(posedge clk) begin
+        if(rst|branch_flush|ctrl.exception_flush) begin
+            inst_and_pc_o.inst_o_1 <= 0;
+            inst_and_pc_o.inst_o_2 <= 0;
+            inst_and_pc_o.pc_o_1 <= 0;
+            inst_and_pc_o.pc_o_2 <= 0;
+            branch_info1 <= 0;
+            branch_info2 <= 0;
+        end
+        else begin
+            if(send_inst_1_en && send_inst_2_en && FIFO_valid[head] && FIFO_valid[head+1]) begin
+                inst_and_pc_o.inst_o_1 <= FIFO_inst[head];
+                inst_and_pc_o.pc_o_1 <= FIFO_pc[head];
+                inst_and_pc_o.inst_o_2 <= FIFO_inst[head+1];
+                inst_and_pc_o.pc_o_2 <= FIFO_pc[head+1];
+
+                branch_info1 <= FIFO_branch_info[head];
+                branch_info2 <= FIFO_branch_info[head+1];
+
+                head <= head + 2;
+            end else if((send_inst_1_en&&FIFO_valid[head])|(send_inst_2_en&&FIFO_valid[head])) begin
+                inst_and_pc_o.inst_o_1 <= FIFO_inst[head];
+                inst_and_pc_o.pc_o_1 <= FIFO_pc[head];
+                inst_and_pc_o.inst_o_2 <= 0;
+                inst_and_pc_o.pc_o_2 <= 0;
+
+                branch_info1 <= FIFO_branch_info[head];
+                branch_info2 <= 0;
+
+                head <= head + 1;
+            end else if ((ctrl.pause[1] && !ctrl.pause[2])|stall) begin
+                inst_and_pc_o.inst_o_1 <= 0;
+                inst_and_pc_o.inst_o_2 <= 0;
+                inst_and_pc_o.pc_o_1 <= 0;
+                inst_and_pc_o.pc_o_2 <= 0;
             end
             else begin
-            pc.pc_o_1 <= pc.pc_o_1 + 4'h4;
+                inst_and_pc_o.inst_o_1 <= 0;
+                inst_and_pc_o.inst_o_2 <= 0;
+                inst_and_pc_o.pc_o_1 <= 0;
+                inst_and_pc_o.pc_o_2 <= 0;
             end
         end
     end
-
 
 endmodule
