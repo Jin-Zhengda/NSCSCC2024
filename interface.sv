@@ -51,18 +51,19 @@ import pipeline_types::*;
         logic inst_en; // 读 icache 使能
         bus32_t inst; // 读 icache 的结果，即给出的指令
         logic stall;
-        logic is_valid;
+        logic is_valid_in;
+        logic is_valid_out;
         //logic cache_miss; // cache 未命中
         //logic data_ok; // 数据传输完成
 
         modport master (
-            input inst, stall, is_valid,
-            output pc, inst_en
+            input inst, stall, is_valid_out,
+            output pc, inst_en, is_valid_in
         );
 
         modport slave (
-            output inst, stall,
-            input pc, inst_en, is_valid
+            output inst, stall, is_valid_out,
+            input pc, inst_en, is_valid_in
         );
     endinterface: pc_icache
 

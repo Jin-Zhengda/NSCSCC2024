@@ -76,7 +76,7 @@ module backend
         .clk,
         .rst,
 
-        .branch_flush(fb_slave.branch_flush),
+        .branch_flush(fb_slave.update_info.branch_flush),
 
         .ctrl(fb_slave.ctrl),
 
