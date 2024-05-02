@@ -5,6 +5,7 @@ package pipeline_types;
     
     typedef logic[31: 0] bus32_t;
     typedef logic[63: 0] bus64_t;
+    typedef logic[255: 0] bus256_t;
 
     typedef logic[7: 0] alu_op_t;
     typedef logic[2: 0] alu_sel_t;
@@ -48,6 +49,13 @@ package pipeline_types;
         logic pre_taken_or_not;
         bus32_t pre_branch_addr;
     } branch_info;
+
+    typedef struct packed {
+        logic branch_flush;
+        logic update_en;
+        logic taken_or_not_actual;
+        bus32_t branch_actual_addr;
+    } branch_update;
 
     // ctrl and pc
     typedef struct packed {

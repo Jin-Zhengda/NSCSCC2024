@@ -17,39 +17,6 @@ typedef logic[255:0] bus256_t;
 `define SET_SIZE 128
 `define TAGV_SIZE 21
 
-    interface pc_icache;
-        bus32_t pc; // 读 icache 的地址
-        logic inst_en; // 读 icache 使能
-        bus32_t inst; // 读 icache 的结果，即给出的指令
-        logic stall;
-        //logic cache_miss; // cache 未命中
-        //logic data_ok; // 数据传输完成
-
-        modport master (
-            input inst, stall,
-            output pc, inst_en
-        );
-
-        modport slave (
-            output inst, stall,
-            input pc, inst_en
-        );
-    endinterface: pc_icache
-
-    interface icache_mem;
-        logic rd_req,ret_valid;
-        bus32_t rd_addr;
-        bus256_t ret_data;
-        modport master (
-            input ret_valid,ret_data,
-            output rd_req,rd_addr
-        );
-        modport slave (
-            input rd_req,rd_addr,
-            output ret_valid,ret_data
-        );
-    endinterface //icache_mem
-
 module icache (
     input logic clk,
     input logic reset,

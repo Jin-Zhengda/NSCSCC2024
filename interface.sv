@@ -28,20 +28,19 @@ import pipeline_types::*;
     interface frontend_backend;
         ctrl_t ctrl;
         ctrl_pc_t ctrl_pc;
-        logic branch_flush;
-        logic [31:0] branch_actual_addr;
         logic send_inst_en;
         branch_info branch_info;
         inst_and_pc_t inst_and_pc_o;
+        branch_update update_info;
 
         modport master (
-            input ctrl, ctrl_pc, branch_flush, branch_actual_addr,send_inst_en,
+            input ctrl, ctrl_pc,send_inst_en, update_info,
             output branch_info,inst_and_pc_o
         );
 
         modport slave (
-            output ctrl, ctrl_pc, branch_flush, branch_actual_addr,send_inst_en,
-            input branch_info,inst_and_pc_o
+            output ctrl, ctrl_pc,send_inst_en, 
+            input branch_info,inst_and_pc_o, update_info
         );
 
         
@@ -52,17 +51,18 @@ import pipeline_types::*;
         logic inst_en; // 读 icache 使能
         bus32_t inst; // 读 icache 的结果，即给出的指令
         logic stall;
+        logic is_valid;
         //logic cache_miss; // cache 未命中
         //logic data_ok; // 数据传输完成
 
         modport master (
-            input inst, stall,
+            input inst, stall, is_valid,
             output pc, inst_en
         );
 
         modport slave (
             output inst, stall,
-            input pc, inst_en
+            input pc, inst_en, is_valid
         );
     endinterface: pc_icache
 
@@ -182,3 +182,17 @@ import pipeline_types::*;
             input exception_addr
         );
     endinterface:ctrl_csr
+
+    interface icache_mem;
+        logic rd_req,ret_valid;
+        bus32_t rd_addr;
+        bus256_t ret_data;
+        modport master (
+            input ret_valid,ret_data,
+            output rd_req,rd_addr
+        );
+        modport slave (
+            input rd_req,rd_addr,
+            output ret_valid,ret_data
+        );
+    endinterface //icache_mem
