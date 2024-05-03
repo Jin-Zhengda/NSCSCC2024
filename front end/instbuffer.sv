@@ -176,10 +176,10 @@ import pipeline_types::*;
                 inst_and_pc_o.pc_o_2 <= 0;
             end
             else begin
-                inst_and_pc_o.inst_o_1 <= 0;
-                inst_and_pc_o.inst_o_2 <= 0;
-                inst_and_pc_o.pc_o_1 <= 0;
-                inst_and_pc_o.pc_o_2 <= 0;
+                inst_and_pc_o.inst_o_1 <= inst_and_pc_o.inst_o_1;
+                inst_and_pc_o.inst_o_2 <= inst_and_pc_o.inst_o_2;
+                inst_and_pc_o.pc_o_1 <= inst_and_pc_o.pc_o_1;
+                inst_and_pc_o.pc_o_2 <= inst_and_pc_o.pc_o_2;
             end
         end
     end

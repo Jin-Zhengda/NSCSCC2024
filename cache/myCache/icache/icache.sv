@@ -122,7 +122,7 @@ assign hit_fail = ~(hit_success) & pre_inst_en;
 
 
 assign pc2icache.stall=reset?1'b1:((hit_fail||read_success)&&pc2icache.is_valid_out?1'b1:1'b0);
-assign pc2icache.inst=hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'hffffffff));
+assign pc2icache.inst=hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0));
 
 
 assign wea_way0=(pre_inst_en&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
