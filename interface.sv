@@ -4,14 +4,14 @@ import pipeline_types::*;
         logic valid;                // 请求有效
         logic op;                   // 操作类型，读-0，写-1
         logic[2:0] size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
-        logic[31:0] virtual_addr;   // 虚拟地址
+        bus32_t virtual_addr;   // 虚拟地址
         logic tlb_excp_cancel_req;
         logic[3:0]  wstrb;          //写使能，1表示对应的8位数据需要写
-        logic[31:0] wdata;          //需要写的数据
+        bus32_t wdata;          //需要写的数据
         
         logic addr_ok;              //该次请求的地址传输OK，读：地址被接收；写：地址和数据被接收
         logic data_ok;              //该次请求的数据传输OK，读：数据返回；写：数据写入完成
-        logic[31:0] rdata;          //读DCache的结果
+        bus32_t rdata;          //读DCache的结果
         logic cache_miss;           //cache未命中
 
         modport master (
@@ -53,17 +53,17 @@ import pipeline_types::*;
         logic stall;
         logic is_valid_in;
         logic is_valid_out;
-        logic pc_out;
+        bus32_t pc_out;
         //logic cache_miss; // cache 未命中
         //logic data_ok; // 数据传输完成
 
         modport master (
-            input inst, stall, is_valid_out,pc_out,
+            input inst, stall, is_valid_out, pc_out,
             output pc, inst_en, is_valid_in
         );
 
         modport slave (
-            output inst, stall, is_valid_out,pc_out,
+            output inst, stall, is_valid_out, pc_out,
             input pc, inst_en, is_valid_in
         );
     endinterface: pc_icache

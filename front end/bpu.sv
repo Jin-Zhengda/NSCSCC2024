@@ -182,7 +182,7 @@ import pipeline_types::*;
     end
 
     always_comb begin
-        if(is_branch_1&pre_taken_or_not_1) begin
+        if((is_branch_1&pre_taken_or_not_1) || update_info.branch_flush) begin
             is_valid_in = 0;
         end else begin
             is_valid_in = 1;
