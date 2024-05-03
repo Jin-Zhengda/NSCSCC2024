@@ -132,7 +132,7 @@ import pipeline_types::*;
         .is_exception,
         .exception_cause,
 
-        .send_inst_1_en(fb_master.send_inst_en),
+        .send_inst_1_en_pre(fb_master.send_inst_en),
         .send_inst_2_en,
 
         .fetch_inst_1_en,

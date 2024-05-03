@@ -13,7 +13,7 @@ module inst_rom
     bus32_t rom[0: 4095];
 
     initial begin
-        $readmemh("C:/Documents/Code/NSCSCC2024/back end/test/inst_rom.mem", rom);
+        $readmemh("C:/Documents/Code/NSCSCC2024/test/inst_rom.mem", rom);
     end
 
     logic[11: 0] inst_addr;
