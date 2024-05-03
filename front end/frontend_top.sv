@@ -117,12 +117,12 @@ import pipeline_types::*;
     instbuffer u_instbuffer(
         .clk,
         .rst,
-        .branch_flush(fb_master.update_info.branch_flush),
+        .branch_flush_pre(fb_master.update_info.branch_flush),
         .ctrl(fb_master.ctrl),
         .stall(pi_master.stall),
 
         .inst(pi_master.inst),
-        .pc(pi_master.pc),
+        .pc(pi_master.pc_out),
         .is_valid_out(pi_master.is_valid_out),
 
         .is_branch_1(is_branch_i_1),

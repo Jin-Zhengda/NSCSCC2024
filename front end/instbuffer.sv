@@ -29,7 +29,7 @@ import pipeline_types::*;
 (
     input logic clk,
     input logic rst,
-    input logic branch_flush,
+    input logic branch_flush_pre,
     input ctrl_t ctrl,
     input logic stall,
 
@@ -61,6 +61,12 @@ import pipeline_types::*;
     output branch_info branch_info2
     );
 
+    logic branch_flush;
+
+    always_ff @(posedge clk) begin
+        branch_flush <= branch_flush_pre;
+    end
+
     //FIFO for inst
     logic [`InstBus]FIFO_inst[`InstBufferSize-1:0];
     //FIFO for pc
@@ -80,7 +86,7 @@ import pipeline_types::*;
 
 
     always_ff @(posedge clk) begin
-        if(rst|branch_flush|ctrl.exception_flush) begin
+        if(rst|branch_flush|ctrl.exception_flush|branch_flush_pre) begin
             head <= 5'b0;
             tail <= `ZeroInstBufferAddr;
             FIFO_valid <= `InstBufferSize'd0;
@@ -140,7 +146,7 @@ import pipeline_types::*;
         
 
     always_ff @(posedge clk) begin
-        if(rst|branch_flush|ctrl.exception_flush) begin
+        if(rst|branch_flush|ctrl.exception_flush|branch_flush_pre) begin
             inst_and_pc_o.inst_o_1 <= 0;
             inst_and_pc_o.inst_o_2 <= 0;
             inst_and_pc_o.pc_o_1 <= 0;
@@ -148,8 +154,18 @@ import pipeline_types::*;
             branch_info1 <= 0;
             branch_info2 <= 0;
         end
-        else begin
-            if(send_inst_1_en && send_inst_2_en && FIFO_valid[head] && FIFO_valid[head+1]) begin
+        else if (ctrl.pause[1] && !ctrl.pause[2]) begin
+                inst_and_pc_o.inst_o_1 <= 0;
+                inst_and_pc_o.inst_o_2 <= 0;
+                inst_and_pc_o.pc_o_1 <= 0;
+                inst_and_pc_o.pc_o_2 <= 0;
+        end else if (!ctrl.pause[1]) begin
+            if (stall) begin
+                inst_and_pc_o.inst_o_1 <= 0;
+                inst_and_pc_o.inst_o_2 <= 0;
+                inst_and_pc_o.pc_o_1 <= 0;
+                inst_and_pc_o.pc_o_2 <= 0;
+            end else if(send_inst_1_en && send_inst_2_en && FIFO_valid[head] && FIFO_valid[head+1]) begin
                 inst_and_pc_o.inst_o_1 <= FIFO_inst[head];
                 inst_and_pc_o.pc_o_1 <= FIFO_pc[head];
                 inst_and_pc_o.inst_o_2 <= FIFO_inst[head+1];
@@ -169,18 +185,12 @@ import pipeline_types::*;
                 branch_info2 <= 0;
 
                 head <= head + 1;
-            end else if ((ctrl.pause[1] && !ctrl.pause[2])|stall) begin
-                inst_and_pc_o.inst_o_1 <= 0;
-                inst_and_pc_o.inst_o_2 <= 0;
-                inst_and_pc_o.pc_o_1 <= 0;
-                inst_and_pc_o.pc_o_2 <= 0;
-            end
-            else begin
-                inst_and_pc_o.inst_o_1 <= inst_and_pc_o.inst_o_1;
-                inst_and_pc_o.inst_o_2 <= inst_and_pc_o.inst_o_2;
-                inst_and_pc_o.pc_o_1 <= inst_and_pc_o.pc_o_1;
-                inst_and_pc_o.pc_o_2 <= inst_and_pc_o.pc_o_2;
-            end
+            end 
+        end else begin
+            inst_and_pc_o.inst_o_1 <= inst_and_pc_o.inst_o_1;
+            inst_and_pc_o.inst_o_2 <= inst_and_pc_o.inst_o_2;
+            inst_and_pc_o.pc_o_1 <= inst_and_pc_o.pc_o_1;
+            inst_and_pc_o.pc_o_2 <= inst_and_pc_o.pc_o_2;
         end
     end
 

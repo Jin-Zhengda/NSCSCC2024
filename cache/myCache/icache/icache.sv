@@ -142,7 +142,7 @@ always_ff @( posedge clk ) begin
     else pc2icache.is_valid_out<=1'b0;
 end
 
-assign pc_out=pre_virtual_addr;
+assign pc2icache.pc_out=pre_virtual_addr;
 
     
 endmodule
