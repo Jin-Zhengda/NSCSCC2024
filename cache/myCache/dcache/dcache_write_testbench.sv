@@ -21,24 +21,23 @@ typedef logic[255:0] bus256_t;
 
 module dcache_testbench ();
 
-reg clk,reset,valid,op,wr_rdy,rd_rdy,ret_valid;
-reg[2:0]size;
-reg[3:0]wstrb;
-bus32_t virtual_addr,wdata;
+mem_dcache mem2dcache();
+
+reg clk,reset,wr_rdy,rd_rdy,ret_valid;
 bus256_t ret_data;
 
 
 logic stall,rd_req,wr_req;
 wire [2:0]rd_type;
 wire [3:0]wr_wstrb;
-bus32_t rdata,rd_addr,wr_addr;
+bus32_t rd_addr,wr_addr;
 bus256_t wr_data;
 
 
 /*
 logic[31:0] pc_get_data;
 always_ff @( posedge clk ) begin
-    if(!stall&&valid)pc_get_data<=inst;
+    if(!stall&&mem2dcache.valid)pc_get_data<=inst;
     else pc_get_data<=pc_get_data;
 end
 */
@@ -61,31 +60,32 @@ always_ff @( posedge clk ) begin
 end
 
 always_ff @( posedge clk ) begin
-    if(counter>2)valid<=1'b1;
-    else valid<=1'b0;
+    if(counter>=9&&counter<=11)mem2dcache.valid<=1'b0;
+    else if(counter>2)mem2dcache.valid<=1'b1;
+    else mem2dcache.valid<=1'b0;
 end
 
 
 always_ff @( posedge clk ) begin
-    if(reset)virtual_addr<=32'b0;
-    else if(virtual_addr>32'b0000_0000_0000_0000_0000_0000_0011_0000)virtual_addr<=32'b0;
-    else if(!stall&&valid)virtual_addr<=virtual_addr+32'd4;
-    else virtual_addr<=virtual_addr;
+    if(reset)mem2dcache.virtual_addr<=32'b0;
+    else if(mem2dcache.virtual_addr>32'b0000_0000_0000_0000_0000_0000_0011_0000)mem2dcache.virtual_addr<=32'b0;
+    else if(!stall&&mem2dcache.valid)mem2dcache.virtual_addr<=mem2dcache.virtual_addr+32'd4;
+    else mem2dcache.virtual_addr<=mem2dcache.virtual_addr;
 end
 
 
 always_ff @( posedge clk ) begin
     if(reset)begin
-        op<=1'b0;size<=3'b0;wstrb<=4'b0;wdata<=32'b0;
+        mem2dcache.op<=1'b0;mem2dcache.size<=3'b0;mem2dcache.wstrb<=4'b0;mem2dcache.wdata<=32'b0;
     end
-    else if(op==1'b0&&virtual_addr>32'b0000_0000_0000_0000_0000_0000_0011_0000)begin
-        op<=1'b1;size<=3'b010;wstrb<=4'b1111;wdata<=32'b0;
+    else if(mem2dcache.op==1'b0&&mem2dcache.virtual_addr>32'b0000_0000_0000_0000_0000_0000_0011_0000)begin
+        mem2dcache.op<=1'b1;mem2dcache.size<=3'b010;mem2dcache.wstrb<=4'b1111;mem2dcache.wdata<=32'b0;
     end
-    else if(op==1'b1&&virtual_addr>32'b0000_0000_0000_0000_0000_0000_0011_0000)begin
-        op<=1'b0;size<=3'b0;wstrb<=4'b0;wdata<=32'b0;
+    else if(mem2dcache.op==1'b1&&mem2dcache.virtual_addr>32'b0000_0000_0000_0000_0000_0000_0011_0000)begin
+        mem2dcache.op<=1'b0;mem2dcache.size<=3'b0;mem2dcache.wstrb<=4'b0;mem2dcache.wdata<=32'b0;
     end
     else begin
-        wdata<=wdata+1;
+        mem2dcache.wdata<=mem2dcache.wdata+1;
     end
 end
 
@@ -110,14 +110,8 @@ end
 dcache u_dcache(
     .clk(clk),
     .reset(reset),
-    .valid(valid),
-    .op(op),
-    .size(size),
-    .virtual_addr(virtual_addr),
-    .wstrb(wstrb),
-    .wdata(wdata),
+    .mem2dcache(mem2dcache.slave),
     .stall(stall),
-    .rdata(rdata),
     .rd_req(rd_req),
     .rd_type(rd_type),
     .rd_addr(rd_addr),
