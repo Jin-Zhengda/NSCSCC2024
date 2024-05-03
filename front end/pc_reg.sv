@@ -83,7 +83,7 @@ import pipeline_types::*;
 
     always_ff @(posedge clk) begin
         if(rst) begin
-            pc.pc_o_1 <= 32'h100;
+            pc.pc_o_1 <= 32'hfc;
             pc.pc_o_2 <= 32'h104;
         end
         else if(ctrl.exception_flush) begin

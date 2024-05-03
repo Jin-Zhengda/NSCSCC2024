@@ -53,10 +53,7 @@ module cpu_spoc
     icache u_icache (
         .clk,
         .reset(rst),
-        .inst_en(pc_icache_io.slave.inst_en),
-        .pc(pc_icache_io.slave.pc),
-        .stall(pc_icache_io.slave.stall),
-        .inst(pc_icache_io.slave.inst),
+        .pc2icache(pc_icache_io.slave),
         .rd_req(icache_mem_io.master.rd_req),
         .rd_addr(icache_mem_io.master.rd_addr),
         .ret_valid(icache_mem_io.master.ret_valid),

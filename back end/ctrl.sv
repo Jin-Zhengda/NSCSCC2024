@@ -44,7 +44,7 @@ module ctrl
     assign ctrl_pc.is_interrupt = (int_vec != 12'b0) ? 1'b1 : 1'b0;
 
     always_comb begin: exception
-        if (mem_i.pc != 32'h100 && mem_i.is_exception != 6'b0) begin
+        if (mem_i.pc != 32'hfc && mem_i.is_exception != 6'b0) begin
             master.is_exception = 1'b1;
             if (mem_i.is_exception[5]) begin
                 master.exception_cause = mem_i.exception_cause[5];
