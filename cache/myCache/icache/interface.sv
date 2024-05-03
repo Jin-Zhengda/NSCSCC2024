@@ -53,16 +53,17 @@ import pipeline_types::*;
         logic stall;
         logic is_valid_in;
         logic is_valid_out;
+        logic pc_out;
         //logic cache_miss; // cache 未命中
         //logic data_ok; // 数据传输完成
 
         modport master (
-            input inst, stall, is_valid_out,
+            input inst, stall, is_valid_out,pc_out,
             output pc, inst_en, is_valid_in
         );
 
         modport slave (
-            output inst, stall, is_valid_out,
+            output inst, stall, is_valid_out,pc_out,
             input pc, inst_en, is_valid_in
         );
     endinterface: pc_icache

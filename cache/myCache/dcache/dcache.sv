@@ -23,16 +23,9 @@ module dcache (
     input logic clk,
     input logic reset,
 
-    input logic valid,//请求有效
-    input logic op,//操作，0-读，1-写
-    input logic[2:0]size,
-    input bus32_t virtual_addr,
-    input logic[3:0]wstrb,
-    input bus32_t wdata,
+    mem_dcache mem2dcache,
+    output logic stall,//比interface.sv里面的多了这个信号，你可以不接
 
-    output logic stall,
-    //output logic data_ok,
-    output bus32_t rdata,
 
     output logic rd_req,//读请求有效
     output logic[2:0] rd_type,//3’b000——字节，3’b001——半字，3’b010——字，3’b100——Cache行。
@@ -49,12 +42,12 @@ module dcache (
 
 );
 
-
+//wire stall;
 
 
 //TLB转换(未实现)
 bus32_t physical_addr;
-assign physical_addr=virtual_addr;
+assign physical_addr=mem2dcache.virtual_addr;
 
 logic pre_valid,pre_op;
 logic[3:0]pre_wstrb;
@@ -80,12 +73,12 @@ always_ff @( posedge clk ) begin
         pre_wdata<=pre_wdata;
     end
     else begin
-        pre_valid<=valid;
-        pre_op<=op;
-        pre_wstrb<=wstrb;
-        pre_size<=size;
+        pre_valid<=mem2dcache.valid;
+        pre_op<=mem2dcache.op;
+        pre_wstrb<=mem2dcache.wstrb;
+        pre_size<=mem2dcache.size;
         pre_physical_addr<=physical_addr;
-        pre_wdata<=wdata;
+        pre_wdata<=mem2dcache.wdata;
     end
 end
 
@@ -189,8 +182,8 @@ logic LRU_pick;
 assign LRU_pick = LRU[pre_physical_addr[`INDEX_LOC]];
 always_ff @( posedge clk ) begin
     if(reset)LRU<=0;
-    else if(valid&&hit_success)LRU[pre_physical_addr[`INDEX_LOC]] <= hit_way0;
-    else if(valid&&hit_fail&&read_success)LRU[pre_physical_addr[`INDEX_LOC]] <= wea_way0;
+    else if(mem2dcache.valid&&hit_success)LRU[pre_physical_addr[`INDEX_LOC]] <= hit_way0;
+    else if(mem2dcache.valid&&hit_fail&&read_success)LRU[pre_physical_addr[`INDEX_LOC]] <= wea_way0;
     else LRU<=LRU;
 end
 
@@ -206,11 +199,11 @@ assign hit_fail = ~(hit_success) & pre_valid;
 
 
 assign stall=reset?1'b1:(hit_fail||read_success?1'b1:1'b0);
-assign rdata=hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'hffffffff));
+assign mem2dcache.rdata=hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'hffffffff));
 
 
-assign wea_way0=(pre_valid&&hit_way0&&op==1'b1)?pre_wstrb:((pre_valid&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000);
-assign wea_way1=(pre_valid&&hit_way1&&op==1'b1)?pre_wstrb:((pre_valid&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000);
+assign wea_way0=(pre_valid&&hit_way0&&mem2dcache.op==1'b1)?pre_wstrb:((pre_valid&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000);
+assign wea_way1=(pre_valid&&hit_way1&&mem2dcache.op==1'b1)?pre_wstrb:((pre_valid&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000);
 
 
 assign rd_req=!read_success&&hit_fail&&!ret_valid;
@@ -262,5 +255,8 @@ always_ff @( posedge clk ) begin
 end
 
 
+assign mem2dcache.addr_ok=(mem2dcache.valid&&!stall);
+assign mem2dcache.data_ok=(pre_valid&&!stall);
+assign mem2dcache.cache_miss=hit_fail;
 
 endmodule

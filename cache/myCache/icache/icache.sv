@@ -35,21 +35,24 @@ bus32_t physical_addr;
 assign physical_addr=pc2icache.pc;
 
 logic pre_inst_en;
-bus32_t pre_physical_addr;
+bus32_t pre_physical_addr,pre_virtual_addr;
 
 //记录地址
 always_ff @( posedge clk ) begin
     if(reset)begin
         pre_inst_en<=1'b0;
         pre_physical_addr<=32'b0;
+        pre_virtual_addr<=32'b0;
     end
     else if(pc2icache.stall)begin
         pre_physical_addr<=pre_physical_addr;
         pre_inst_en<=pre_inst_en;
+        pre_virtual_addr<=pre_virtual_addr;
     end
     else begin
         pre_inst_en<=pc2icache.inst_en;
         pre_physical_addr<=physical_addr;
+        pre_virtual_addr<=pc2icache.pc;
     end
 end
 
@@ -139,6 +142,7 @@ always_ff @( posedge clk ) begin
     else pc2icache.is_valid_out<=1'b0;
 end
 
+assign pc_out=pre_virtual_addr;
 
     
 endmodule
