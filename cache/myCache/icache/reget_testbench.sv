@@ -21,19 +21,18 @@ typedef logic[255:0] bus256_t;
 
 module icache_testbench ();
 
-reg clk,reset,ret_valid;
+reg clk,reset,inst_en,ret_valid;
+bus32_t pc;
 bus256_t ret_data;
-pc_icache pc2icache;
 
-logic rd_req;
-bus32_t rd_addr;
+logic stall,rd_req;
+bus32_t inst,rd_addr;
 
 logic[31:0] pc_get_data;
 always_ff @( posedge clk ) begin
-    if(!pc2icache.stall&&pc2icache.inst_en)pc_get_data<=pc2icache.inst;
+    if(!stall&&inst_en)pc_get_data<=inst;
     else pc_get_data<=pc_get_data;
 end
-
 
 
 
@@ -53,15 +52,16 @@ always_ff @( posedge clk ) begin
 end
 
 always_ff @( posedge clk ) begin
-    if(counter>2)pc2icache.inst_en<=1'b1;
-    else pc2icache.inst_en<=1'b0;
+    if(counter>2)inst_en<=1'b1;
+    else inst_en<=1'b0;
 end
 
 
 always_ff @( posedge clk ) begin
-    if(reset)pc2icache.pc<=32'b0;
-    else if(!pc2icache.stall&&pc2icache.inst_en)pc2icache.pc<=pc2icache.pc+32'd4;
-    else pc2icache.pc<=pc2icache.pc;
+    if(reset)pc<=32'b0;
+    else if(pc>32'b0000_0000_0000_0000_0000_0000_0000_1010)pc<=32'b0;
+    else if(!stall&&inst_en)pc<=pc+32'd4;
+    else pc<=pc;
 end
 /*
 reg[255:0]data;
@@ -86,18 +86,13 @@ end
 
 
 
-always_ff @( posedge clk ) begin
-    if(counter==13)pc2icache.is_valid_in<=1'b0;
-    else if(counter==8)pc2icache.is_valid_in<=1'b0;
-    else pc2icache.is_valid_in<=1'b1;
-end
-
-
-
 icache u_icache(
     .clk(clk),
     .reset(reset),
-    .pc2icache(pc2icache),
+    .inst_en(inst_en),
+    .pc(pc),
+    .inst(inst),
+    .stall(stall),
     .rd_req(rd_req),
     .rd_addr(rd_addr),
     .ret_valid(ret_valid),
