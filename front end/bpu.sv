@@ -151,7 +151,7 @@ import pipeline_types::*;
     logic pre_taken_or_not_2;
 
     always_comb begin
-        if(rst|update_info.branch_flush|ctrl.pause[0]|stall) begin
+        if(rst|update_info.branch_flush|stall) begin
             fetch_inst_1_en <= 0;
             fetch_inst_2_en <= 0;
         end

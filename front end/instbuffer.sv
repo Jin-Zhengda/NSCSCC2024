@@ -48,7 +48,7 @@ import pipeline_types::*;
 
 
     //发射指令的使能信号
-    input logic send_inst_1_en,
+    input logic send_inst_1_en_pre,
     input logic send_inst_2_en,
 
     //从bpu取指令的使能信号
@@ -66,6 +66,13 @@ import pipeline_types::*;
     always_ff @(posedge clk) begin
         branch_flush <= branch_flush_pre;
     end
+
+    logic send_inst_1_en;
+
+    always_ff @(posedge clk) begin
+        send_inst_1_en <= send_inst_1_en_pre;
+    end
+
 
     //FIFO for inst
     logic [`InstBus]FIFO_inst[`InstBufferSize-1:0];
@@ -92,7 +99,12 @@ import pipeline_types::*;
             FIFO_valid <= `InstBufferSize'd0;
             // FIFO_inst <= '{32'b0};
         end
-        else begin
+        else if (ctrl.pause[1] && !ctrl.pause[2]) begin
+            head <= 5'b0;
+            tail <= `ZeroInstBufferAddr;
+            FIFO_valid <= `InstBufferSize'd0;
+        end
+        else if (!ctrl.pause[1]) begin
             if(fetch_inst_1_en&&fetch_inst_2_en) begin
                 FIFO_inst[tail] <= inst;
                 FIFO_pc[tail] <= pc;
@@ -112,35 +124,40 @@ import pipeline_types::*;
 
                 // FIFO_valid[tail+1] <= 1'b1;
                 tail <= tail + 2;
+            end if(fetch_inst_1_en) begin
+                FIFO_inst[tail] <= inst;
+                FIFO_pc[tail] <= pc;
+                FIFO_valid[tail] <= is_valid_out;
+                
+                FIFO_branch_info[tail].is_branch <= is_branch_1;
+                FIFO_branch_info[tail].pre_taken_or_not <= pre_taken_or_not;
+                FIFO_branch_info[tail].pre_branch_addr <= pre_branch_addr;
+
+                tail <= tail + 1;
+            end else if(fetch_inst_2_en) begin
+                // FIFO_inst[tail] <= inst_and_pc_i.inst_o_2;
+                // FIFO_pc[tail] <= inst_and_pc_i.pc_o_2;
+                // FIFO_valid[tail] <= 1'b1;
+
+                // FIFO_branch_info[tail].is_branch <= is_branch_2;
+                // FIFO_branch_info[tail].pre_taken_or_not <= pre_taken_or_not;
+                // FIFO_branch_info[tail].pre_branch_addr <= pre_branch_addr;
+
+                tail <= tail + 1;
             end else begin
-                if(fetch_inst_1_en) begin
-                    FIFO_inst[tail] <= inst;
-                    FIFO_pc[tail] <= pc;
-                    FIFO_valid[tail] <= is_valid_out;
-                    
-                    FIFO_branch_info[tail].is_branch <= is_branch_1;
-                    FIFO_branch_info[tail].pre_taken_or_not <= pre_taken_or_not;
-                    FIFO_branch_info[tail].pre_branch_addr <= pre_branch_addr;
-
-                    tail <= tail + 1;
-                end else if(fetch_inst_2_en) begin
-                    // FIFO_inst[tail] <= inst_and_pc_i.inst_o_2;
-                    // FIFO_pc[tail] <= inst_and_pc_i.pc_o_2;
-                    // FIFO_valid[tail] <= 1'b1;
-
-                    // FIFO_branch_info[tail].is_branch <= is_branch_2;
-                    // FIFO_branch_info[tail].pre_taken_or_not <= pre_taken_or_not;
-                    // FIFO_branch_info[tail].pre_branch_addr <= pre_branch_addr;
-
-                    tail <= tail + 1;
-                end else begin
-                    FIFO_inst[tail] <= FIFO_inst[tail];
-                    FIFO_pc[tail] <= FIFO_pc[tail];
-                    FIFO_valid[tail] <= FIFO_valid[tail];
-                    FIFO_branch_info[tail] <= FIFO_branch_info[tail];
-                    tail <= tail;
-                end
+                FIFO_inst[tail] <= FIFO_inst[tail];
+                FIFO_pc[tail] <= FIFO_pc[tail];
+                FIFO_valid[tail] <= FIFO_valid[tail];
+                FIFO_branch_info[tail] <= FIFO_branch_info[tail];
+                tail <= tail;
             end
+        end
+        else begin
+            FIFO_inst[tail] <= FIFO_inst[tail];
+            FIFO_pc[tail] <= FIFO_pc[tail];
+            FIFO_valid[tail] <= FIFO_valid[tail];
+            FIFO_branch_info[tail] <= FIFO_branch_info[tail];
+            tail <= tail;   
         end
     end
         
