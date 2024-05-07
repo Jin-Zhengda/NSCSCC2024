@@ -29,7 +29,7 @@ import pipeline_types::*;
 (
     input logic clk,
     input logic rst,
-    input logic branch_flush_pre,
+    input logic branch_flush,
     input ctrl_t ctrl,
     input logic stall,
 
@@ -48,7 +48,7 @@ import pipeline_types::*;
 
 
     //发射指令的使能信号
-    input logic send_inst_1_en_pre,
+    input logic send_inst_1_en,
     input logic send_inst_2_en,
 
     //从bpu取指令的使能信号
@@ -60,18 +60,6 @@ import pipeline_types::*;
     output branch_info branch_info1,
     output branch_info branch_info2
     );
-
-    logic branch_flush;
-
-    always_ff @(posedge clk) begin
-        branch_flush <= branch_flush_pre;
-    end
-
-    logic send_inst_1_en;
-
-    always_ff @(posedge clk) begin
-        send_inst_1_en <= send_inst_1_en_pre;
-    end
 
 
     //FIFO for inst
@@ -93,7 +81,7 @@ import pipeline_types::*;
 
 
     always_ff @(posedge clk) begin
-        if(rst|branch_flush|ctrl.exception_flush|branch_flush_pre) begin
+        if(rst|branch_flush|ctrl.exception_flush|branch_flush) begin
             head <= 5'b0;
             tail <= `ZeroInstBufferAddr;
             FIFO_valid <= `InstBufferSize'd0;
@@ -163,7 +151,7 @@ import pipeline_types::*;
         
 
     always_ff @(posedge clk) begin
-        if(rst|branch_flush|ctrl.exception_flush|branch_flush_pre) begin
+        if(rst|branch_flush|ctrl.exception_flush|branch_flush) begin
             inst_and_pc_o.inst_o_1 <= 0;
             inst_and_pc_o.inst_o_2 <= 0;
             inst_and_pc_o.pc_o_1 <= 0;
