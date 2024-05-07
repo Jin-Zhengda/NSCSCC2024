@@ -6,7 +6,8 @@ module cpu_core
     input logic continue_idle,
     
     mem_dcache dcache_master,
-    pc_icache icache_master
+    pc_icache icache_master,
+    output cache_inst_t cache_inst
 );
 
     frontend_backend fb();
@@ -18,7 +19,8 @@ module cpu_core
         .continue_idle,
 
         .dcache_master(dcache_master),
-        .fb_slave(fb.slave)
+        .fb_slave(fb.slave),
+        .cache_inst(cache_inst)
     );
 
 
@@ -29,7 +31,5 @@ module cpu_core
         .pi_master(icache_master),
         .fb_master(fb.master)
     );
-
-    assign icache_master.is_valid_out = 1'b1;
 
 endmodule

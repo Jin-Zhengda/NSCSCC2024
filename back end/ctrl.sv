@@ -7,7 +7,7 @@ module ctrl
     input pause_t pause_request,
     input mem_ctrl_t mem_i,
 
-    input wb_push_forward_t wb_push_forward,
+    input csr_push_forward_t wb_push_forward,
 
     input logic continue_idle,
 

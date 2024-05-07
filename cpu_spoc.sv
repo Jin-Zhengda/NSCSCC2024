@@ -25,20 +25,20 @@ module cpu_spoc
     pc_icache pc_icache_io();
     icache_mem icache_mem_io();
 
-    assign ram_en = mem_dcache_io.master.valid;
-    assign write_en = mem_dcache_io.master.op;
-    assign read_en = ~mem_dcache_io.master.op;
-    assign addr = mem_dcache_io.master.virtual_addr;
-    assign select = mem_dcache_io.master.wstrb;
-    assign data_i = mem_dcache_io.master.wdata;
-    assign mem_dcache_io.master.rdata = data_o;
-    assign mem_dcache_io.master.cache_miss = 1'b0;
-    assign mem_dcache_io.master.data_ok = 1'b1;
+    assign ram_en = mem_dcache_io.valid;
+    assign write_en = mem_dcache_io.op;
+    assign read_en = ~mem_dcache_io.op;
+    assign addr = mem_dcache_io.virtual_addr;
+    assign select = mem_dcache_io.wstrb;
+    assign data_i = mem_dcache_io.wdata;
+    assign mem_dcache_io.rdata = data_o;
+    assign mem_dcache_io.cache_miss = 1'b0;
+    assign mem_dcache_io.data_ok = 1'b1;
 
-    assign inst_addr = icache_mem_io.master.rd_addr;
-    assign inst_en = icache_mem_io.master.rd_req;
-    assign icache_mem_io.master.ret_data = inst;
-    assign icache_mem_io.master.ret_valid = inst_valid;
+    assign inst_addr = icache_mem_io.rd_addr;
+    assign inst_en = icache_mem_io.rd_req;
+    assign icache_mem_io.ret_data = inst;
+    assign icache_mem_io.ret_valid = inst_valid;
 
 
     cpu_core u_cpu_core (
@@ -54,10 +54,10 @@ module cpu_spoc
         .clk,
         .reset(rst),
         .pc2icache(pc_icache_io.slave),
-        .rd_req(icache_mem_io.master.rd_req),
-        .rd_addr(icache_mem_io.master.rd_addr),
-        .ret_valid(icache_mem_io.master.ret_valid),
-        .ret_data(icache_mem_io.master.ret_data)
+        .rd_req(icache_mem_io.rd_req),
+        .rd_addr(icache_mem_io.rd_addr),
+        .ret_valid(icache_mem_io.ret_valid),
+        .ret_data(icache_mem_io.ret_data)
     );
 
     inst_rom u_inst_rom (
