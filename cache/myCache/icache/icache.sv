@@ -17,7 +17,9 @@ typedef logic[255:0] bus256_t;
 `define SET_SIZE 128
 `define TAGV_SIZE 21
 
-module icache (
+
+module icache 
+(
     input logic clk,
     input logic reset,
     //front-icache
@@ -28,6 +30,8 @@ module icache (
     input logic ret_valid,
     input bus256_t ret_data
 );
+
+
 
 
 //TLB转换(未实现)
@@ -124,7 +128,7 @@ assign hit_success = (hit_way0 | hit_way1) & pre_inst_en;
 assign hit_fail = ~(hit_success) & pre_inst_en;
 
 
-assign pc2icache.stall=reset?1'b1:((hit_fail||read_success)&&pc2icache.is_valid_out?1'b1:1'b0);
+assign pc2icache.stall=reset?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0);
 assign pc2icache.inst=hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0));
 
 
@@ -132,17 +136,22 @@ assign wea_way0=(pre_inst_en&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
 assign wea_way1=(pre_inst_en&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
 
 
-assign rd_req=!read_success&&hit_fail&&!ret_valid&&pc2icache.is_valid_out;
+assign rd_req=!read_success&&hit_fail&&!ret_valid&&pc2icache.icache_is_valid;
 assign rd_addr=pre_physical_addr;
 
 
 
 always_ff @( posedge clk ) begin
-    if(pc2icache.is_valid_in)pc2icache.is_valid_out<=1'b1;
-    else pc2icache.is_valid_out<=1'b0;
+    if(pc2icache.front_is_valid)pc2icache.icache_is_valid<=1'b1;
+    else pc2icache.icache_is_valid<=1'b0;
 end
 
 assign pc2icache.pc_out=pre_virtual_addr;
+
+always_ff @( posedge clk ) begin
+    pc2icache.icache_is_exception<=pc2icache.front_is_exception;
+    pc2icache.icache_exception_cause<=pc2icache.front_exception_cause;
+end
 
     
 endmodule

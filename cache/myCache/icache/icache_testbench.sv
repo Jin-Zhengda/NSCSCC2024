@@ -23,7 +23,7 @@ module icache_testbench ();
 
 reg clk,reset,ret_valid;
 bus256_t ret_data;
-pc_icache pc2icache;
+pc_icache pc2icache();
 
 logic rd_req;
 bus32_t rd_addr;
@@ -87,9 +87,14 @@ end
 
 
 always_ff @( posedge clk ) begin
-    if(counter==13)pc2icache.is_valid_in<=1'b0;
-    else if(counter==8)pc2icache.is_valid_in<=1'b0;
-    else pc2icache.is_valid_in<=1'b1;
+    if(counter==13)pc2icache.front_is_valid<=1'b0;
+    else if(counter==8)pc2icache.front_is_valid<=1'b0;
+    else pc2icache.front_is_valid<=1'b1;
+end
+
+always_ff @( posedge clk ) begin
+    pc2icache.front_is_exception<=counter;
+    pc2icache.front_exception_cause<={6{counter}};
 end
 
 
