@@ -49,9 +49,7 @@ import pipeline_types::*;
 
     //传给instbuffer
     output logic fetch_inst_1_en,
-    output logic fetch_inst_2_en,
-    output logic is_exception,
-    output logic exception_cause
+    output logic fetch_inst_2_en
 
     );
 
@@ -61,11 +59,7 @@ import pipeline_types::*;
     assign branch_judge_1 = inst_1_i[31:26];
     assign branch_judge_2 = inst_2_i[31:26];
 
-    //异常
-    always_ff @(posedge clk) begin
-        is_exception = pc_i.is_exception;
-        exception_cause = pc_i.exception_cause;
-    end
+
 
 
     always_comb begin
@@ -182,7 +176,7 @@ import pipeline_types::*;
     end
 
     always_comb begin
-        if((is_branch_1&pre_taken_or_not_1) || update_info.branch_flush) begin
+        if((is_branch_1&pre_taken_or_not_1)||update_info.branch_flush) begin
             is_valid_in = 0;
         end else begin
             is_valid_in = 1;
