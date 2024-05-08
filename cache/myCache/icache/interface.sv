@@ -4,14 +4,14 @@ import pipeline_types::*;
         logic valid;                // 请求有效
         logic op;                   // 操作类型，读-0，写-1
         logic[2:0] size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
-        logic[31:0] virtual_addr;   // 虚拟地址
+        bus32_t virtual_addr;   // 虚拟地址
         logic tlb_excp_cancel_req;
         logic[3:0]  wstrb;          //写使能，1表示对应的8位数据需要写
-        logic[31:0] wdata;          //需要写的数据
+        bus32_t wdata;          //需要写的数据
         
         logic addr_ok;              //该次请求的地址传输OK，读：地址被接收；写：地址和数据被接收
         logic data_ok;              //该次请求的数据传输OK，读：数据返回；写：数据写入完成
-        logic[31:0] rdata;          //读DCache的结果
+        bus32_t rdata;          //读DCache的结果
         logic cache_miss;           //cache未命中
 
         modport master (
@@ -51,20 +51,22 @@ import pipeline_types::*;
         logic inst_en; // 读 icache 使能
         bus32_t inst; // 读 icache 的结果，即给出的指令
         logic stall;
-        logic is_valid_in;
-        logic is_valid_out;
-        logic pc_out;
-        //logic cache_miss; // cache 未命中
-        //logic data_ok; // 数据传输完成
+        bus32_t pc_out;
+        logic front_is_valid;
+        logic icache_is_valid;
+        logic [5:0] front_is_exception;
+        logic [5:0][6:0] front_exception_cause;
+        logic [5:0] icache_is_exception;
+        logic [5:0][6:0] icache_exception_cause;
 
         modport master (
-            input inst, stall, is_valid_out,pc_out,
-            output pc, inst_en, is_valid_in
+            input inst, stall,icache_is_valid,icache_is_exception,icache_exception_cause,pc_out,
+            output pc, inst_en,front_is_valid,front_is_exception,front_exception_cause
         );
 
         modport slave (
-            output inst, stall, is_valid_out,pc_out,
-            input pc, inst_en, is_valid_in
+            output inst, stall,icache_is_valid,icache_is_exception,icache_exception_cause,pc_out,
+            input pc, inst_en,front_is_valid,front_is_exception,front_exception_cause
         );
     endinterface: pc_icache
 

@@ -62,10 +62,14 @@ import pipeline_types::*;
 
     assign pi_master.pc = pc.pc_o_1;
     assign pi_master.inst_en = inst_en_1;
+    assign pi_master.front_is_exception = pc.is_exception;
+    assign pi_master.front_exception_cause = pc.exception_cause;
 
     //没用
     assign pc2 = pc.pc_o_2;
     assign inst_en_2_o = inst_en_2;
+
+
   
     pc_reg u_pc_reg(
         .clk,
@@ -100,7 +104,7 @@ import pipeline_types::*;
         .inst_en_2,
         .ctrl(fb_master.ctrl),
 
-        .is_valid_in(pi_master.is_valid_in),
+        .is_valid_in(pi_master.front_is_valid),
 
         .is_branch_1(is_branch_i_1),
         .is_branch_2(is_branch_i_2),
@@ -109,9 +113,7 @@ import pipeline_types::*;
         .pre_branch_addr,
 
         .fetch_inst_1_en,
-        .fetch_inst_2_en,
-        .is_exception,
-        .exception_cause
+        .fetch_inst_2_en
     );
 
     instbuffer u_instbuffer(
@@ -122,15 +124,15 @@ import pipeline_types::*;
         .stall(pi_master.stall),
 
         .inst(pi_master.inst),
-        .pc(pi_master.pc_out),
-        .is_valid_out(pi_master.is_valid_out),
+        .pc(pi_master.pc),
+        .is_valid_out(pi_master.icache_is_valid),
+        .is_exception(pi_master.icache_is_exception),
+        .exception_cause(pi_master.icache_exception_cause),
 
         .is_branch_1(is_branch_i_1),
         .is_branch_2(is_branch_i_2),
         .pre_taken_or_not,
         .pre_branch_addr,
-        .is_exception,
-        .exception_cause,
 
         .send_inst_1_en(fb_master.send_inst_en),
         .send_inst_2_en,
