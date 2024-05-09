@@ -34,7 +34,6 @@ module mem
 
     assign mem_wb.csr_write.csr_write_en = ex_mem.csr_write_en;
     assign mem_wb.csr_write.csr_write_addr = ex_mem.csr_addr;
-    assign mem_wb.csr_write.csr_write_data = ex_mem.csr_write_data;
     assign mem_wb.csr_write.is_llw_scw = ex_mem.is_llw_scw;
 
     bus32_t cache_data;
@@ -62,6 +61,7 @@ module mem
         mem_wb.data_write.write_en = ex_mem.reg_write_en;
         mem_wb.data_write.write_addr = ex_mem.reg_write_addr;
         mem_wb.data_write.write_data = ex_mem.reg_write_data;
+        mem_wb.csr_write.csr_write_data = ex_mem.csr_write_data;
 
         case (ex_mem.aluop)
             `ALU_LDB: begin

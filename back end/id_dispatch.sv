@@ -19,10 +19,10 @@ module id_dispatch
         else if (ctrl.exception_flush) begin
             dispatch_o <= 0;
         end
-        else if (ctrl.pause[2] && !ctrl.pause[3]) begin
+        else if (ctrl.pause[3] && !ctrl.pause[4]) begin
             dispatch_o <= 0;
         end
-        else if (!ctrl.pause[2]) begin
+        else if (!ctrl.pause[3]) begin
             if (branch_flush) begin
                 dispatch_o <= 0;
             end

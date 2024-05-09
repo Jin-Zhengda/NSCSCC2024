@@ -19,7 +19,7 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 `define InstAddrWidth 31:0
-`include "csr_define.sv"
+`include "csr_defines.sv"
 
 module pc_reg
 import pipeline_types::*;
@@ -100,7 +100,7 @@ import pipeline_types::*;
                 pc.pc_o_1 <= pre_branch_addr;
             end
             else begin
-            pc.pc_o_1 <= pc.pc_o_1 + 4'h4;
+                pc.pc_o_1 <= pc.pc_o_1 + 4'h4;
             end
         end
     end

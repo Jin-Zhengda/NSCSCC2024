@@ -24,7 +24,7 @@ package pipeline_types;
 
     // from ctrl
     typedef struct packed {
-        logic[6: 0] pause;
+        logic[7: 0] pause;
         logic exception_flush;
     } ctrl_t;
 

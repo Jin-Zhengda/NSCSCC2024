@@ -48,7 +48,7 @@ import pipeline_types::*;
         bus32_t pc; // 读 icache 的地址
         logic inst_en; // 读 icache 使能
         bus32_t inst; // 读 icache 的结果，即给出的指令
-        logic stall;
+        logic stall_for_buffer;
         bus32_t pc_out;
         logic front_is_valid;
         logic icache_is_valid;
@@ -56,14 +56,15 @@ import pipeline_types::*;
         logic [5:0][6:0] front_exception_cause;
         logic [5:0] icache_is_exception;
         logic [5:0][6:0] icache_exception_cause;
+        logic stall;
 
         modport master (
-            input inst, stall,icache_is_valid,icache_is_exception,icache_exception_cause,pc_out,
+            input inst, stall, icache_is_valid,icache_is_exception,icache_exception_cause,pc_out, stall_for_buffer,
             output pc, inst_en,front_is_valid,front_is_exception,front_exception_cause
         );
 
         modport slave (
-            output inst, stall,icache_is_valid,icache_is_exception,icache_exception_cause,pc_out,
+            output inst, stall,icache_is_valid,icache_is_exception,icache_exception_cause,pc_out, stall_for_buffer,
             input pc, inst_en,front_is_valid,front_is_exception,front_exception_cause
         );
     endinterface: pc_icache

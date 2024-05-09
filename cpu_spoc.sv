@@ -21,6 +21,10 @@ module cpu_spoc
     bus32_t data_i;
     bus32_t data_o;
 
+    ctrl_t ctrl;
+    logic branch_flush;
+    cache_inst_t cache_inst;
+
     mem_dcache mem_dcache_io();
     pc_icache pc_icache_io();
     icache_mem icache_mem_io();
@@ -47,13 +51,19 @@ module cpu_spoc
         .continue_idle,
         
         .icache_master(pc_icache_io.master),
-        .dcache_master(mem_dcache_io.master)  
+        .dcache_master(mem_dcache_io.master),
+        .cache_inst(cache_inst),
+        .ctrl(ctrl),
+        .branch_flush(branch_flush)
     );
 
     icache u_icache (
         .clk,
         .reset(rst),
         .pc2icache(pc_icache_io.slave),
+        .ctrl(ctrl),
+        .branch_flush(branch_flush),
+
         .rd_req(icache_mem_io.rd_req),
         .rd_addr(icache_mem_io.rd_addr),
         .ret_valid(icache_mem_io.ret_valid),

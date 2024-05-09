@@ -1,6 +1,3 @@
-typedef logic[31:0] bus32_t;
-typedef logic[255:0] bus256_t;
-
 `define ADDR_SIZE 32
 `define DATA_SIZE 32
 
@@ -19,9 +16,12 @@ typedef logic[255:0] bus256_t;
 
 
 module icache 
+import pipeline_types::*;
 (
     input logic clk,
     input logic reset,
+    input ctrl_t ctrl,
+    input logic branch_flush,
     //front-icache
     pc_icache pc2icache,
     //icache-mem
@@ -31,12 +31,15 @@ module icache
     input bus256_t ret_data
 );
 
-
+logic branch_flush_delay;
+always_ff @( posedge clk ) begin
+    branch_flush_delay<=branch_flush;
+end
 
 
 //TLB转换(未实现)
 bus32_t physical_addr;
-assign physical_addr=pc2icache.pc;
+assign physical_addr=branch_flush? 32'b0:pc2icache.pc;
 
 logic pre_inst_en;
 bus32_t pre_physical_addr,pre_virtual_addr;
@@ -48,7 +51,7 @@ always_ff @( posedge clk ) begin
         pre_physical_addr<=32'b0;
         pre_virtual_addr<=32'b0;
     end
-    else if(pc2icache.stall)begin
+    else if(pc2icache.stall || ctrl.pause[0])begin
         pre_physical_addr<=pre_physical_addr;
         pre_inst_en<=pre_inst_en;
         pre_virtual_addr<=pre_virtual_addr;
@@ -127,9 +130,9 @@ assign hit_way1 = (tagv_cache_w1[19:0]==pre_physical_addr[`TAG_LOC] && tagv_cach
 assign hit_success = (hit_way0 | hit_way1) & pre_inst_en;
 assign hit_fail = ~(hit_success) & pre_inst_en;
 
-
+bus32_t inst;
 assign pc2icache.stall=reset?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0);
-assign pc2icache.inst=hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0));
+assign inst=branch_flush_delay? 32'b0:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0)));
 
 
 assign wea_way0=(pre_inst_en&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
@@ -141,16 +144,59 @@ assign rd_addr=pre_physical_addr;
 
 
 
-always_ff @( posedge clk ) begin
-    if(pc2icache.front_is_valid)pc2icache.icache_is_valid<=1'b1;
-    else pc2icache.icache_is_valid<=1'b0;
-end
+// always_ff @( posedge clk ) begin
+//     if(pc2icache.front_is_valid)pc2icache.icache_is_valid<=1'b1;
+//     else pc2icache.icache_is_valid<=1'b0;
+// end
 
-assign pc2icache.pc_out=pre_virtual_addr;
+// always_ff @( posedge clk ) begin
+//     pc2icache.icache_is_exception<=pc2icache.front_is_exception;
+//     pc2icache.icache_exception_cause<=pc2icache.front_exception_cause;
+// end
+
+// bus32_t pc_temp;
+
+// always_ff @( posedge clk ) begin
+//     if(reset) pc_temp <= 32'b0;
+//     else pc_temp <= pre_physical_addr;
+// end
+
 
 always_ff @( posedge clk ) begin
-    pc2icache.icache_is_exception<=pc2icache.front_is_exception;
-    pc2icache.icache_exception_cause<=pc2icache.front_exception_cause;
+    if (reset | ctrl.exception_flush | (ctrl.pause[1] && !ctrl.pause[2])) begin
+        pc2icache.pc_out <= 32'b0;
+        pc2icache.icache_is_valid <= 1'b0;
+        pc2icache.icache_is_exception <= 6'b0;
+        pc2icache.icache_exception_cause <= 42'b0;
+        pc2icache.inst <= 32'b0;
+        pc2icache.stall_for_buffer <= 1'b1;
+    end
+    // else if (!ctrl.pause[1]) begin
+       else if (branch_flush) begin
+            pc2icache.pc_out <= 32'b0;
+            pc2icache.icache_is_valid <= 1'b0;
+            pc2icache.icache_is_exception <= 6'b0;
+            pc2icache.icache_exception_cause <= 42'b0;
+            pc2icache.inst <= 32'b0;
+            pc2icache.stall_for_buffer <= 1'b1;
+        end
+        else begin
+            pc2icache.pc_out <= pre_physical_addr;
+            pc2icache.icache_is_valid <= pc2icache.front_is_valid;
+            pc2icache.icache_is_exception <= pc2icache.front_is_exception;
+            pc2icache.icache_exception_cause <= pc2icache.front_exception_cause;
+            pc2icache.inst <= inst;
+            pc2icache.stall_for_buffer <= pc2icache.stall;
+        end
+    // end
+    // else begin
+    //     pc2icache.pc_out <= pc2icache.pc_out;
+    //     pc2icache.icache_is_valid <= pc2icache.icache_is_valid;
+    //     pc2icache.icache_is_exception <= pc2icache.icache_is_exception;
+    //     pc2icache.icache_exception_cause <= pc2icache.icache_exception_cause;
+    //     pc2icache.inst <= pc2icache.inst;
+    //     pc2icache.stall_for_buffer <= pc2icache.stall_for_buffer;
+    // end
 end
 
     
