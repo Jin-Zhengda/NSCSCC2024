@@ -46,7 +46,7 @@ bus32_t pre_physical_addr,pre_virtual_addr;
 
 //记录地址
 always_ff @( posedge clk ) begin
-    if(reset)begin
+    if(reset || branch_flush)begin
         pre_inst_en<=1'b0;
         pre_physical_addr<=32'b0;
         pre_virtual_addr<=32'b0;
@@ -142,26 +142,6 @@ assign wea_way1=(pre_inst_en&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
 assign rd_req=!read_success&&hit_fail&&!ret_valid&&pc2icache.icache_is_valid;
 assign rd_addr=pre_physical_addr;
 
-
-
-// always_ff @( posedge clk ) begin
-//     if(pc2icache.front_is_valid)pc2icache.icache_is_valid<=1'b1;
-//     else pc2icache.icache_is_valid<=1'b0;
-// end
-
-// always_ff @( posedge clk ) begin
-//     pc2icache.icache_is_exception<=pc2icache.front_is_exception;
-//     pc2icache.icache_exception_cause<=pc2icache.front_exception_cause;
-// end
-
-// bus32_t pc_temp;
-
-// always_ff @( posedge clk ) begin
-//     if(reset) pc_temp <= 32'b0;
-//     else pc_temp <= pre_physical_addr;
-// end
-
-
 always_ff @( posedge clk ) begin
     if (reset | ctrl.exception_flush | (ctrl.pause[1] && !ctrl.pause[2])) begin
         pc2icache.pc_out <= 32'b0;
@@ -188,15 +168,6 @@ always_ff @( posedge clk ) begin
             pc2icache.inst <= inst;
             pc2icache.stall_for_buffer <= pc2icache.stall;
         end
-    // end
-    // else begin
-    //     pc2icache.pc_out <= pc2icache.pc_out;
-    //     pc2icache.icache_is_valid <= pc2icache.icache_is_valid;
-    //     pc2icache.icache_is_exception <= pc2icache.icache_is_exception;
-    //     pc2icache.icache_exception_cause <= pc2icache.icache_exception_cause;
-    //     pc2icache.inst <= pc2icache.inst;
-    //     pc2icache.stall_for_buffer <= pc2icache.stall_for_buffer;
-    // end
 end
 
     
