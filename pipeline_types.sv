@@ -24,7 +24,7 @@ package pipeline_types;
 
     // from ctrl
     typedef struct packed {
-        logic[6: 0] pause;
+        logic[7: 0] pause;
         logic exception_flush;
     } ctrl_t;
 
@@ -149,21 +149,6 @@ package pipeline_types;
     } dispatch_ex_t;
 
     typedef struct packed {
-        logic write_en;
-        reg_addr_t write_addr;
-        bus32_t write_data;
-    } data_write_t;
-
-    typedef struct packed {
-        logic LLbit_write_en;
-        logic LLbit_write_data;
-
-        logic csr_write_en;
-        csr_addr_t csr_write_addr;
-        bus32_t csr_write_data;
-    } csr_write_t;
-
-    typedef struct packed {
         bus32_t pc;
 
         logic[5: 0] is_exception;
@@ -176,16 +161,27 @@ package pipeline_types;
         alu_op_t aluop;
 
         bus32_t mem_addr;
-        bus32_t store_data;
 
         logic csr_read_en;
         logic csr_write_en;
         csr_addr_t csr_addr;
         bus32_t csr_write_data;
         bus32_t csr_mask;
-
-        logic[4: 0] cacop_code;
+        logic is_llw_scw;
     } ex_mem_t;
+
+    typedef struct packed {
+        logic write_en;
+        reg_addr_t write_addr;
+        bus32_t write_data;
+    } data_write_t;
+
+    typedef struct packed {
+        logic is_llw_scw;
+        logic csr_write_en;
+        csr_addr_t csr_write_addr;
+        bus32_t csr_write_data;
+    } csr_write_t;
 
     typedef struct packed {
         data_write_t data_write;
@@ -205,15 +201,13 @@ package pipeline_types;
         logic pause_mem;
     } mem_ctrl_t;
 
-
     typedef struct packed {
-        logic LLbit_write_en;
-        logic LLbit_write_data;
+        logic is_cacop;
+        logic[4: 0] cacop_code;
 
-        logic csr_write_en;
-        csr_addr_t csr_write_addr;
-        bus32_t csr_write_data;
-    } wb_push_forward_t;
+        logic is_preld;
+        bus32_t preld_addr; 
+    } cache_inst_t;
     
 endpackage
 

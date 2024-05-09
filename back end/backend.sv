@@ -10,7 +10,8 @@ module backend
     frontend_backend fb_slave,
 
     // with dcache
-    mem_dcache dcache_master
+    mem_dcache dcache_master,
+    output cache_inst_t cache_inst
 );
 
     // regfile
@@ -32,11 +33,13 @@ module backend
     dispatch_ex_t ex_i;
     ex_div ex_div_io();
     ex_mem_t ex_o;
+    logic LLbit;
+    csr_push_forward_t mem_csr_push_forward;
 
     // mem
     ex_mem_t mem_i;
     mem_csr mem_csr_io();
-    wb_push_forward_t wb_push_forward;
+    csr_push_forward_t wb_push_forward;
     bus64_t cnt;
     mem_wb_t mem_o;
     mem_ctrl_t mem_ctrl;
@@ -121,11 +124,16 @@ module backend
 
     ex u_ex (
         .dispatch_ex(ex_i),
+        
+        .LLbit(LLbit),
+        .mem_push_forward(mem_csr_push_forward),
 
         .pause_ex(pause_request.pause_ex),
         .ex_mem(ex_o),
 
-        .master(ex_div_io.master)
+        .dcache_master(dcache_master),
+        .div_master(ex_div_io.master),
+        .cache_inst(cache_inst)
     );
 
     assign ex_push_forward.reg_write_en = ex_o.reg_write_en;
@@ -169,6 +177,10 @@ module backend
     assign mem_push_forward.reg_write_addr = mem_o.data_write.write_addr;
     assign mem_push_forward.reg_write_data = mem_o.data_write.write_data;
 
+    assign mem_csr_push_forward.csr_write_en = mem_o.csr_write.csr_write_en;
+    assign mem_csr_push_forward.csr_write_addr = mem_o.csr_write.csr_write_addr;
+    assign mem_csr_push_forward.csr_write_data = mem_o.csr_write.csr_write_data;
+
     mem_wb u_mem_wb (
         .clk,
         .rst,
@@ -179,8 +191,6 @@ module backend
         .wb_o(wb)
     );
 
-    assign wb_push_forward.LLbit_write_en = wb.csr_write.LLbit_write_en;
-    assign wb_push_forward.LLbit_write_data = wb.csr_write.LLbit_write_data;
     assign wb_push_forward.csr_write_en = wb.csr_write.csr_write_en;
     assign wb_push_forward.csr_write_addr = wb.csr_write.csr_write_addr;
     assign wb_push_forward.csr_write_data = wb.csr_write.csr_write_data;
@@ -215,7 +225,8 @@ module backend
         .is_hwi(0),
 
         .ctrl_slave(ctrl_csr_io.slave),
-        .CRMD_PLV(CRMD_PLV)
+        .CRMD_PLV(CRMD_PLV),
+        .LLbit(LLbit)
     );
 
     stable_counter u_stable_counter (

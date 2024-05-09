@@ -17,10 +17,10 @@ module dispatch_ex
         else if (ctrl.exception_flush) begin
             ex_o <= 0;
         end
-        else if (ctrl.pause[3] && !ctrl.pause[4]) begin
+        else if (ctrl.pause[4] && !ctrl.pause[5]) begin
             ex_o <= 0;
         end
-        else if (!ctrl.pause[3]) begin
+        else if (!ctrl.pause[4]) begin
             ex_o <= dispatch_i;
         end
         else begin

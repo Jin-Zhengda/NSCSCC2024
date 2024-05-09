@@ -16,10 +16,10 @@ module mem_wb
         else if (ctrl.exception_flush) begin
             wb_o <= 0;
         end
-        else if (ctrl.pause[5] && !ctrl.pause[6]) begin
+        else if (ctrl.pause[6] && !ctrl.pause[7]) begin
             wb_o <= 0;
         end
-        else if (!ctrl.pause[5]) begin
+        else if (!ctrl.pause[6]) begin
             wb_o <= mem_i;
         end
         else begin

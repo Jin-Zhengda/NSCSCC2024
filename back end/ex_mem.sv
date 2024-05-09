@@ -17,10 +17,10 @@ module ex_mem
         else if (ctrl.exception_flush) begin
             mem_o <= 0;
         end
-        else if (ctrl.pause[4] && !ctrl.pause[5]) begin
+        else if (ctrl.pause[5] && !ctrl.pause[6]) begin
             mem_o <= 0;
         end
-        else if (!ctrl.pause[4]) begin
+        else if (!ctrl.pause[5]) begin
             mem_o <= ex_i;
         end
         else begin

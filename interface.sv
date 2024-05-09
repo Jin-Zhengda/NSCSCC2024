@@ -3,7 +3,7 @@ import pipeline_types::*;
     interface mem_dcache;
         logic valid;                // 请求有效
         logic op;                   // 操作类型，读-0，写-1
-        logic[2:0] size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
+        // logic[2:0] size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
         bus32_t virtual_addr;   // 虚拟地址
         logic tlb_excp_cancel_req;
         logic[3:0]  wstrb;          //写使能，1表示对应的8位数据需要写
@@ -16,12 +16,12 @@ import pipeline_types::*;
 
         modport master (
             input addr_ok, data_ok, rdata, cache_miss,
-            output valid, op, size, virtual_addr, tlb_excp_cancel_req, wstrb, wdata
+            output valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata
         );
 
         modport slave (
             output addr_ok, data_ok, rdata, cache_miss,
-            input valid, op, size, virtual_addr, tlb_excp_cancel_req, wstrb, wdata
+            input valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata
         );
     endinterface: mem_dcache
 
@@ -42,15 +42,13 @@ import pipeline_types::*;
             output ctrl, ctrl_pc,send_inst_en, 
             input branch_info,inst_and_pc_o, update_info
         );
-
-        
     endinterface: frontend_backend
 
     interface pc_icache;
         bus32_t pc; // 读 icache 的地址
         logic inst_en; // 读 icache 使能
         bus32_t inst; // 读 icache 的结果，即给出的指令
-        logic stall;
+        logic stall_for_buffer;
         bus32_t pc_out;
         logic front_is_valid;
         logic icache_is_valid;
@@ -58,14 +56,15 @@ import pipeline_types::*;
         logic [5:0][6:0] front_exception_cause;
         logic [5:0] icache_is_exception;
         logic [5:0][6:0] icache_exception_cause;
+        logic stall;
 
         modport master (
-            input inst, stall,icache_is_valid,icache_is_exception,icache_exception_cause,pc_out,
+            input inst, stall, icache_is_valid,icache_is_exception,icache_exception_cause,pc_out, stall_for_buffer,
             output pc, inst_en,front_is_valid,front_is_exception,front_exception_cause
         );
 
         modport slave (
-            output inst, stall,icache_is_valid,icache_is_exception,icache_exception_cause,pc_out,
+            output inst, stall,icache_is_valid,icache_is_exception,icache_exception_cause,pc_out, stall_for_buffer,
             input pc, inst_en,front_is_valid,front_is_exception,front_exception_cause
         );
     endinterface: pc_icache
@@ -128,21 +127,17 @@ import pipeline_types::*;
     endinterface:ex_div
 
     interface mem_csr;
-        logic LLbit;
         bus32_t csr_read_data;
-
         logic csr_read_en;
         csr_addr_t csr_read_addr;
 
         modport master (
-            input LLbit,
             input csr_read_data,
             output csr_read_en,
             output csr_read_addr
         );
 
         modport slave (
-            output LLbit,
             output csr_read_data,
             input csr_read_en,
             input csr_read_addr

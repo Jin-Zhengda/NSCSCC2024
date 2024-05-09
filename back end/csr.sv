@@ -18,7 +18,8 @@ module csr
 
     ctrl_csr ctrl_slave,
 
-    output logic [1:0] CRMD_PLV
+    output logic [1:0] CRMD_PLV,
+    output logic LLbit
 );
 
     bus32_t crmd;
@@ -356,19 +357,21 @@ module csr
             llbctl[0] <= 1'b0;
             llbctl[2] <= 1'b0;
         end
-        else if (wb_i.LLbit_write_en) begin
-            llbctl[0] <= wb_i.LLbit_write_data;
-        end
         else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_LLBCTL) begin
-            llbctl[1] <= (wb_i.csr_write_data[1] == 1'b1) ? 1'b1: llbctl[1];
-            llbctl[2] <= wb_i.csr_write_data[2];
+            if (wb_i.is_llw_scw) begin
+                llbctl[0] <= wb_i.csr_write_data[0];
+            end
+            else begin
+                llbctl[1] <= (wb_i.csr_write_data[1] == 1'b1) ? 1'b1: llbctl[1];
+                llbctl[2] <= wb_i.csr_write_data[2];
+            end
         end
         else begin
             llbctl <= llbctl;
         end
     end
 
-    assign mem_slave.LLbit = llbctl[0];
+    assign LLbit = llbctl[0];
 
     // TID write
     always_ff @(posedge clk) begin

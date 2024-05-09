@@ -9,7 +9,7 @@ module mem
     mem_csr csr_master,
     mem_dcache dcache_master,
 
-    input wb_push_forward_t wb_push_forward,
+    input csr_push_forward_t wb_push_forward,
 
     input bus64_t cnt,
 
@@ -29,27 +29,21 @@ module mem
     assign mem_ctrl.is_ertn = (mem_ctrl.is_exception == 6'b0 && ex_mem.aluop == `ALU_ERTN) ? 1'b1 : 1'b0;
     assign is_syscall_break = (ex_mem.aluop == `ALU_SYSCALL || ex_mem.aluop == `ALU_BREAK) ? 1'b1 : 1'b0;
     assign mem_ctrl.is_idle = (ex_mem.aluop == `ALU_IDLE) ? 1'b1 : 1'b0;
+    assign mem_ctrl.is_exception = ex_mem.is_exception;
+    assign mem_ctrl.exception_cause = ex_mem.exception_cause;
 
-    logic LLbit;
+    assign mem_wb.csr_write.csr_write_en = ex_mem.csr_write_en;
+    assign mem_wb.csr_write.csr_write_addr = ex_mem.csr_addr;
+    assign mem_wb.csr_write.is_llw_scw = ex_mem.is_llw_scw;
 
     bus32_t cache_data;
 
     assign cache_data = (!dcache_master.cache_miss && dcache_master.data_ok) ? dcache_master.rdata : 32'b0;
 
-    assign LLbit = (wb_push_forward.LLbit_write_en) ? wb_push_forward.LLbit_write_data : csr_master.LLbit;
-
     bus32_t csr_read_data;
     logic pause_uncache;
 
     assign pause_mem = pause_uncache;
-
-    logic mem_is_exception;
-    exception_cause_t mem_is_exception_cause;
-
-    assign mem_ctrl.is_exception = {ex_mem.is_exception[5: 1], mem_is_exception};
-    assign mem_ctrl.exception_cause = {ex_mem.exception_cause[5: 1], mem_is_exception_cause};
-
-    assign dcache_master.virtual_addr = ex_mem.mem_addr;
 
     always_comb begin: csr_read
         if (csr_master.csr_read_en && wb_push_forward.csr_write_en && (csr_master.csr_read_addr == wb_push_forward.csr_write_addr)) begin
@@ -67,30 +61,10 @@ module mem
         mem_wb.data_write.write_en = ex_mem.reg_write_en;
         mem_wb.data_write.write_addr = ex_mem.reg_write_addr;
         mem_wb.data_write.write_data = ex_mem.reg_write_data;
-
-        dcache_master.valid = 1'b0;
-        dcache_master.wdata = 32'b0;
-        dcache_master.op = 1'b0;
-        dcache_master.wstrb = 4'b1111;
-
-        // dcache_master.is_preld = 1'b0;
-        // dcache_master.is_cacop = 1'b0;
-        // dcache_master.cacop_code = 5'b0;
-
-        mem_wb.csr_write.LLbit_write_en = 1'b0;
-        mem_wb.csr_write.LLbit_write_data = 1'b0;
-        mem_wb.csr_write.csr_write_en = ex_mem.csr_write_en;
-        mem_wb.csr_write.csr_write_addr = ex_mem.csr_addr;
         mem_wb.csr_write.csr_write_data = ex_mem.csr_write_data;
-
-        mem_is_exception = 1'b0;
-        mem_is_exception_cause = `EXCEPTION_NOP;
 
         case (ex_mem.aluop)
             `ALU_LDB: begin
-                dcache_master.op = 1'b0;
-                dcache_master.valid = 1'b1;
-
                 if (!dcache_master.cache_miss && dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
                     case (ex_mem.mem_addr[1: 0])
@@ -117,9 +91,6 @@ module mem
                 
             end
             `ALU_LDBU: begin
-                dcache_master.op = 1'b0;
-                dcache_master.valid = 1'b1;
-
                 if (!dcache_master.cache_miss && dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
                     case (ex_mem.mem_addr[1: 0])
@@ -145,11 +116,6 @@ module mem
                 end
             end 
             `ALU_LDH: begin
-                mem_is_exception = (ex_mem.mem_addr[1: 0] == 2'b01 || ex_mem.mem_addr[1: 0] == 2'b11) ? 1'b1 : 1'b0;
-                mem_is_exception_cause = (ex_mem.mem_addr[1: 0] == 2'b01 || ex_mem.mem_addr[1: 0] == 2'b11) ? `EXCEPTION_ALE : 7'b0;
-                dcache_master.op = 1'b0;
-                dcache_master.valid = 1'b1;
-
                 if (!dcache_master.cache_miss && dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
                     case (ex_mem.mem_addr[1: 0])
@@ -170,11 +136,6 @@ module mem
                 
             end
             `ALU_LDHU: begin
-                mem_is_exception = (ex_mem.mem_addr[1: 0] == 2'b01 || ex_mem.mem_addr[1: 0] == 2'b11) ? 1'b1 : 1'b0;
-                mem_is_exception_cause = (ex_mem.mem_addr[1: 0] == 2'b01 || ex_mem.mem_addr[1: 0] == 2'b11) ? `EXCEPTION_ALE : 7'b0;
-                dcache_master.op = 1'b0;
-                dcache_master.valid = 1'b1;
-
                 if (!dcache_master.cache_miss && dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
                     case (ex_mem.mem_addr[1: 0])
@@ -194,11 +155,6 @@ module mem
                 end
             end
             `ALU_LDW: begin
-                mem_is_exception = (ex_mem.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
-                mem_is_exception_cause = (ex_mem.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
-                dcache_master.op = 1'b0;
-                dcache_master.valid = 1'b1;
-                dcache_master.wstrb = 4'b1111;
                 if (!dcache_master.cache_miss && dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
                     mem_wb.data_write.write_data = cache_data;
@@ -208,60 +164,7 @@ module mem
                 end
                 
             end
-            `ALU_STB: begin
-                dcache_master.op = 1'b1;
-                dcache_master.wdata = {4{ex_mem.store_data[7: 0]}};
-                dcache_master.valid = 1'b1;
-                case (ex_mem.mem_addr[1: 0])
-                    2'b00: begin
-                        dcache_master.wstrb = 4'b0001;
-                    end 
-                    2'b01: begin
-                        dcache_master.wstrb = 4'b0010;
-                    end
-                    2'b10: begin
-                        dcache_master.wstrb = 4'b0100;
-                    end
-                    2'b11: begin
-                        dcache_master.wstrb = 4'b1000;
-                    end
-                    default: begin
-                        dcache_master.wstrb = 4'b0000;                        
-                    end
-                endcase
-            end
-            `ALU_STH: begin
-                dcache_master.op = 1'b1;
-                dcache_master.wdata = {2{ex_mem.store_data[15: 0]}};
-                dcache_master.valid = 1'b1;
-                case (ex_mem.mem_addr[1: 0])
-                    2'b00: begin
-                        dcache_master.wstrb = 4'b0011;
-                    end 
-                    2'b10: begin
-                        dcache_master.wstrb = 4'b1100;
-                    end
-                    2'b01, 2'b11: begin
-                        dcache_master.wstrb = 4'b0000;
-                        mem_is_exception = 1'b1;
-                        mem_is_exception_cause = `EXCEPTION_ALE;
-                    end
-                    default: begin
-                        dcache_master.wstrb = 4'b0000;                        
-                    end
-                endcase
-            end
-            `ALU_STW: begin
-                dcache_master.op = 1'b1;
-                dcache_master.wdata = ex_mem.store_data;
-                dcache_master.valid = 1'b1;
-                dcache_master.wstrb = 4'b1111;
-                mem_is_exception = (ex_mem.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
-                mem_is_exception_cause = (ex_mem.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
-            end
             `ALU_LLW: begin
-                dcache_master.op = 1'b0;
-                dcache_master.valid = 1'b1;
                 if (!dcache_master.cache_miss && dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
                     mem_wb.data_write.write_data = cache_data;
@@ -269,26 +172,6 @@ module mem
                 else begin
                     pause_uncache = 1'b1;
                 end
-                dcache_master.wstrb = 4'b1111;
-                mem_wb.csr_write.LLbit_write_en = 1'b1;
-                mem_wb.csr_write.LLbit_write_data = 1'b1;
-                mem_is_exception = (ex_mem.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
-                mem_is_exception_cause = (ex_mem.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
-            end
-            `ALU_SCW: begin
-                if (LLbit) begin
-                    dcache_master.op = 1'b1;
-                    dcache_master.wdata = ex_mem.store_data;
-                    dcache_master.valid = 1'b1;
-                    dcache_master.wstrb = 4'b1111;
-                    mem_wb.data_write.write_data = 32'b1;
-                    mem_wb.csr_write.LLbit_write_en = 1'b1;
-                    mem_wb.csr_write.LLbit_write_data = 1'b0;
-                end else begin
-                    mem_wb.data_write.write_data = 32'b0;
-                end
-                mem_is_exception = (ex_mem.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
-                mem_is_exception_cause = (ex_mem.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
             end
             `ALU_CSRRD: begin
                 mem_wb.data_write.write_data = csr_read_data;
@@ -311,10 +194,6 @@ module mem
             end
             default: begin
             end 
-            // `ALU_CACOP: begin
-            //     dcache_master.is_cacop = 1'b1;
-            //     dcache_master.cacop_code = ex_mem.cacop_code;
-            // end
         endcase
     end
 endmodule
