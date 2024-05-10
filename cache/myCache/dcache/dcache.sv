@@ -51,7 +51,7 @@ assign physical_addr=mem2dcache.virtual_addr;
 
 logic pre_valid,pre_op;
 logic[3:0]pre_wstrb;
-logic[2:0]pre_size;
+// logic[2:0]pre_size;
 bus32_t pre_physical_addr,pre_wdata;
 
 //记录地址
@@ -60,7 +60,7 @@ always_ff @( posedge clk ) begin
         pre_valid<=1'b0;
         pre_op<=1'b0;
         pre_wstrb<=4'b0;
-        pre_size<=3'b0;
+        // pre_size<=3'b0;
         pre_physical_addr<=32'b0;
         pre_wdata<=32'b0;
     end
@@ -68,7 +68,7 @@ always_ff @( posedge clk ) begin
         pre_valid<=pre_valid;
         pre_op<=pre_op;
         pre_wstrb<=pre_wstrb;
-        pre_size<=pre_size;
+        // pre_size<=pre_size;
         pre_physical_addr<=pre_physical_addr;
         pre_wdata<=pre_wdata;
     end
@@ -76,7 +76,7 @@ always_ff @( posedge clk ) begin
         pre_valid<=mem2dcache.valid;
         pre_op<=mem2dcache.op;
         pre_wstrb<=mem2dcache.wstrb;
-        pre_size<=mem2dcache.size;
+        // pre_size<=mem2dcache.size;
         pre_physical_addr<=physical_addr;
         pre_wdata<=mem2dcache.wdata;
     end

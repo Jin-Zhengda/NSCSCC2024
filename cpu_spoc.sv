@@ -13,13 +13,14 @@ module cpu_spoc
     logic inst_en;
     logic inst_valid;
 
-    logic ram_en;
     logic write_en;
     logic read_en;
-    bus32_t addr;
+    bus32_t read_addr;
+    bus32_t write_addr;
     logic[3: 0] select;
     bus32_t data_i;
-    bus32_t data_o;
+    logic[255: 0] data_o;
+    logic data_valid;
 
     ctrl_t ctrl;
     logic branch_flush;
@@ -28,16 +29,6 @@ module cpu_spoc
     mem_dcache mem_dcache_io();
     pc_icache pc_icache_io();
     icache_mem icache_mem_io();
-
-    assign ram_en = mem_dcache_io.valid;
-    assign write_en = mem_dcache_io.op;
-    assign read_en = ~mem_dcache_io.op;
-    assign addr = mem_dcache_io.virtual_addr;
-    assign select = mem_dcache_io.wstrb;
-    assign data_i = mem_dcache_io.wdata;
-    assign mem_dcache_io.rdata = data_o;
-    assign mem_dcache_io.cache_miss = 1'b0;
-    assign mem_dcache_io.data_ok = 1'b1;
 
     assign inst_addr = icache_mem_io.rd_addr;
     assign inst_en = icache_mem_io.rd_req;
@@ -70,6 +61,22 @@ module cpu_spoc
         .ret_data(icache_mem_io.ret_data)
     );
 
+    dcache u_dcache (
+        .clk,
+        .reset(rst),
+        .mem2dcache(mem_dcache_io.slave),
+        .rd_req(read_en),
+        .rd_addr(read_addr),
+        .wr_req(write_en),
+        .wr_addr(write_addr),
+        .wr_wstrb(select),
+        .wr_data(data_i),
+        .wr_rdy(1'b1),
+        .rd_rdy(1'b1),
+        .ret_data(data_o),
+        .ret_valid(data_valid)
+    );
+
     inst_rom u_inst_rom (
         .clk,
         .rst,
@@ -82,15 +89,18 @@ module cpu_spoc
 
     data_ram u_data_ram (
         .clk(clk),
-        .ram_en(ram_en),
+        .ram_en(1'b1),
 
         .write_en(write_en),
-        .addr(addr),
+
+        .read_addr(read_addr),
+        .write_addr(write_addr),
         .select(select),
         .data_i(data_i),
         .read_en(read_en),
 
-        .data_o(data_o)
+        .data_o(data_o),
+        .data_valid(data_valid)
     );
 
 endmodule

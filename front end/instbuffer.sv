@@ -78,20 +78,25 @@ import pipeline_types::*;
         inst_and_pc_o.exception_cause = exception_cause;
     end
 
+    logic[6: 0] pause;
+    always_ff @( posedge clk ) begin
+        pause <= ctrl.pause;
+    end
+
 
     always_ff @(posedge clk) begin
         if(rst|branch_flush|ctrl.exception_flush) begin
-            head <= `ZeroInstBufferAddr;
+            head <= 5'b11111;
             tail <= `ZeroInstBufferAddr;
             FIFO_valid <= `InstBufferSize'd0;
             // FIFO_inst <= '{32'b0};
         end
-        else if(ctrl.pause[1]&&!ctrl.pause[2])begin
-            head <= `ZeroInstBufferAddr;
+        else if(pause[2]&&!pause[3])begin
+            head <= 5'b11111;
             tail <= `ZeroInstBufferAddr;
             FIFO_valid <= `InstBufferSize'd0;
         end
-        else if (!ctrl.pause[1]) begin
+        else if (!pause[2]) begin
             if(fetch_inst_1_en&&fetch_inst_2_en) begin
                 FIFO_inst[tail] <= inst;
                 FIFO_pc[tail] <= pc;
@@ -160,12 +165,12 @@ import pipeline_types::*;
             branch_info1 <= 0;
             branch_info2 <= 0;
         end
-        else if (ctrl.pause[1] && !ctrl.pause[2]) begin
+        else if (ctrl.pause[2] && !ctrl.pause[3]) begin
                 inst_and_pc_o.inst_o_1 <= 0;
                 inst_and_pc_o.inst_o_2 <= 0;
                 inst_and_pc_o.pc_o_1 <= 0;
                 inst_and_pc_o.pc_o_2 <= 0;
-        end else if (!ctrl.pause[1]) begin
+        end else if (!ctrl.pause[2]) begin
             if (stall) begin
                 inst_and_pc_o.inst_o_1 <= 0;
                 inst_and_pc_o.inst_o_2 <= 0;
