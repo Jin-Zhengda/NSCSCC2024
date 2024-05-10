@@ -62,6 +62,7 @@ module mem
         mem_wb.data_write.write_addr = ex_mem.reg_write_addr;
         mem_wb.data_write.write_data = ex_mem.reg_write_data;
         mem_wb.csr_write.csr_write_data = ex_mem.csr_write_data;
+        pause_uncache = 1'b0;
 
         case (ex_mem.aluop)
             `ALU_LDB: begin
