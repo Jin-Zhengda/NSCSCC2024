@@ -24,12 +24,30 @@ module icache
     input logic reset,
     //front-icache
     pc_icache pc2icache,
-    //icache-mem
+    //icache-axi
     output logic rd_req,
     output bus32_t rd_addr,
     input logic ret_valid,
-    input bus256_t ret_data
+    input bus256_t ret_data,
+
+    input  logic             icacop_op_en   ,//使能信号
+    input  logic[ 1:0]       cacop_op_mode  ,//缓存操作的模式
+    input bus32_t cacop_addr
 );
+
+logic[`TAG_SIZE-1:0] cacop_op_addr_tag,pre_cacop_virtual_tag;
+logic [`INDEX_SIZE-1:0]cacop_op_addr_index,pre_cacop_virtual_index;
+logic [`OFFSET_SIZE-1:0]cacop_op_addr_offset,pre_cacop_virtual_offset;
+assign cacop_op_addr_tag=cacop_addr[`TAG_LOC];
+assign cacop_op_addr_index=cacop_addr[`INDEX_LOC];
+assign cacop_op_addr_offset=cacop_addr[`OFFSET_LOC];
+
+logic cacop_op_0,cacop_op_1,cacop_op_2;
+logic pre_cacop_op_0,pre_cacop_op_1,pre_cacop_op_2,pre_cacop_en;
+assign cacop_op_0=icacop_op_en&&cacop_op_mode==2'd0;
+assign cacop_op_1=icacop_op_en&&cacop_op_mode==2'd1;
+assign cacop_op_2=icacop_op_en&&cacop_op_mode==2'd2;
+
 
 
 
@@ -57,6 +75,27 @@ always_ff @( posedge clk ) begin
         pre_inst_en<=pc2icache.inst_en;
         pre_physical_addr<=physical_addr;
         pre_virtual_addr<=pc2icache.pc;
+    end
+end
+
+always_ff @( posedge clk ) begin
+    if(reset)begin
+        pre_cacop_op_0<=1'b0;
+        pre_cacop_op_1<=1'b0;
+        pre_cacop_op_2<=1'b0;
+        pre_cacop_en<=1'b0;
+        pre_cacop_virtual_tag<=`TAG_SIZE'b0;
+        pre_cacop_virtual_index<=`INDEX_SIZE'b0;
+        pre_cacop_virtual_offset<=`OFFSET_SIZE'b0;
+    end
+    else begin
+        pre_cacop_op_0<=cacop_op_0;
+        pre_cacop_op_1<=cacop_op_1;
+        pre_cacop_op_2<=cacop_op_2;
+        pre_cacop_en<=icacop_op_en;
+        pre_cacop_virtual_tag<=cacop_op_addr_tag;
+        pre_cacop_virtual_index<=cacop_op_addr_index;
+        pre_cacop_virtual_offset<=cacop_op_addr_offset;
     end
 end
 
@@ -98,8 +137,14 @@ simple_dual_port_ram Bank7_way1 (.clka(clk),.ena(|wea_way1),.wea(wea_way1),.addr
 //Tag+Valid
 logic [`TAGV_SIZE-1:0]tagv_cache_w0;
 logic [`TAGV_SIZE-1:0]tagv_cache_w1;
-simple_dual_port_ram TagV0 (.clka(clk),.ena(|wea_way0),.wea(wea_way0),.addra(pre_physical_addr[`INDEX_LOC]), .dina({1'b1,pre_physical_addr[`TAG_LOC]}),.clkb(clk),.enb(1'b1),.addrb(ram_addr),.doutb(tagv_cache_w0));
-simple_dual_port_ram TagV1 (.clka(clk),.ena(|wea_way1),.wea(wea_way1),.addra(pre_physical_addr[`INDEX_LOC]), .dina({1'b1,pre_physical_addr[`TAG_LOC]}),.clkb(clk),.enb(1'b1),.addrb(ram_addr),.doutb(tagv_cache_w1));  
+
+logic[`INDEX_SIZE-1:0] tagv_addr_index;
+assign tagv_addr_index=(pre_cacop_op_0||pre_cacop_op_1||pre_cacop_op_2)?pre_cacop_virtual_index:pre_physical_addr[`INDEX_LOC];
+logic[`TAG_SIZE-1:0]tagv_data_tagv;
+assign tagv_data_tagv=(pre_cacop_op_0||pre_cacop_op_1||pre_cacop_op_2)?`TAGV_SIZE'b0:{1'b1,pre_physical_addr[`TAG_LOC]};
+
+simple_dual_port_ram TagV0 (.clka(clk),.ena(|wea_way0),.wea(wea_way0),.addra(tagv_addr_index), .dina(tagv_data_tagv),.clkb(clk),.enb(1'b1),.addrb(ram_addr),.doutb(tagv_cache_w0));
+simple_dual_port_ram TagV1 (.clka(clk),.ena(|wea_way1),.wea(wea_way1),.addra(tagv_addr_index), .dina(tagv_data_tagv),.clkb(clk),.enb(1'b1),.addrb(ram_addr),.doutb(tagv_cache_w1));  
 
 
 logic read_success;
@@ -127,13 +172,13 @@ assign hit_way1 = (tagv_cache_w1[19:0]==pre_physical_addr[`TAG_LOC] && tagv_cach
 assign hit_success = (hit_way0 | hit_way1) & pre_inst_en;
 assign hit_fail = ~(hit_success) & pre_inst_en;
 
-
-assign pc2icache.stall=reset?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0);
+//icacop_op_en?还是pre_icacop_op_en
+assign pc2icache.stall=reset?1'b1:(pre_cacop_en?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0));
 assign pc2icache.inst=hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0));
 
 
-assign wea_way0=(pre_inst_en&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
-assign wea_way1=(pre_inst_en&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
+assign wea_way0=(pre_cacop_op_0||pre_cacop_op_1||pre_cacop_op_2)?4'b1111:(pre_inst_en&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
+assign wea_way1=(pre_cacop_op_0||pre_cacop_op_1||pre_cacop_op_2)?4'b1111:(pre_inst_en&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
 
 
 assign rd_req=!read_success&&hit_fail&&!ret_valid&&pc2icache.icache_is_valid;

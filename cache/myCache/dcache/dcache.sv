@@ -249,7 +249,7 @@ always_ff @( posedge clk ) begin
     else begin
         wr_req<=1'b0;
         wr_addr<=32'b0;
-        wr_wstrb<=4'b1111;
+        wr_wstrb<=4'd0;
         wr_data<=256'b0;
     end
 end
