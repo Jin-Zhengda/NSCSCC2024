@@ -72,16 +72,16 @@ module csr
             crmd[1: 0] <= 2'b0; // PLV
             crmd[2] <= 1'b0; // IE
             if (ctrl_slave.exception_cause == `EXCEPTION_TLBR) begin
-                crmd[3] <= 1'b0; // DA
-                crmd[4] <= 1'b1; // PG
+                crmd[3] <= 1'b1; // DA
+                crmd[4] <= 1'b0; // PG
             end
-        end 
-        else if (is_ertn) begin
-            crmd[1: 0] <= prmd[1: 0]; // PLV
-            crmd[2] <= prmd[2]; // IE
-            crmd[3] <= (estat[21: 16] == 6'b111111) ? 1'b0 : crmd[3]; // DA
-            crmd[4] <= (estat[21: 16] == 6'b111111) ? 1'b1 : crmd[4]; // PG
-        end
+            else if (is_ertn) begin
+                crmd[1: 0] <= prmd[1: 0]; // PLV
+                crmd[2] <= prmd[2]; // IE
+                crmd[3] <= (estat[21: 16] == 6'b111111) ? 1'b0 : crmd[3]; // DA
+                crmd[4] <= (estat[21: 16] == 6'b111111) ? 1'b1 : crmd[4]; // PG
+            end
+        end  
         else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_CRMD) begin
             crmd[8: 0] <= wb_i.csr_write_data[8: 0];
         end

@@ -38,10 +38,19 @@ module ex
 
     assign si12 = dispatch_ex.inst[21: 10];
     assign si14 = dispatch_ex.inst[14: 10];
-    
+
+    logic pause_ex_mem;
+    logic is_mem;
+
+    assign is_mem = dispatch_ex.aluop == `ALU_LDB || dispatch_ex.aluop == `ALU_LDBU || dispatch_ex.aluop == `ALU_LDH 
+                        || dispatch_ex.aluop == `ALU_LDH || dispatch_ex.aluop == `ALU_LDW || dispatch_ex.aluop == `ALU_LLW
+                        || dispatch_ex.aluop == `ALU_PRELD || dispatch_ex.aluop == `ALU_CACOP || dispatch_ex.aluop == `ALU_STB
+                        || dispatch_ex.aluop == `ALU_STH || dispatch_ex.aluop == `ALU_STW || dispatch_ex.aluop == `ALU_SCW;
+    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.data_ok;
+
     always_comb begin
         case (dispatch_ex.aluop)
-            `ALU_LDB, `ALU_LDBU, `ALU_LDH, `ALU_LDHU, `ALU_LDW, `ALU_LLW, `ALU_PRELD: begin
+            `ALU_LDB, `ALU_LDBU, `ALU_LDH, `ALU_LDHU, `ALU_LDW, `ALU_LLW, `ALU_PRELD, `ALU_CACOP: begin
                 ex_mem.mem_addr = dispatch_ex.reg1 + dispatch_ex.reg2;
             end
             `ALU_STB, `ALU_STH, `ALU_STW: begin
@@ -332,7 +341,7 @@ module ex
         endcase
     end
 
-    assign pause_ex = pause_ex_div;
+    assign pause_ex = pause_ex_div || pause_ex_mem;
 
     always_comb begin: result
         case (dispatch_ex.aluop)
