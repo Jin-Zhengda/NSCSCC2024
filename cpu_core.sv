@@ -1,3 +1,6 @@
+`include "pipeline_types.sv"
+`include "interface.sv"
+
 module cpu_core 
     import pipeline_types::*;
 (

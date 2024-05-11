@@ -29,7 +29,7 @@ import pipeline_types::*;
         ctrl_t ctrl;
         ctrl_pc_t ctrl_pc;
         logic send_inst_en;
-        branch_info branch_info;
+        branch_info_t branch_info;
         inst_and_pc_t inst_and_pc_o;
         branch_update update_info;
 

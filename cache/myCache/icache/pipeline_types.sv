@@ -42,7 +42,7 @@ package pipeline_types;
         bus32_t pc_o_2;
         logic [5:0] is_exception;
         logic [5:0][6:0] exception_cause;
-    } pc_out_t;
+    } pc_out;
 
     typedef struct packed {
         logic is_branch;

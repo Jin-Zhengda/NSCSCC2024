@@ -13,7 +13,7 @@
 `define BANK_SIZE 32
 `define SET_SIZE 128
 `define TAGV_SIZE 21
-
+`include "pipeline_types.sv"
 
 module icache 
 import pipeline_types::*;

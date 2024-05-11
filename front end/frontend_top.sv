@@ -40,7 +40,7 @@ import pipeline_types::*;
 
     //不用
     input logic send_inst_2_en,
-    output branch_info branch_info2
+    output branch_info_t branch_info2
 
     );
 
@@ -141,7 +141,7 @@ import pipeline_types::*;
         .fetch_inst_2_en,
 
         .inst_and_pc_o(fb_master.inst_and_pc_o),
-        .branch_info1(fb_master.branch_info),
+        .branch_info1(fb_master.branch_info_t),
         .branch_info2
     );
 endmodule

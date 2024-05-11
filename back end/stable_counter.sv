@@ -1,3 +1,5 @@
+`include "pipeline_types.sv"
+
 module stable_counter 
     import pipeline_types::bus64_t;
 (

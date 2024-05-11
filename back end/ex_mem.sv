@@ -1,3 +1,5 @@
+`include "pipeline_types.sv"
+
 module ex_mem 
     import pipeline_types::*;
 (

@@ -1,3 +1,5 @@
+`include "pipeline_types.sv"
+
 module div 
     import pipeline_types::*;
 (

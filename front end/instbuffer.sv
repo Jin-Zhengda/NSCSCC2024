@@ -22,7 +22,7 @@
 `define InstBufferSize 32
 `define InstBufferAddrSize 5
 `define ZeroInstBufferAddr 5'd0
-
+`include "pipeline_types.sv"
 
 module instbuffer
 import pipeline_types::*;
@@ -57,8 +57,8 @@ import pipeline_types::*;
 
     //输出给if_id的
     output inst_and_pc_t inst_and_pc_o,
-    output branch_info branch_info1,
-    output branch_info branch_info2
+    output branch_info_t branch_info1,
+    output branch_info_t branch_info2
     );
 
     //FIFO for inst
@@ -66,7 +66,7 @@ import pipeline_types::*;
     //FIFO for pc
     logic [`InstBus]FIFO_pc[`InstBufferSize-1:0];
 
-    branch_info FIFO_branch_info[`InstBufferSize-1:0];
+    branch_info_t FIFO_branch_info[`InstBufferSize-1:0];
 
     //头尾指针
     logic [`InstBufferAddrSize-1:0]tail;

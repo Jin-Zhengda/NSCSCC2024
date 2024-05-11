@@ -1,3 +1,5 @@
+`include "pipeline_types.sv"
+
 module if_id 
     import pipeline_types::*;
 (

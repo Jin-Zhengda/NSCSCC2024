@@ -1,3 +1,5 @@
+`include "pipeline_types.sv"
+
 module regfile 
     import pipeline_types::*;
 (
