@@ -1,3 +1,5 @@
+`include "pipeline_types.sv"
+
 module mem_wb 
     import pipeline_types::*;
 (

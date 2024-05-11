@@ -1,4 +1,5 @@
 `include "defines.sv"
+`include "pipeline_types.sv"
 
 module dispatch 
     import pipeline_types::*;

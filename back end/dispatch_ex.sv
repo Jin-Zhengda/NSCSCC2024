@@ -1,3 +1,5 @@
+`include "pipeline_types.sv"
+
 module dispatch_ex
     import pipeline_types::*;
 (

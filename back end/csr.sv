@@ -1,4 +1,5 @@
 `include "csr_defines.sv"
+`include "pipeline_types.sv"
 
 module csr
   import pipeline_types::*;

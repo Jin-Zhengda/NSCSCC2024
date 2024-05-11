@@ -10,8 +10,8 @@ module my_axi_interface(
     input                   logic                   cache_wen,  // axi_wen_o
     input                   logic                   cache_ren,  // axi_ren_o
     input wire [3:0]         cache_wsel,        // wstrb????? 或许接dcache的wr_strb?
-    input   logic [4:0]      cache_raddr,       // axi_raddr_o
-    input   logic [4:0]      cache_waddr,       // axi_waddr_o
+    input   logic [31:0]      cache_raddr,       // axi_raddr_o
+    input   logic [31:0]      cache_waddr,       // axi_waddr_o
     input   logic [31:0]     cache_wdata,       // axi_wdata_o
     input                   logic                   cache_rready, // Cache读准备好      axi_rready_o
     input                   logic                   cache_wvalid, // Cache写数据准备好  axi_wvalid_o

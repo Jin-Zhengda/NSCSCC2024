@@ -42,13 +42,13 @@ package pipeline_types;
         bus32_t pc_o_2;
         logic [5:0] is_exception;
         logic [5:0][6:0] exception_cause;
-    } pc_out_t;
+    } pc_out;
 
     typedef struct packed {
         logic is_branch;
         logic pre_taken_or_not;
         bus32_t pre_branch_addr;
-    } branch_info_t;
+    } branch_info;
 
     typedef struct packed {
         logic branch_flush;

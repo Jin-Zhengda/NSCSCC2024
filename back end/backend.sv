@@ -1,3 +1,5 @@
+`include "pipeline_types.sv"
+
 module backend
     import pipeline_types::*;
 (
