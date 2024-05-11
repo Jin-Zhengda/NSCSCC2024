@@ -46,7 +46,7 @@ module ex
                         || dispatch_ex.aluop == `ALU_LDH || dispatch_ex.aluop == `ALU_LDW || dispatch_ex.aluop == `ALU_LLW
                         || dispatch_ex.aluop == `ALU_PRELD || dispatch_ex.aluop == `ALU_CACOP || dispatch_ex.aluop == `ALU_STB
                         || dispatch_ex.aluop == `ALU_STH || dispatch_ex.aluop == `ALU_STW || dispatch_ex.aluop == `ALU_SCW;
-    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.data_ok;
+    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.addr_ok;
 
     always_comb begin
         case (dispatch_ex.aluop)
@@ -199,19 +199,19 @@ module ex
                 cache_inst.is_cacop = 1'b0;
                 cache_inst.cacop_code = 5'b0;
                 cache_inst.is_preld = 1'b1;
-                cache_inst.preld_addr = ex_mem.mem_addr;  
+                cache_inst.addr = ex_mem.mem_addr;  
             end
             `ALU_CACOP: begin
                 cache_inst.is_cacop = 1'b1;
                 cache_inst.cacop_code = dispatch_ex.cacop_code;
                 cache_inst.is_preld = 1'b0;
-                cache_inst.preld_addr = 32'b0;
+                cache_inst.addr = ex_mem.mem_addr;
             end
             default: begin
                 cache_inst.is_cacop = 1'b0;
                 cache_inst.cacop_code = 5'b0;
                 cache_inst.is_preld = 1'b0;
-                cache_inst.preld_addr = 32'b0;
+                cache_inst.addr = 32'b0;
             end
         endcase
     end

@@ -204,9 +204,8 @@ package pipeline_types;
     typedef struct packed {
         logic is_cacop;
         logic[4: 0] cacop_code;
-
         logic is_preld;
-        bus32_t preld_addr; 
+        bus32_t addr; 
     } cache_inst_t;
     
 endpackage
