@@ -285,7 +285,7 @@ module csr
     // CPUID write
     always_ff @(posedge clk) begin
         if (rst) begin
-            cpuid <= 32'b1;
+            cpuid <= 32'b0;
         end
         else begin
             cpuid <= cpuid;
@@ -349,21 +349,21 @@ module csr
         if (rst) begin
             llbctl <= 32'b0;
         end
-        else if (llbctl[1]) begin
-            llbctl[0] <= 1'b0;
-            llbctl[1] <= 1'b0;
-        end
-        else if (is_ertn && llbctl[2] != 1'b1) begin
-            llbctl[0] <= 1'b0;
-            llbctl[2] <= 1'b0;
+        else if (is_ertn) begin
+            if (llbctl[2]) begin
+                llbctl[2] <= 1'b0;
+            end
+            else begin
+                llbctl[0] <= 1'b0;
+            end  
         end
         else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_LLBCTL) begin
             if (wb_i.is_llw_scw) begin
                 llbctl[0] <= wb_i.csr_write_data[0];
             end
             else begin
-                llbctl[1] <= (wb_i.csr_write_data[1] == 1'b1) ? 1'b1: llbctl[1];
                 llbctl[2] <= wb_i.csr_write_data[2];
+                    llbctl[0] <= wb_i.csr_write_data[1]? 1'b0: llbctl[0];
             end
         end
         else begin
