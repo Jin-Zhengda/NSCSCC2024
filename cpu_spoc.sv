@@ -13,32 +13,27 @@ module cpu_spoc
     logic inst_en;
     logic inst_valid;
 
-    logic ram_en;
     logic write_en;
     logic read_en;
-    bus32_t addr;
+    bus32_t read_addr;
+    bus32_t write_addr;
     logic[3: 0] select;
     bus32_t data_i;
-    bus32_t data_o;
+    logic[255: 0] data_o;
+    logic data_valid;
+
+    ctrl_t ctrl;
+    logic branch_flush;
+    cache_inst_t cache_inst;
 
     mem_dcache mem_dcache_io();
     pc_icache pc_icache_io();
     icache_mem icache_mem_io();
 
-    assign ram_en = mem_dcache_io.master.valid;
-    assign write_en = mem_dcache_io.master.op;
-    assign read_en = ~mem_dcache_io.master.op;
-    assign addr = mem_dcache_io.master.virtual_addr;
-    assign select = mem_dcache_io.master.wstrb;
-    assign data_i = mem_dcache_io.master.wdata;
-    assign mem_dcache_io.master.rdata = data_o;
-    assign mem_dcache_io.master.cache_miss = 1'b0;
-    assign mem_dcache_io.master.data_ok = 1'b1;
-
-    assign inst_addr = icache_mem_io.master.rd_addr;
-    assign inst_en = icache_mem_io.master.rd_req;
-    assign icache_mem_io.master.ret_data = inst;
-    assign icache_mem_io.master.ret_valid = inst_valid;
+    assign inst_addr = icache_mem_io.rd_addr;
+    assign inst_en = icache_mem_io.rd_req;
+    assign icache_mem_io.ret_data = inst;
+    assign icache_mem_io.ret_valid = inst_valid;
 
 
     cpu_core u_cpu_core (
@@ -47,17 +42,39 @@ module cpu_spoc
         .continue_idle,
         
         .icache_master(pc_icache_io.master),
-        .dcache_master(mem_dcache_io.master)  
+        .dcache_master(mem_dcache_io.master),
+        .cache_inst(cache_inst),
+        .ctrl(ctrl),
+        .branch_flush(branch_flush)
     );
 
     icache u_icache (
         .clk,
         .reset(rst),
         .pc2icache(pc_icache_io.slave),
-        .rd_req(icache_mem_io.master.rd_req),
-        .rd_addr(icache_mem_io.master.rd_addr),
-        .ret_valid(icache_mem_io.master.ret_valid),
-        .ret_data(icache_mem_io.master.ret_data)
+        .ctrl(ctrl),
+        .branch_flush(branch_flush),
+
+        .rd_req(icache_mem_io.rd_req),
+        .rd_addr(icache_mem_io.rd_addr),
+        .ret_valid(icache_mem_io.ret_valid),
+        .ret_data(icache_mem_io.ret_data)
+    );
+
+    dcache u_dcache (
+        .clk,
+        .reset(rst),
+        .mem2dcache(mem_dcache_io.slave),
+        .rd_req(read_en),
+        .rd_addr(read_addr),
+        .wr_req(write_en),
+        .wr_addr(write_addr),
+        .wr_wstrb(select),
+        .wr_data(data_i),
+        .wr_rdy(1'b1),
+        .rd_rdy(1'b1),
+        .ret_data(data_o),
+        .ret_valid(data_valid)
     );
 
     inst_rom u_inst_rom (
@@ -72,15 +89,18 @@ module cpu_spoc
 
     data_ram u_data_ram (
         .clk(clk),
-        .ram_en(ram_en),
+        .ram_en(1'b1),
 
         .write_en(write_en),
-        .addr(addr),
+
+        .read_addr(read_addr),
+        .write_addr(write_addr),
         .select(select),
         .data_i(data_i),
         .read_en(read_en),
 
-        .data_o(data_o)
+        .data_o(data_o),
+        .data_valid(data_valid)
     );
 
 endmodule

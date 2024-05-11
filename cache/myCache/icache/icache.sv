@@ -1,6 +1,3 @@
-typedef logic[31:0] bus32_t;
-typedef logic[255:0] bus256_t;
-
 `define ADDR_SIZE 32
 `define DATA_SIZE 32
 
@@ -19,9 +16,12 @@ typedef logic[255:0] bus256_t;
 
 
 module icache 
+import pipeline_types::*;
 (
     input logic clk,
     input logic reset,
+    input ctrl_t ctrl,
+    input logic branch_flush,
     //front-icache
     pc_icache pc2icache,
     //icache-axi
@@ -54,19 +54,19 @@ assign cacop_op_2=icacop_op_en&&cacop_op_mode==2'd2;
 
 //TLB转换(未实现)
 bus32_t physical_addr;
-assign physical_addr=pc2icache.pc;
+assign physical_addr=branch_flush? 32'b0:pc2icache.pc;
 
 logic pre_inst_en;
 bus32_t pre_physical_addr,pre_virtual_addr;
 
 //记录地址
 always_ff @( posedge clk ) begin
-    if(reset)begin
+    if(reset || branch_flush)begin
         pre_inst_en<=1'b0;
         pre_physical_addr<=32'b0;
         pre_virtual_addr<=32'b0;
     end
-    else if(pc2icache.stall)begin
+    else if(pc2icache.stall || ctrl.pause[0])begin
         pre_physical_addr<=pre_physical_addr;
         pre_inst_en<=pre_inst_en;
         pre_virtual_addr<=pre_virtual_addr;
@@ -183,8 +183,6 @@ assign wea_way1=(pre_cacop_op_0||pre_cacop_op_1||pre_cacop_op_2)?4'b1111:(pre_in
 
 assign rd_req=!read_success&&hit_fail&&!ret_valid&&pc2icache.icache_is_valid;
 assign rd_addr=pre_physical_addr;
-
-
 
 always_ff @( posedge clk ) begin
     if(pc2icache.front_is_valid)pc2icache.icache_is_valid<=1'b1;

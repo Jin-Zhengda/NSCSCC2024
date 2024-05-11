@@ -7,7 +7,7 @@ module ctrl
     input pause_t pause_request,
     input mem_ctrl_t mem_i,
 
-    input wb_push_forward_t wb_push_forward,
+    input csr_push_forward_t wb_push_forward,
 
     input logic continue_idle,
 
@@ -75,30 +75,30 @@ module ctrl
 
     assign pause_idle = mem_i.is_idle && (int_vec == 12'b0) && !continue_idle;
 
-    // pause[0] PC, pause[1] instBuffer, pause[2] id
-    // pause[3] dispatch, pause[4] ex, pause[5] mem, pause[6] wb
+    // pause[0] PC, pause[1] icache, pause[2] instbuffer, pause[3] id
+    // pause[4] dispatch, pause[5] ex, pause[6] mem, pause[7] wb
     always_comb begin: pause_ctrl
         if (pause_request.pause_if) begin
-            ctrl_o.pause = 7'b0000001;
+            ctrl_o.pause = 7'b00000001;
         end
         else if (pause_request.pause_id) begin
-            ctrl_o.pause = 7'b0000111;
+            ctrl_o.pause = 7'b00001111;
         end
         else if (pause_request.pause_dispatch) begin
-            ctrl_o.pause = 7'b0001111;
+            ctrl_o.pause = 7'b00011111;
         end
         else if (pause_request.pause_ex) begin
-            ctrl_o.pause = 7'b0011111;
+            ctrl_o.pause = 7'b00111111;
         end
         else if (pause_request.pause_mem || pause_idle) begin
-            ctrl_o.pause = 7'b0111111;
+            ctrl_o.pause = 7'b01111111;
         end
         else begin
             ctrl_o.pause = 7'b0;
         end
     end
 
-    assign send_inst1_en = ctrl_o.pause[1] ? 1'b0 : 1'b1;
+    assign send_inst1_en = ctrl_o.pause[2] ? 1'b0 : 1'b1;
 
     
 endmodule

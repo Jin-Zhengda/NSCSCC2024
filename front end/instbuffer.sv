@@ -78,20 +78,25 @@ import pipeline_types::*;
         inst_and_pc_o.exception_cause = exception_cause;
     end
 
+    logic[6: 0] pause;
+    always_ff @( posedge clk ) begin
+        pause <= ctrl.pause;
+    end
+
 
     always_ff @(posedge clk) begin
         if(rst|branch_flush|ctrl.exception_flush) begin
-            head <= 5'b0;
+            head <= 5'b11111;
             tail <= `ZeroInstBufferAddr;
             FIFO_valid <= `InstBufferSize'd0;
             // FIFO_inst <= '{32'b0};
         end
-        else if(ctrl.pause[1]&&!ctrl.pause[2])begin
-            head <= 5'b0;
+        else if(pause[2]&&!pause[3])begin
+            head <= 5'b11111;
             tail <= `ZeroInstBufferAddr;
             FIFO_valid <= `InstBufferSize'd0;
         end
-        else if (!ctrl.pause[1]) begin
+        else if (!pause[2]) begin
             if(fetch_inst_1_en&&fetch_inst_2_en) begin
                 FIFO_inst[tail] <= inst;
                 FIFO_pc[tail] <= pc;
@@ -160,35 +165,79 @@ import pipeline_types::*;
             branch_info1 <= 0;
             branch_info2 <= 0;
         end
-        else if (ctrl.pause[1] && !ctrl.pause[2]) begin
+        else if (ctrl.pause[2] && !ctrl.pause[3]) begin
                 inst_and_pc_o.inst_o_1 <= 0;
                 inst_and_pc_o.inst_o_2 <= 0;
                 inst_and_pc_o.pc_o_1 <= 0;
                 inst_and_pc_o.pc_o_2 <= 0;
-        end else if (!ctrl.pause[1]) begin
+        end else if (!ctrl.pause[2]) begin
             if (stall) begin
                 inst_and_pc_o.inst_o_1 <= 0;
                 inst_and_pc_o.inst_o_2 <= 0;
                 inst_and_pc_o.pc_o_1 <= 0;
                 inst_and_pc_o.pc_o_2 <= 0;
-            end else if(send_inst_1_en && send_inst_2_en && FIFO_valid[head] && FIFO_valid[head+1]) begin
-                inst_and_pc_o.inst_o_1 <= FIFO_inst[head];
-                inst_and_pc_o.pc_o_1 <= FIFO_pc[head];
-                inst_and_pc_o.inst_o_2 <= FIFO_inst[head+1];
-                inst_and_pc_o.pc_o_2 <= FIFO_pc[head+1];
+            end else if(send_inst_1_en && send_inst_2_en) begin
+                if(FIFO_valid[head]&&FIFO_valid[head+1]) begin
+                    inst_and_pc_o.inst_o_1 <= FIFO_inst[head];
+                    inst_and_pc_o.pc_o_1 <= FIFO_pc[head];
+                    inst_and_pc_o.inst_o_2 <= FIFO_inst[head+1];
+                    inst_and_pc_o.pc_o_2 <= FIFO_pc[head+1];
 
-                branch_info1 <= FIFO_branch_info[head];
-                branch_info2 <= FIFO_branch_info[head+1];
+                    branch_info1 <= FIFO_branch_info[head];
+                    branch_info2 <= FIFO_branch_info[head+1];
+                end else if(FIFO_valid[head]) begin
+                    inst_and_pc_o.inst_o_1 <= FIFO_inst[head];
+                    inst_and_pc_o.pc_o_1 <= FIFO_pc[head];
+                    inst_and_pc_o.inst_o_2 <= 0;
+                    inst_and_pc_o.pc_o_2 <= 0;
+
+                    branch_info1 <= FIFO_branch_info[head];
+                    branch_info2 <= 0;
+                end else if(FIFO_valid[head+1]) begin
+                    inst_and_pc_o.inst_o_1 <= FIFO_inst[head+1];
+                    inst_and_pc_o.pc_o_1 <= FIFO_pc[head+1];
+                    inst_and_pc_o.inst_o_2 <= 0;
+                    inst_and_pc_o.pc_o_2 <= 0;
+
+                    branch_info1 <= FIFO_branch_info[head+1];
+                    branch_info2 <= 0;
+                end else begin
+                    inst_and_pc_o.inst_o_1 <= 0;
+                    inst_and_pc_o.pc_o_1 <= 0;
+                    inst_and_pc_o.inst_o_2 <= 0;
+                    inst_and_pc_o.pc_o_2 <= 0;
+
+                    branch_info1 <= 0;
+                    branch_info2 <= 0;
+                end
 
                 head <= head + 2;
-            end else if((send_inst_1_en&&FIFO_valid[head])|(send_inst_2_en&&FIFO_valid[head])) begin
-                inst_and_pc_o.inst_o_1 <= FIFO_inst[head];
-                inst_and_pc_o.pc_o_1 <= FIFO_pc[head];
-                inst_and_pc_o.inst_o_2 <= 0;
-                inst_and_pc_o.pc_o_2 <= 0;
+            end else if(send_inst_1_en || send_inst_2_en) begin
+                if(FIFO_valid[head]) begin
+                    inst_and_pc_o.inst_o_1 <= FIFO_inst[head];
+                    inst_and_pc_o.pc_o_1 <= FIFO_pc[head];
+                    inst_and_pc_o.inst_o_2 <= 0;
+                    inst_and_pc_o.pc_o_2 <= 0;
 
-                branch_info1 <= FIFO_branch_info[head];
-                branch_info2 <= 0;
+                    branch_info1 <= FIFO_branch_info[head];
+                    branch_info2 <= 0;
+                end else if(FIFO_valid[head+1]) begin
+                    inst_and_pc_o.inst_o_1 <= FIFO_inst[head+1];
+                    inst_and_pc_o.pc_o_1 <= FIFO_pc[head+1];
+                    inst_and_pc_o.inst_o_2 <= 0;
+                    inst_and_pc_o.pc_o_2 <= 0;
+
+                    branch_info1 <= FIFO_branch_info[head+1];
+                    branch_info2 <= 0;
+                end else begin
+                    inst_and_pc_o.inst_o_1 <= 0;
+                    inst_and_pc_o.pc_o_1 <= 0;
+                    inst_and_pc_o.inst_o_2 <= 0;
+                    inst_and_pc_o.pc_o_2 <= 0;
+
+                    branch_info1 <= 0;
+                    branch_info2 <= 0;
+                end
 
                 head <= head + 1;
             end 

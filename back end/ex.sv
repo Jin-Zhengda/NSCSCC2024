@@ -6,35 +6,51 @@ module ex
 (
     input dispatch_ex_t dispatch_ex,
 
+    input logic LLbit,
+    input csr_push_forward_t mem_push_forward,
+
     output logic pause_ex,
     output ex_mem_t ex_mem,
+    
+    mem_dcache dcache_master,
+    output cache_inst_t cache_inst,
 
-    ex_div master
+    ex_div div_master
 );
     assign ex_mem.pc = dispatch_ex.pc;
-    assign ex_mem.is_exception = dispatch_ex.is_exception;
-    assign ex_mem.exception_cause = dispatch_ex.exception_cause;
+    assign ex_mem.aluop = dispatch_ex.aluop;
+
+    logic ex_is_exception;
+    exception_cause_t ex_exception_cause;
+
+    assign ex_mem.is_exception = {dispatch_ex.is_exception[5: 2], ex_is_exception, dispatch_ex.is_exception[0]};
+    assign ex_mem.exception_cause = {dispatch_ex.exception_cause[5: 2], ex_exception_cause, dispatch_ex.exception_cause[0]};
 
     assign ex_mem.csr_read_en = dispatch_ex.csr_read_en;
-    assign ex_mem.csr_write_en = dispatch_ex.csr_write_en;
-    assign ex_mem.csr_addr = dispatch_ex.csr_addr;
-    assign ex_mem.csr_write_data = dispatch_ex.reg1;
     assign ex_mem.csr_mask = dispatch_ex.reg2;
 
-    assign ex_mem.aluop = dispatch_ex.aluop;
-    assign ex_mem.store_data = dispatch_ex.reg2;
+    logic LLbit_current;
 
-    assign ex_mem.cacop_code = dispatch_ex.cacop_code;
+    assign LLbit_current = (mem_push_forward.csr_write_en && (mem_push_forward.csr_write_addr == `CSR_LLBCTL)) ? mem_push_forward.csr_write_data[0] : LLbit;
 
     logic[11: 0] si12;
     logic[13: 9] si14;
 
     assign si12 = dispatch_ex.inst[21: 10];
     assign si14 = dispatch_ex.inst[14: 10];
-    
+
+    logic pause_ex_mem;
+    logic is_mem;
+
+    assign is_mem = dispatch_ex.aluop == `ALU_LDB || dispatch_ex.aluop == `ALU_LDBU || dispatch_ex.aluop == `ALU_LDH 
+                        || dispatch_ex.aluop == `ALU_LDH || dispatch_ex.aluop == `ALU_LDW || dispatch_ex.aluop == `ALU_LLW
+                        || dispatch_ex.aluop == `ALU_PRELD || dispatch_ex.aluop == `ALU_CACOP || dispatch_ex.aluop == `ALU_STB
+                        || dispatch_ex.aluop == `ALU_STH || dispatch_ex.aluop == `ALU_STW || dispatch_ex.aluop == `ALU_SCW;
+    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.data_ok;
+
     always_comb begin
         case (dispatch_ex.aluop)
-            `ALU_LDB, `ALU_LDBU, `ALU_LDH, `ALU_LDHU, `ALU_LDW, `ALU_LLW, `ALU_PRELD: begin
+            `ALU_LDB, `ALU_LDBU, `ALU_LDH, `ALU_LDHU, `ALU_LDW, `ALU_LLW, `ALU_PRELD, `ALU_CACOP: begin
                 ex_mem.mem_addr = dispatch_ex.reg1 + dispatch_ex.reg2;
             end
             `ALU_STB, `ALU_STH, `ALU_STW: begin
@@ -48,6 +64,158 @@ module ex
             end
         endcase
     end
+
+    assign dcache_master.virtual_addr = ex_mem.mem_addr;
+    logic mem_is_valid;
+
+    always_comb begin
+        if (ex_mem.is_exception == 6'b0) begin
+            dcache_master.valid = mem_is_valid;
+        end
+        else begin
+            dcache_master.valid = 1'b0;
+        end
+    end
+
+    always_comb begin: to_dcache
+        mem_is_valid = 1'b0;
+        dcache_master.wdata = 32'b0;
+        dcache_master.op = 1'b0;
+        dcache_master.wstrb = 4'b1111;
+        ex_is_exception = 1'b0;
+        ex_exception_cause = 7'b0;
+
+        case (dispatch_ex.aluop) 
+            `ALU_LDB, `ALU_LDBU: begin
+                dcache_master.op = 1'b0;
+                mem_is_valid = 1'b1;
+            end
+            `ALU_LDH, `ALU_LDHU: begin
+                ex_is_exception = (ex_mem.mem_addr[1: 0] == 2'b01 || ex_mem.mem_addr[1: 0] == 2'b11) ? 1'b1 : 1'b0;
+                ex_exception_cause = (ex_mem.mem_addr[1: 0] == 2'b01 || ex_mem.mem_addr[1: 0] == 2'b11) ? `EXCEPTION_ALE : 7'b0;
+                dcache_master.op = 1'b0;
+                mem_is_valid = 1'b1;
+            end
+            `ALU_LDW, `ALU_LLW: begin
+                ex_is_exception = (ex_mem.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
+                ex_exception_cause = (ex_mem.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
+                dcache_master.op = 1'b0;
+                mem_is_valid = 1'b1;
+            end
+            `ALU_STB: begin
+                dcache_master.op = 1'b1;
+                dcache_master.wdata = {4{dispatch_ex.reg2[7: 0]}};
+                mem_is_valid = 1'b1;
+                case (ex_mem.mem_addr[1: 0])
+                    2'b00: begin
+                        dcache_master.wstrb = 4'b0001;
+                    end 
+                    2'b01: begin
+                        dcache_master.wstrb = 4'b0010;
+                    end
+                    2'b10: begin
+                        dcache_master.wstrb = 4'b0100;
+                    end
+                    2'b11: begin
+                        dcache_master.wstrb = 4'b1000;
+                    end
+                    default: begin
+                        dcache_master.wstrb = 4'b0000;                        
+                    end
+                endcase
+            end
+            `ALU_STH: begin
+                dcache_master.op = 1'b1;
+                dcache_master.wdata = {2{dispatch_ex.reg2[15: 0]}};
+                mem_is_valid = 1'b1;
+                case (ex_mem.mem_addr[1: 0])
+                    2'b00: begin
+                        dcache_master.wstrb = 4'b0011;
+                    end 
+                    2'b10: begin
+                        dcache_master.wstrb = 4'b1100;
+                    end
+                    2'b01, 2'b11: begin
+                        dcache_master.wstrb = 4'b0000;
+                        ex_is_exception = 1'b1;
+                        ex_exception_cause = `EXCEPTION_ALE;
+                    end
+                    default: begin
+                        dcache_master.wstrb = 4'b0000;                        
+                    end
+                endcase
+            end
+            `ALU_STW: begin
+                dcache_master.op = 1'b1;
+                dcache_master.wdata = dispatch_ex.reg2;
+                mem_is_valid = 1'b1;
+                dcache_master.wstrb = 4'b1111;
+                ex_is_exception = (ex_mem.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
+                ex_exception_cause = (ex_mem.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
+            end
+            `ALU_SCW: begin
+                ex_is_exception = (ex_mem.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
+                ex_exception_cause = (ex_mem.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
+                if (LLbit_current) begin
+                    dcache_master.op = 1'b1;
+                    dcache_master.wdata = dispatch_ex.reg2;
+                    mem_is_valid = 1'b1;
+                    dcache_master.wstrb = 4'b1111;
+                end
+                else begin
+                    dcache_master.op = 1'b0;
+                    dcache_master.wdata = 32'b0;
+                    mem_is_valid = 1'b0;
+                    dcache_master.wstrb = 4'b1111;
+                end
+            end
+        endcase
+    end
+
+    always_comb begin
+        if (dispatch_ex.aluop == `ALU_LLW) begin
+            ex_mem.csr_write_en = 1'b1;
+            ex_mem.csr_addr = `CSR_LLBCTL;
+            ex_mem.csr_write_data = 32'b1;
+            ex_mem.is_llw_scw = 1'b1;
+        end
+        else if (dispatch_ex.aluop == `ALU_SCW && LLbit_current) begin
+            ex_mem.csr_write_en = 1'b1;
+            ex_mem.csr_addr = `CSR_LLBCTL;
+            ex_mem.csr_write_data = 32'b0;
+            ex_mem.is_llw_scw = 1'b1;
+        end
+        else begin
+            ex_mem.csr_write_en = dispatch_ex.csr_write_en;
+            ex_mem.csr_addr = dispatch_ex.csr_addr;
+            ex_mem.csr_write_data = dispatch_ex.reg1;
+            ex_mem.is_llw_scw = 1'b0;
+        end
+    end
+
+    always_comb begin
+        case (dispatch_ex.aluop)
+            `ALU_PRELD: begin
+                cache_inst.is_cacop = 1'b0;
+                cache_inst.cacop_code = 5'b0;
+                cache_inst.is_preld = 1'b1;
+                cache_inst.preld_addr = ex_mem.mem_addr;  
+            end
+            `ALU_CACOP: begin
+                cache_inst.is_cacop = 1'b1;
+                cache_inst.cacop_code = dispatch_ex.cacop_code;
+                cache_inst.is_preld = 1'b0;
+                cache_inst.preld_addr = 32'b0;
+            end
+            default: begin
+                cache_inst.is_cacop = 1'b0;
+                cache_inst.cacop_code = 5'b0;
+                cache_inst.is_preld = 1'b0;
+                cache_inst.preld_addr = 32'b0;
+            end
+        endcase
+    end
+
 
     bus32_t logic_res;
     bus32_t shift_res;
@@ -123,48 +291,48 @@ module ex
     always_comb begin: div_calculate
         case (dispatch_ex.aluop)
             `ALU_DIVW, `ALU_MODW: begin
-                if (!master.div_done) begin
-                    master.div_data1= dispatch_ex.reg1;
-                    master.div_data2 = dispatch_ex.reg2;
-                    master.div_start = 1'b1;
-                    master.div_signed = 1'b1;
+                if (!div_master.div_done) begin
+                    div_master.div_data1= dispatch_ex.reg1;
+                    div_master.div_data2 = dispatch_ex.reg2;
+                    div_master.div_start = 1'b1;
+                    div_master.div_signed = 1'b1;
                     pause_ex_div = 1'b1;
                 end 
-                else if (master.div_done) begin
-                    master.div_data1= dispatch_ex.reg1;
-                    master.div_data2 = dispatch_ex.reg2;
-                    master.div_start = 1'b0;
-                    master.div_signed = 1'b1;
+                else if (div_master.div_done) begin
+                    div_master.div_data1= dispatch_ex.reg1;
+                    div_master.div_data2 = dispatch_ex.reg2;
+                    div_master.div_start = 1'b0;
+                    div_master.div_signed = 1'b1;
                     pause_ex_div = 1'b0;
                 end
                 else begin
-                    master.div_data1= 32'b0;
-                    master.div_data2 = 32'b0;
-                    master.div_start = 1'b0;
-                    master.div_signed = 1'b0;
+                    div_master.div_data1= 32'b0;
+                    div_master.div_data2 = 32'b0;
+                    div_master.div_start = 1'b0;
+                    div_master.div_signed = 1'b0;
                     pause_ex_div = 1'b0;
                 end
             end 
             `ALU_DIVWU, `ALU_MODWU: begin
-                if (!master.div_done) begin
-                    master.div_data1= dispatch_ex.reg1;
-                    master.div_data2 = dispatch_ex.reg2;
-                    master.div_start = 1'b1;
-                   master.div_signed = 1'b0;
+                if (!div_master.div_done) begin
+                    div_master.div_data1= dispatch_ex.reg1;
+                    div_master.div_data2 = dispatch_ex.reg2;
+                    div_master.div_start = 1'b1;
+                   div_master.div_signed = 1'b0;
                     pause_ex_div = 1'b1;
                 end 
-                else if (master.div_done) begin
-                    master.div_data1= dispatch_ex.reg1;
-                    master.div_data2 = dispatch_ex.reg2;
-                    master.div_start = 1'b0;
-                   master.div_signed = 1'b0;
+                else if (div_master.div_done) begin
+                    div_master.div_data1= dispatch_ex.reg1;
+                    div_master.div_data2 = dispatch_ex.reg2;
+                    div_master.div_start = 1'b0;
+                   div_master.div_signed = 1'b0;
                     pause_ex_div = 1'b0;
                 end
                 else begin
-                    master.div_data1= 32'b0;
-                    master.div_data2 = 32'b0;
-                    master.div_start = 1'b0;
-                   master.div_signed = 1'b0;
+                    div_master.div_data1= 32'b0;
+                    div_master.div_data2 = 32'b0;
+                    div_master.div_start = 1'b0;
+                   div_master.div_signed = 1'b0;
                     pause_ex_div = 1'b0;
                 end
             end
@@ -173,7 +341,7 @@ module ex
         endcase
     end
 
-    assign pause_ex = pause_ex_div;
+    assign pause_ex = pause_ex_div || pause_ex_mem;
 
     always_comb begin: result
         case (dispatch_ex.aluop)
@@ -190,13 +358,13 @@ module ex
                 arithmetic_res = mul_result[63:32];
             end
             `ALU_DIVW, `ALU_DIVWU: begin
-                if(master.div_done) begin
-                    arithmetic_res = master.div_result[31:0];
+                if(div_master.div_done) begin
+                    arithmetic_res = div_master.div_result[31:0];
                 end
             end
             `ALU_MODW, `ALU_MODWU: begin
-                if (master.div_done) begin
-                    arithmetic_res = master.div_result[63:32];
+                if (div_master.div_done) begin
+                    arithmetic_res = div_master.div_result[63:32];
                 end
             end
             default: begin
@@ -225,8 +393,11 @@ module ex
             `ALU_SEL_JUMP_BRANCH: begin
                 ex_mem.reg_write_data = dispatch_ex.reg_write_branch_data;
             end
-            default: begin
+            `ALU_SEL_LOAD_STORE: begin
                 ex_mem.reg_write_data = 32'b0;
+            end
+            default: begin
+                ex_mem.reg_write_data = LLbit_current ? 32'b1: 32'b0;
             end
         endcase
     end
