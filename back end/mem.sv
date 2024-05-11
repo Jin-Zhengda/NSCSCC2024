@@ -57,13 +57,10 @@ module mem
         end
     end
 
-    always_comb begin : mem
-        mem_wb.data_write.write_en = ex_mem.reg_write_en;
-        mem_wb.data_write.write_addr = ex_mem.reg_write_addr;
-        mem_wb.data_write.write_data = ex_mem.reg_write_data;
-        mem_wb.csr_write.csr_write_data = ex_mem.csr_write_data;
-        pause_uncache = 1'b0;
+    assign mem_wb.data_write.write_en = ex_mem.reg_write_en;
+    assign mem_wb.data_write.write_addr = ex_mem.reg_write_addr;
 
+    always_comb begin : mem
         case (ex_mem.aluop)
             `ALU_LDB: begin
                 if (!dcache_master.cache_miss && dcache_master.data_ok) begin
@@ -182,7 +179,6 @@ module mem
             end
             `ALU_CSRXCHG: begin
                 mem_wb.data_write.write_data = csr_read_data;
-                mem_wb.csr_write.csr_write_data = (csr_read_data & !ex_mem.csr_mask) | (ex_mem.csr_write_data & ex_mem.csr_mask);
             end
             `ALU_RDCNTID: begin
                 mem_wb.data_write.write_data = csr_read_data;
@@ -194,7 +190,12 @@ module mem
                 mem_wb.data_write.write_data = cnt[63: 32];
             end
             default: begin
+                mem_wb.data_write.write_data = ex_mem.reg_write_data;
+                pause_uncache = 1'b0;
             end 
         endcase
     end
+
+    assign mem_wb.csr_write.csr_write_data = (ex_mem.aluop == `ALU_CSRXCHG) ? 
+                                        ((csr_read_data & !ex_mem.csr_mask) | (ex_mem.csr_write_data & ex_mem.csr_mask)): ex_mem.csr_write_data;
 endmodule

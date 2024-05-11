@@ -127,6 +127,7 @@ module backend
         
         .LLbit(LLbit),
         .mem_push_forward(mem_csr_push_forward),
+        .wb_push_forward(wb.csr_write),
 
         .pause_ex(pause_request.pause_ex),
         .ex_mem(ex_o),
@@ -221,7 +222,7 @@ module backend
         .is_ertn(mem_ctrl.is_ertn),
         .is_syscall_break(is_syscall_break),
 
-        .is_ipi(32'b0),
+        .is_ipi(1'b0),
         .is_hwi(0),
 
         .ctrl_slave(ctrl_csr_io.slave),
