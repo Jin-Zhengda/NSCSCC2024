@@ -256,7 +256,9 @@ end
 
 
 assign mem2dcache.addr_ok=(mem2dcache.valid&&!stall);
-assign mem2dcache.data_ok=(pre_valid&&!stall&&pre_op==1'b1);
+// assign mem2dcache.addr_ok=!stall;
+
+assign mem2dcache.data_ok=(pre_valid&&!stall&&pre_op==1'b0);
 assign mem2dcache.cache_miss=hit_fail;
 
 endmodule
