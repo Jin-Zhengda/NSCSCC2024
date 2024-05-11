@@ -8,6 +8,7 @@ module ex
 
     input logic LLbit,
     input csr_push_forward_t mem_push_forward,
+    input csr_push_forward_t wb_push_forward,
 
     output logic pause_ex,
     output ex_mem_t ex_mem,
@@ -31,8 +32,18 @@ module ex
 
     logic LLbit_current;
 
-    assign LLbit_current = (mem_push_forward.csr_write_en && (mem_push_forward.csr_write_addr == `CSR_LLBCTL)) ? mem_push_forward.csr_write_data[0] : LLbit;
-
+    always_comb begin 
+        if (mem_push_forward.csr_write_en && (mem_push_forward.csr_write_addr == `CSR_LLBCTL)) begin
+            LLbit_current = mem_push_forward.csr_write_data[0];
+        end
+        else if (wb_push_forward.csr_write_en && (wb_push_forward.csr_write_addr == `CSR_LLBCTL)) begin
+            LLbit_current = wb_push_forward.csr_write_data[0];
+        end
+        else begin
+            LLbit_current = LLbit;
+        end
+    end
+    
     logic[11: 0] si12;
     logic[13: 9] si14;
 
@@ -182,7 +193,7 @@ module ex
         else if (dispatch_ex.aluop == `ALU_SCW && LLbit_current) begin
             ex_mem.csr_write_en = 1'b1;
             ex_mem.csr_addr = `CSR_LLBCTL;
-            ex_mem.csr_write_data = 32'b0;
+            ex_mem.csr_write_data = 1'b0;
             ex_mem.is_llw_scw = 1'b1;
         end
         else begin
@@ -394,7 +405,7 @@ module ex
                 ex_mem.reg_write_data = dispatch_ex.reg_write_branch_data;
             end
             `ALU_SEL_LOAD_STORE: begin
-                ex_mem.reg_write_data = 32'b0;
+                ex_mem.reg_write_data = (dispatch_ex.aluop == `ALU_SCW)? {31'b0, LLbit_current}: 32'b0;
             end
             default: begin
                 ex_mem.reg_write_data = LLbit_current ? 32'b1: 32'b0;

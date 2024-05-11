@@ -363,7 +363,7 @@ module csr
             end
             else begin
                 llbctl[2] <= wb_i.csr_write_data[2];
-                    llbctl[0] <= wb_i.csr_write_data[1]? 1'b0: llbctl[0];
+                llbctl[0] <= wb_i.csr_write_data[1]? 1'b0: llbctl[0];
             end
         end
         else begin
