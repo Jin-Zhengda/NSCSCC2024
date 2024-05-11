@@ -21,8 +21,8 @@ module my_axi_interface(
     // AXI接口
     input   logic [1:0]      cache_burst_type,          // 固定为增量突发（地址递增的突发），2'b01
     input   logic [2:0]      cache_burst_size,          // 固定为四个字节， 3'b010
-    input   logic [3:0]      cacher_burst_length,       // 固定为8， 4'b1000
-    input   logic [3:0]      cachew_burst_length,       // 固定为8， 4'b1000
+    input   logic [7:0]      cacher_burst_length,       // 固定为8， 8'b00000111 axi_rlen_o   单位到底是transfer还是byte啊，注意这个点，我也不太确定，大概率是transfer
+    input   logic [7:0]      cachew_burst_length,       // 固定为8， 8'b00000111 axi_wlen_o   A(W/R)LEN 表示传输的突发长度（burst length），其值为实际传输数据的数量减 1
                                                         // logic [1:0]   burst_type;            顶层模块直接给这两个值赋定值就行
                                                         // logic [2:0]    burst_size;
                                                         // assign burst_type = 2'b01;
@@ -193,7 +193,7 @@ module my_axi_interface(
                     rdata_valid_o <= 1'b0;
                     if (cache_ce && cache_ren && !(cache_raddr == awaddr && wnext_state != AXI_IDLE)) begin
                         arlen   <= cacher_burst_length;     
-                        arsize <= cache_burst_size;     // 不用cache_rsel去选择了，注意会不会出bug    
+                        arsize <= cache_burst_size;     // 默认为4个字节，不用cache_rsel去选择了，注意看会不会出bug    
                         arburst  <= cache_burst_type; 
                         arcache  <= 4'b0000;    
                         arvalid  <= 1'b1;
@@ -241,7 +241,7 @@ module my_axi_interface(
                         end else if (cache_wsel == 4'b0011 || cache_wsel == 4'b1100) begin
                             awsize <= 3'b001;
                         end else begin
-                            awsize <= cache_burst_size;
+                            awsize <= cache_burst_size;         // 此阶段cache_wsel固定传为4'b1111，所以会固定的执行这条语句，即awsize的值会固定为3'b010，即四个字节
                         end             
                         awburst <= cache_burst_type;   
                         awcache <= 4'b0000;          

@@ -5,20 +5,20 @@ module cache_axi(
     // ICache: Read Channel
     input logic                   inst_ren_i,       // rd_req
     input logic [31:0]            inst_araddr_i,    // rd_addr
-    output logic                  inst_rvalid_o,    // ret_valid
+    output logic                  inst_rvalid_o,    // ret_valid 读完8个32位数据之后才给高有效信号
     output logic [255:0]          inst_rdata_o,     // ret_data
     
     // DCache: Read Channel
     input logic                   data_ren_i,       // rd_req
     input logic [31:0]            data_araddr_i,    // rd_addr
-    output logic                  data_rvalid_o,    // ret_valid
+    output logic                  data_rvalid_o,    // ret_valid 写完8个32位信号之后才给高有效信号
     output logic [255:0]          data_rdata_o,     // ret_data
     
     // DCache: Write Channel
     input logic                   data_wen_i,       // wr_req
     input logic [255:0]           data_wdata_i,     // wr_data
     input logic [31:0]            data_awaddr_i,    // wr_addr
-    output logic                  data_bvalid_o,    // ret_valid
+    output logic                  data_bvalid_o,    // 在顶层模块直接定义     logic   data_bvalid_o; 下面会给它赋值并输出
     
     // AXI Communicate
     output logic                  axi_ce_o,
@@ -29,7 +29,7 @@ module cache_axi(
     output logic                  axi_ren_o,
     output logic                  axi_rready_o,
     output logic [31:0]           axi_raddr_o,
-    output logic [3:0]            axi_rlen_o,
+    output logic [7:0]            axi_rlen_o,
     
     // AXI write
     input logic                   wdata_resp_i,
@@ -38,11 +38,11 @@ module cache_axi(
     output logic [31:0]           axi_wdata_o,
     output logic                  axi_wvalid_o,
     output logic                  axi_wlast_o,
-    output logic [3:0]            axi_wlen_o    
+    output logic [7:0]            axi_wlen_o    
 );
 
     // Define state enum
-    typedef enum logic [1:0] {
+    typedef enum logic [2:0] {
         STATE_READ_FREE,
         STATE_READ_DCACHE,
         STATE_READ_ICACHE,
@@ -68,7 +68,7 @@ module cache_axi(
     logic [31:0]  data_araddr_2;
 
     // DCache: Write Channel
-    logic [255:0]       data_wdata_2;
+    logic [255:0]  data_wdata_2;
     logic [31:0]  data_awaddr_2;
 
     always_ff @(posedge clk) begin
@@ -91,8 +91,8 @@ module cache_axi(
     //////////////////////////Main Body////////////////////////////
     ///////////////////////////////////////////////////////////////
 
-    // READ(DCache first)
-    // State transition for read operation
+    // READ(DCache first) -- 自定义规定
+    // State transition for read and write operation
     always_ff @(posedge clk) begin
         if (rst) begin
             read_state <= STATE_READ_FREE;
@@ -110,6 +110,7 @@ module cache_axi(
                         read_state <= STATE_READ_FREE;
                 end
             endcase
+
             case (write_state)
                 STATE_WRITE_FREE: begin
                     if (data_wen_i) // Write
@@ -144,7 +145,9 @@ module cache_axi(
     // AXI
     assign axi_ren_o   = (read_state == STATE_READ_FREE) ? 1'b0 : 1'b1;
     assign axi_rready_o = axi_ren_o; // ready when starts reading
-    assign axi_raddr_o = (read_state == STATE_READ_DCACHE) ? {data_araddr_2[31:5], read_count, 2'b00} :
+    // 如果突发长度为8的话，按道理是cpu给的地址直接低五位置0就行了，这样实现的话应该也不影响(应该还能算是可以适应突发长度改变的情况)
+    // 后面七个地址会被直接忽略了，如果真的出bug了记得关注这个地方
+    assign axi_raddr_o = (read_state == STATE_READ_DCACHE) ? {data_araddr_2[31:5], read_count, 2'b00} : 
                          (read_state == STATE_READ_ICACHE) ? {inst_araddr_2[31:5], read_count, 2'b00} :
                          32'h0;
 
@@ -192,13 +195,15 @@ module cache_axi(
     end
 
     // WRITE
-
     // AXI
     assign axi_wen_o    = (write_state == STATE_WRITE_FREE) ? 1'b0 : 1'b1;
     assign axi_wvalid_o = (write_state == STATE_WRITE_FREE) ? 1'b0 : 1'b1;
     
-    assign axi_wlen_o   = 4'h7; // byte select
+    assign axi_wlen_o   = 8'h7; // byte select  这个信号我有点懵
+    assign axi_rlen_o   = 8'h7;
 
+    // 如果突发长度为8的话，按道理是cpu给的地址直接低五位置0就行了，这样实现的话应该也不影响(应该还能算是可以适应突发长度改变的情况)
+    // 后面七个地址会被直接忽略了，如果真的出bug了记得关注这个地方
     assign axi_waddr_o  = {data_awaddr_2[31:5], write_count, 2'b00};
     assign axi_wlast_o  = (write_state == STATE_WRITE_BUSY && write_count == 3'h7) ? 1'b1 : 1'b0; // write last word
     
