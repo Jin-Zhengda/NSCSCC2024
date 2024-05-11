@@ -202,8 +202,8 @@ assign stall=reset?1'b1:(hit_fail||read_success?1'b1:1'b0);
 assign mem2dcache.rdata=hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'hffffffff));
 
 
-assign wea_way0=(pre_valid&&hit_way0&&mem2dcache.op==1'b1)?pre_wstrb:((pre_valid&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000);
-assign wea_way1=(pre_valid&&hit_way1&&mem2dcache.op==1'b1)?pre_wstrb:((pre_valid&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000);
+assign wea_way0=(pre_valid&&hit_way0&&pre_op==1'b1)?pre_wstrb:((pre_valid&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000);
+assign wea_way1=(pre_valid&&hit_way1&&pre_op==1'b1)?pre_wstrb:((pre_valid&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000);
 
 
 assign rd_req=!read_success&&hit_fail&&!ret_valid;
@@ -256,7 +256,6 @@ end
 
 
 assign mem2dcache.addr_ok=(mem2dcache.valid&&!stall);
-// assign mem2dcache.addr_ok=!stall;
 
 assign mem2dcache.data_ok=(pre_valid&&!stall&&pre_op==1'b0);
 assign mem2dcache.cache_miss=hit_fail;

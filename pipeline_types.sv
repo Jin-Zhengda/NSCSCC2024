@@ -205,6 +205,7 @@ package pipeline_types;
         logic is_cacop;
         logic[4: 0] cacop_code;
         logic is_preld;
+        logic hint;
         bus32_t addr; 
     } cache_inst_t;
     
