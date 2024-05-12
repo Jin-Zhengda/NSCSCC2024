@@ -1,3 +1,7 @@
+`ifndef INTERFACE_SV
+`define INTERFACE_SV
+`timescale 1ns / 1ps
+
 import pipeline_types::*;
 
     interface mem_dcache;
@@ -195,3 +199,5 @@ import pipeline_types::*;
             output ret_valid,ret_data
         );
     endinterface //icache_mem
+
+`endif

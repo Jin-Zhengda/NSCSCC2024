@@ -1,4 +1,6 @@
-module cpu_top (
+`timescale 1ns / 1ps
+
+module mycpu_top (
     input           aclk,
     input           aresetn,
     input    [ 7:0] intrpt, 
@@ -99,7 +101,7 @@ module cpu_top (
     wire rdata_valid_i;
     wire[7:0] axi_rlen_o;
     wire[7:0] axi_wlen_o;
-    
+    wire[2: 0] dcache_rd_type;
 
 
 
@@ -124,7 +126,7 @@ module cpu_top (
         .dcache_wr_req(dcache_wr_req),
         .dcache_wr_addr(dcache_wr_addr),
         .dcache_wr_wstrb(dcache_wr_wstrb),
-        .dcache_wr_data(dcache_wr_dat)
+        .dcache_wr_data(dcache_wr_data)
     );
 
     cache_axi u_cache_axi (
@@ -170,7 +172,7 @@ module cpu_top (
         .axi_wlen_o(axi_wlen_o)
     );
 
-    axi_interface u_aix_interface (
+    axi_interface u_axi_interface (
         .clk(aclk),
         .resetn(aresetn),     // 低有效
         .flush(1'b0),
@@ -191,8 +193,8 @@ module cpu_top (
         .wdata_resp_o(wdata_resp_i), // 写响应信号，每个beat发一次，成功则可以传下一数据   wdata_resp_i
 
         // AXI接口
-        .cache_burst_type(burst_type),          // 固定为增量突发（地址递增的突发），2'b01
-        .cache_burst_size(burst_size),          // 固定为四个字节， 3'b010
+        .cache_burst_type(cache_burst_type),          // 固定为增量突发（地址递增的突发），2'b01
+        .cache_burst_size(cache_burst_size),          // 固定为四个字节， 3'b010
         .cacher_burst_length(axi_rlen_o),       // 固定为8， 8'b00000111 axi_rlen_o   单位到底是transfer还是byte啊，注意这个点，我也不太确定，大概率是transfer
         .cachew_burst_length(axi_wlen_o),       // 固定为8， 8'b00000111 axi_wlen_o   A(W/R)LEN 表示传输的突发长度（burst length），其值为实际传输数据的数量减 1
                                                             // wire [1:0]   burst_type;            顶层模块直接给这两个值赋定值就行

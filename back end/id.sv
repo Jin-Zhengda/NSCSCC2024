@@ -1,6 +1,6 @@
 `include "defines.sv"
 `include "csr_defines.sv"
-`include "pipeline_types.sv"
+`timescale 1ns / 1ps
 
 module id
   import pipeline_types::*;
