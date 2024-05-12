@@ -24,7 +24,19 @@ module cpu
     output logic dcache_wr_req,
     output bus32_t dcache_wr_addr,
     output logic[3: 0] dcache_wr_wstrb,
-    output bus256_t dcache_wr_data
+    output bus256_t dcache_wr_data,
+
+    output logic[31:0] debug0_wb_pc,
+    output logic[ 3:0] debug0_wb_rf_wen,
+    output logic[ 4:0] debug0_wb_rf_wnum,
+    output logic[31:0] debug0_wb_rf_wdata,
+    output logic[31:0] debug0_wb_inst,
+
+    output logic inst_valid_diff,
+    output logic cnt_inst_diff,
+    output logic csr_rstat_en_diff,
+    output logic[31: 0] csr_data_diff,
+    output logic[63: 0] timer_64_diff
 );
     
     ctrl_t ctrl;
@@ -43,7 +55,19 @@ module cpu
         .dcache_master(mem_dcache_io.master),
         .cache_inst(cache_inst),
         .ctrl(ctrl),
-        .branch_flush(branch_flush)
+        .branch_flush(branch_flush),
+
+        .debug0_wb_pc,
+        .debug0_wb_rf_wen,
+        .debug0_wb_rf_wnum,
+        .debug0_wb_rf_wdata,
+        .debug0_wb_inst,
+
+        .inst_valid_diff,
+        .cnt_inst_diff,
+        .csr_rstat_en_diff,
+        .csr_data_diff,
+        .timer_64_diff
     );
 
     icache u_icache (

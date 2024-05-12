@@ -150,6 +150,7 @@ package pipeline_types;
 
     typedef struct packed {
         bus32_t pc;
+        bus32_t inst;
 
         logic[5: 0] is_exception;
         logic[5: 0][6: 0] exception_cause;
@@ -184,6 +185,8 @@ package pipeline_types;
     } csr_write_t;
 
     typedef struct packed {
+        bus32_t pc;
+        bus32_t inst;
         data_write_t data_write;
         csr_write_t csr_write;
     } mem_wb_t;

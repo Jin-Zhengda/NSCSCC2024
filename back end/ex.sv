@@ -20,6 +20,7 @@ module ex
     ex_div div_master
 );
     assign ex_mem.pc = dispatch_ex.pc;
+    assign ex_mem.inst = dispatch_ex.inst;
     assign ex_mem.aluop = dispatch_ex.aluop;
 
     logic ex_is_exception;

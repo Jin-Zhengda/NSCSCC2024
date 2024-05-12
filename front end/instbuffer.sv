@@ -73,8 +73,8 @@ import pipeline_types::*;
     logic [`InstBufferSize-1:0]FIFO_valid;
 
     always_ff @(posedge clk) begin
-        inst_and_pc_o.is_exception = is_exception;
-        inst_and_pc_o.exception_cause = exception_cause;
+        inst_and_pc_o.is_exception <= is_exception;
+        inst_and_pc_o.exception_cause <= exception_cause;
     end
 
     logic[6: 0] pause;
