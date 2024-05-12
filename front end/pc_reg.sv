@@ -76,12 +76,14 @@ import pipeline_types::*;
     //         end
     //     end
     // end
-    assign pc.is_exception = {ctrl_pc.is_interrupt, {(pc.pc_o_1[1: 0] == 2'b00) ? 1'b0 : 1'b1}, 4'b0};
-    assign pc.exception_cause = {{ctrl_pc.is_interrupt ? `EXCEPTION_INT: `EXCEPTION_NOP}, 
+
+
+    always_ff @(posedge clk) begin
+        pc.is_exception <= {ctrl_pc.is_interrupt, {(pc.pc_o_1[1: 0] == 2'b00) ? 1'b0 : 1'b1}, 4'b0};
+        pc.exception_cause <= {{ctrl_pc.is_interrupt ? `EXCEPTION_INT: `EXCEPTION_NOP}, 
                                 {(pc.pc_o_1[1: 0] == 2'b00) ?  `EXCEPTION_NOP: `EXCEPTION_ADEF},
                                 {4{`EXCEPTION_NOP}}};
 
-    always_ff @(posedge clk) begin
         if(rst) begin
             pc.pc_o_1 <= 32'hfc;
             pc.pc_o_2 <= 32'h104;

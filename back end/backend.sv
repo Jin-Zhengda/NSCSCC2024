@@ -13,7 +13,20 @@ module backend
 
     // with dcache
     mem_dcache dcache_master,
-    output cache_inst_t cache_inst
+    output cache_inst_t cache_inst,
+
+    // debug
+    output logic[31:0] debug0_wb_pc,
+    output logic[3:0] debug0_wb_rf_wen,
+    output logic[4:0] debug0_wb_rf_wnum,
+    output logic[31:0] debug0_wb_rf_wdata,
+    output logic[31:0] debug0_wb_inst,
+
+    output logic inst_valid_diff,
+    output logic cnt_inst_diff,
+    output logic csr_rstat_en_diff,
+    output logic[31: 0] csr_data_diff,
+    output logic[63: 0] timer_64_diff
 );
 
     // regfile
@@ -160,6 +173,11 @@ module backend
         .mem_o(mem_i)
     );
 
+    logic cnt_inst;
+    logic[63: 0] timer_64;
+    logic csr_rstat_en;
+    logic[31: 0] csr_data;
+
     mem u_mem (
         .ex_mem(mem_i),
 
@@ -173,7 +191,12 @@ module backend
         .pause_mem(pause_request.pause_mem),
         .mem_wb(mem_o),
         .mem_ctrl(mem_ctrl),
-        .is_syscall_break(is_syscall_break)
+        .is_syscall_break(is_syscall_break),
+
+        .cnt_inst,
+        .timer_64,
+        .csr_rstat_en,
+        .csr_data
     );
 
     assign mem_push_forward.reg_write_en = mem_o.data_write.write_en;
@@ -191,12 +214,29 @@ module backend
         .ctrl(fb_slave.ctrl),
 
         .mem_i(mem_o),
-        .wb_o(wb)
+        .wb_o(wb),
+
+        .cnt_inst,
+        .csr_rstat_en,
+        .csr_data,
+        .timer_64,
+
+        .inst_valid_diff,
+        .cnt_inst_diff,
+        .csr_rstat_en_diff,
+        .csr_data_diff,
+        .timer_64_diff
     );
 
     assign wb_push_forward.csr_write_en = wb.csr_write.csr_write_en;
     assign wb_push_forward.csr_write_addr = wb.csr_write.csr_write_addr;
     assign wb_push_forward.csr_write_data = wb.csr_write.csr_write_data;
+
+    assign debug0_wb_pc = wb.pc;
+    assign debug0_wb_rf_wen = wb.data_write.write_en;
+    assign debug0_wb_rf_wnum = wb.data_write.write_addr;
+    assign debug0_wb_rf_wdata = wb.data_write.write_data;
+    assign debug0_wb_inst = wb.inst;
 
     ctrl u_ctrl (
         .pause_request(pause_request),
@@ -238,4 +278,5 @@ module backend
 
         .cnt(cnt)
     );
+
 endmodule
