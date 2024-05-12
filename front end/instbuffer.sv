@@ -22,7 +22,6 @@
 `define InstBufferSize 32
 `define InstBufferAddrSize 5
 `define ZeroInstBufferAddr 5'd0
-`include "pipeline_types.sv"
 
 module instbuffer
 import pipeline_types::*;

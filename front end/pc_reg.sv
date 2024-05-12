@@ -20,7 +20,6 @@
 //////////////////////////////////////////////////////////////////////////////////
 `define InstAddrWidth 31:0
 `include "csr_defines.sv"
-`include "pipeline_types.sv"
 
 module pc_reg
 import pipeline_types::*;
@@ -39,7 +38,7 @@ import pipeline_types::*;
     input ctrl_t ctrl,
     input ctrl_pc_t ctrl_pc,
 
-    output pc_out pc,
+    output pc_out_t pc,
     output logic inst_en_1,
     output logic inst_en_2
 );

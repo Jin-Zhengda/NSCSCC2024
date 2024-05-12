@@ -13,7 +13,8 @@
 `define BANK_SIZE 32
 `define SET_SIZE 128
 `define TAGV_SIZE 21
-`include "pipeline_types.sv"
+
+`timescale 1ns / 1ps
 
 module icache 
 import pipeline_types::*;
@@ -170,5 +171,4 @@ always_ff @( posedge clk ) begin
         end
 end
 
-    
 endmodule

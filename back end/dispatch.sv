@@ -1,5 +1,5 @@
 `include "defines.sv"
-`include "pipeline_types.sv"
+`timescale 1ns / 1ps
 
 module dispatch 
     import pipeline_types::*;

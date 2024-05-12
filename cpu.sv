@@ -1,5 +1,6 @@
 `include "pipeline_types.sv"
 `include "interface.sv"
+`timescale 1ns / 1ps
 
 module cpu 
     import pipeline_types::*;
@@ -37,7 +38,6 @@ module cpu
     cpu_core u_cpu_core (
         .clk,
         .rst,
-        .continue_idle,
         
         .icache_master(pc_icache_io.master),
         .dcache_master(mem_dcache_io.master),

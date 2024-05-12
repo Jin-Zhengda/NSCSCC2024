@@ -1,4 +1,4 @@
-`include "pipeline_types.sv"
+`timescale 1ns / 1ps
 
 module div 
     import pipeline_types::*;

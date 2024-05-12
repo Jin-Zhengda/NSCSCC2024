@@ -49,7 +49,7 @@ import pipeline_types::*;
     logic is_branch_i_2;
     logic pre_taken_or_not;
     logic [31:0] pre_branch_addr;
-    pc_out pc;
+    pc_out_t pc;
     logic inst_en_1;
     logic inst_en_2;
 
@@ -141,7 +141,7 @@ import pipeline_types::*;
         .fetch_inst_2_en,
 
         .inst_and_pc_o(fb_master.inst_and_pc_o),
-        .branch_info1(fb_master.branch_info_t),
+        .branch_info1(fb_master.branch_info),
         .branch_info2
     );
 endmodule

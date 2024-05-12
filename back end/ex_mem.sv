@@ -1,4 +1,4 @@
-`include "pipeline_types.sv"
+`timescale 1ns / 1ps
 
 module ex_mem 
     import pipeline_types::*;

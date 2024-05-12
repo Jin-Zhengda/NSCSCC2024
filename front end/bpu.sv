@@ -19,7 +19,6 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 `define InstBus 31:0
-`include "pipeline_types.sv"
 
 module bpu
 import pipeline_types::*;
@@ -30,7 +29,7 @@ import pipeline_types::*;
     input logic stall,
     
     
-    input pc_out pc_i,
+    input pc_out_t pc_i,
     input logic [`InstBus] inst_1_i,
     input logic [`InstBus] inst_2_i,
     input logic inst_en_1,

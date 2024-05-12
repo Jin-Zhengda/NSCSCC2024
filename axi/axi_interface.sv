@@ -1,4 +1,4 @@
-module my_axi_interface(
+module axi_interface(
     input                   logic                   clk,
     input                   logic                   resetn,     // 低有效
     input                   logic                   flush,

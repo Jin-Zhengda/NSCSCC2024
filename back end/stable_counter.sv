@@ -1,4 +1,4 @@
-`include "pipeline_types.sv"
+`timescale 1ns / 1ps
 
 module stable_counter 
     import pipeline_types::bus64_t;

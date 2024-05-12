@@ -1,5 +1,6 @@
 typedef logic[31:0] bus32_t;
 typedef logic[255:0] bus256_t;
+`timescale 1ns / 1ps
 
 
 `define ADDR_SIZE 32
@@ -24,7 +25,7 @@ module dcache (
     input logic reset,
 
     mem_dcache mem2dcache,
-    output logic stall,//比interface.sv里面的多了这个信号，你可以不接
+    // output logic stall,//比interface.sv里面的多了这个信号，你可以不接
 
 
     output logic rd_req,//读请求有效
@@ -42,7 +43,7 @@ module dcache (
 
 );
 
-//wire stall;
+logic stall;
 
 
 //TLB转换(未实现)
