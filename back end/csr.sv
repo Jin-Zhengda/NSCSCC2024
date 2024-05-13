@@ -20,7 +20,35 @@ module csr
     ctrl_csr ctrl_slave,
 
     output logic [1:0] CRMD_PLV,
-    output logic LLbit
+    output logic LLbit,
+
+
+    output logic[31:0] csr_crmd_diff,
+    output logic[31:0] csr_prmd_diff,
+    output logic[31:0] csr_ectl_diff,
+    output logic[31:0] csr_estat_diff,
+    output logic[31:0] csr_era_diff,
+    output logic[31:0] csr_badv_diff,
+    output logic[31:0] csr_eentry_diff,
+    output logic[31:0] csr_tlbidx_diff,
+    output logic[31:0] csr_tlbehi_diff,
+    output logic[31:0] csr_tlbelo0_diff,
+    output logic[31:0] csr_tlbelo1_diff,
+    output logic[31:0] csr_asid_diff,
+    output logic[31:0] csr_save0_diff,
+    output logic[31:0] csr_save1_diff,
+    output logic[31:0] csr_save2_diff,
+    output logic[31:0] csr_save3_diff,
+    output logic[31:0] csr_tid_diff,
+    output logic[31:0] csr_tcfg_diff,
+    output logic[31:0] csr_tval_diff,
+    output logic[31:0] csr_ticlr_diff,
+    output logic[31:0] csr_llbctl_diff,
+    output logic[31:0] csr_tlbrentry_diff,
+    output logic[31:0] csr_dmw0_diff,
+    output logic[31:0] csr_dmw1_diff,
+    output logic[31:0] csr_pgdl_diff,
+    output logic[31:0] csr_pgdh_diff
 );
 
     bus32_t crmd;
@@ -32,9 +60,9 @@ module csr
     bus32_t badv;
     bus32_t eentry;
     bus32_t tlbidx;
-    bus32_t tlbhi;
-    bus32_t tlblo0;
-    bus32_t tlblo1;
+    bus32_t tlbehi;
+    bus32_t tlbelo0;
+    bus32_t tlbelo1;
     bus32_t asid;
     bus32_t pgdl;
     bus32_t pgdh;
@@ -53,6 +81,33 @@ module csr
     bus32_t ctag;
     bus32_t dmw0;
     bus32_t dmw1;
+
+    assign csr_crmd_diff        = crmd;
+    assign csr_prmd_diff        = prmd;
+    assign csr_ectl_diff        = ecfg;
+    assign csr_estat_diff       = estat;
+    assign csr_era_diff         = era;
+    assign csr_badv_diff        = badv;
+    assign csr_eentry_diff      = eentry;
+    assign csr_tlbidx_diff      = tlbidx;
+    assign csr_tlbehi_diff      = tlbehi;
+    assign csr_tlbelo0_diff     = tlbelo0;
+    assign csr_tlbelo1_diff     = tlbelo1;
+    assign csr_asid_diff        = asid;
+    assign csr_save0_diff       = save0;
+    assign csr_save1_diff       = save1;
+    assign csr_save2_diff       = save2;
+    assign csr_save3_diff       = save3;
+    assign csr_tid_diff         = tid;
+    assign csr_tcfg_diff        = tcfg;
+    assign csr_tval_diff        = tval;
+    assign csr_ticlr_diff       = ticlr;
+    assign csr_llbctl_diff      = llbctl[31:1];
+    assign csr_tlbrentry_diff   = tlbrentry;
+    assign csr_dmw0_diff        = dmw0;
+    assign csr_dmw1_diff        = dmw1;
+    assign csr_pgdl_diff        = pgdl;
+    assign csr_pgdh_diff        = pgdh;
 
     logic is_ti;
 
@@ -141,74 +196,8 @@ module csr
             estat <= 32'b0;
         end 
         else if (ctrl_slave.is_exception) begin
-            case (ctrl_slave.exception_cause)
-                `EXCEPTION_INT: begin
-                    estat[21: 16] <= 6'h0;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_PIL: begin
-                    estat[21: 16] <= 6'h1;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_PIS: begin
-                    estat[21: 16] <= 6'h2;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_PIF: begin
-                    estat[21: 16] <= 6'h3;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_PME: begin
-                    estat[21: 16] <= 6'h4;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_PPI: begin
-                    estat[21: 16] <= 6'h7;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_ADEF: begin
-                    estat[21: 16] <= 6'h8;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_ADEM: begin
-                    estat[21: 16] <= 6'h8;
-                    estat[30: 22] <= 9'b1;
-                end
-                `EXCEPTION_ALE: begin
-                    estat[21: 16] <= 6'h9;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_SYS: begin
-                    estat[21: 16] <= 6'hb;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_BRK: begin
-                    estat[21: 16] <= 6'hc;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_INE: begin
-                    estat[21: 16] <= 6'hd;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_IPE: begin
-                    estat[21: 16] <= 6'he;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_FPD: begin
-                    estat[21: 16] <= 6'hf;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_FPE: begin
-                    estat[21: 16] <= 6'h12;
-                    estat[30: 22] <= 9'b0;
-                end
-                `EXCEPTION_TLBR: begin
-                    estat[21: 16] <= 6'h3f;
-                    estat[30: 22] <= 9'b0;
-                end
-                default: begin
-                end 
-            endcase
+            estat[21: 16] <= ctrl_slave.ecode;
+            estat[31: 22] <= ctrl_slave.esubcode;
         end
         else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_ESTAT) begin
             estat[1: 0] <= wb_i.csr_write_data[1: 0];

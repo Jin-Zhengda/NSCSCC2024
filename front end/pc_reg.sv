@@ -85,6 +85,7 @@ import pipeline_types::*;
                                 {4{`EXCEPTION_NOP}}};
 
         if(rst) begin
+            // pc.pc_o_1 <= 32'h1bfffffc;
             pc.pc_o_1 <= 32'hfc;
             pc.pc_o_2 <= 32'h104;
         end

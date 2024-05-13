@@ -8,10 +8,13 @@ module regfile
 
     input data_write_t data_write,
 
-    dispatch_regfile slave
+    dispatch_regfile slave,
+
+    output logic [31: 0] regs_diff [31: 0]
 );
 
-    logic [31: 0] regs [0: 31];
+    logic [31: 0] regs [31: 0];
+    assign regs_diff = regs;
 
     always_ff @(posedge clk) begin
         if (!rst) begin
