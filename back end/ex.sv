@@ -19,6 +19,14 @@ module ex
 
     ex_div div_master
 );
+
+    assign ex_mem.st_paddr = ex_mem.mem_addr;
+    assign ex_mem.st_vaddr = ex_mem.mem_addr;
+    assign ex_mem.st_data = dcache_master.wdata;
+
+    assign ex_mem.ld_paddr = ex_mem.mem_addr;
+    assign ex_mem.ld_vaddr = ex_mem.mem_addr;
+
     assign ex_mem.pc = dispatch_ex.pc;
     assign ex_mem.inst = dispatch_ex.inst;
     assign ex_mem.aluop = dispatch_ex.aluop;
@@ -45,6 +53,11 @@ module ex
             LLbit_current = LLbit;
         end
     end
+
+    assign ex_mem.inst_st_en = {4'b0, (LLbit_current && (dispatch_ex.aluop == `ALU_SCW)),dispatch_ex.aluop == `ALU_STW, 
+                            dispatch_ex.aluop == `ALU_STH, dispatch_ex.aluop == `ALU_STB};
+    assign ex_mem.inst_ld_en = {2'b0, dispatch_ex.aluop == `ALU_LLW, dispatch_ex.aluop == `ALU_LDW, dispatch_ex.aluop == `ALU_LDHU,
+                            dispatch_ex.aluop == `ALU_LDH, dispatch_ex.aluop == `ALU_LDBU, dispatch_ex.aluop == `ALU_LDB};
     
     logic[11: 0] si12;
     logic[13: 9] si14;

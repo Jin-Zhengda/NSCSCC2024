@@ -169,6 +169,15 @@ package pipeline_types;
         bus32_t csr_write_data;
         bus32_t csr_mask;
         logic is_llw_scw;
+
+        logic[7: 0] inst_st_en;
+        bus32_t st_paddr;
+        bus32_t st_vaddr;
+        bus32_t st_data;
+
+        logic[7: 0] inst_ld_en;
+        bus32_t ld_paddr;
+        bus32_t ld_vaddr;
     } ex_mem_t;
 
     typedef struct packed {

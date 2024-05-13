@@ -44,33 +44,114 @@ module ctrl
  
     assign ctrl_pc.is_interrupt = (int_vec != 12'b0) ? 1'b1 : 1'b0;
 
+    exception_cause_t exception_cause;
+
     always_comb begin: exception
         if (mem_i.pc != 32'hfc && mem_i.is_exception != 6'b0) begin
             master.is_exception = 1'b1;
             if (mem_i.is_exception[5]) begin
-                master.exception_cause = mem_i.exception_cause[5];
+                exception_cause = mem_i.exception_cause[5];
             end
             else if (mem_i.is_exception[4]) begin
-                master.exception_cause = mem_i.exception_cause[4];
+                exception_cause = mem_i.exception_cause[4];
             end 
             else if (mem_i.is_exception[3]) begin
-                master.exception_cause = mem_i.exception_cause[3];
+                exception_cause = mem_i.exception_cause[3];
             end
             else if (mem_i.is_exception[2]) begin
-                master.exception_cause = mem_i.exception_cause[2];
+                exception_cause = mem_i.exception_cause[2];
             end
             else if (mem_i.is_exception[1]) begin
-                master.exception_cause = mem_i.exception_cause[1];
+                exception_cause = mem_i.exception_cause[1];
             end
             else if (mem_i.is_exception[0]) begin
-                master.exception_cause = mem_i.exception_cause[0];
+                exception_cause = mem_i.exception_cause[0];
+            end
+            else begin
+                exception_cause = `EXCEPTION_NOP;
             end
         end
         else begin
             master.is_exception = 1'b0;
-            master.exception_cause = `EXCEPTION_NOP;
+            exception_cause = `EXCEPTION_NOP;
         end
     end
+
+    assign master.exception_cause = exception_cause;
+
+    always_comb begin 
+        case (exception_cause)
+            `EXCEPTION_INT: begin
+                master.ecode = 6'h0;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_PIL: begin
+                master.ecode = 6'h1;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_PIS: begin
+                master.ecode = 6'h2;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_PIF: begin
+                master.ecode = 6'h3;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_PME: begin
+                master.ecode = 6'h4;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_PPI: begin
+                master.ecode = 6'h7;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_ADEF: begin
+                master.ecode = 6'h8;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_ADEM: begin
+                master.ecode = 6'h8;
+                master.esubcode = 9'b1;
+            end
+            `EXCEPTION_ALE: begin
+                master.ecode = 6'h9;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_SYS: begin
+                master.ecode = 6'hb;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_BRK: begin
+                master.ecode = 6'hc;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_INE: begin
+                master.ecode = 6'hd;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_IPE: begin
+                master.ecode = 6'he;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_FPD: begin
+                master.ecode = 6'hf;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_FPE: begin
+                master.ecode = 6'h12;
+                master.esubcode = 9'b0;
+            end
+            `EXCEPTION_TLBR: begin
+                master.ecode = 6'h3f;
+                master.esubcode = 9'b0;
+            end
+            default: begin
+                master.ecode = 6'h0;
+                master.esubcode = 9'b0;
+            end 
+        endcase
+    end
+
 
     logic pause_idle;
 

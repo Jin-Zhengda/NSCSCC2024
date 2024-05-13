@@ -111,7 +111,7 @@ module core_top (
     wire[2: 0] dcache_rd_type;
 
 
-        // difftest
+    // difftest
     // from wb_stage
     wire            ws_valid_diff       ;
     wire            cnt_inst_diff       ;
@@ -125,6 +125,11 @@ module core_top (
     wire    [31:0]  st_data_diff        ;
     wire            csr_rstat_en_diff   ;
     wire    [31:0]  csr_data_diff       ;
+    wire            excp_flush          ;
+    wire            ertn_flush          ;
+    wire    [5: 0]  ws_csr_ecode        ;
+    wire            tlbfill_en          ;
+    wire    [ 4:0]  rand_index          ;
 
     wire inst_valid_diff = ws_valid_diff;
     reg             cmt_valid           ;
@@ -224,7 +229,49 @@ module core_top (
         .cnt_inst_diff(cnt_inst_diff),
         .csr_rstat_en_diff(csr_rstat_en_diff),
         .csr_data_diff(csr_data_diff),
-        .timer_64_diff(timer_64_diff)
+        .timer_64_diff(timer_64_diff),
+
+        .inst_st_en_diff(inst_st_en_diff),
+        .st_paddr_diff(st_paddr_diff),
+        .st_vaddr_diff(st_vaddr_diff),
+        .st_data_diff(st_data_diff),
+
+        .inst_ld_en_diff(inst_ld_en_diff),
+        .ld_paddr_diff(ld_paddr_diff),
+        .ld_vaddr_diff(ld_vaddr_diff),
+
+        .excp_flush(excp_flush),
+        .ertn_flush(ertn_flush),
+        .ecode(ws_csr_ecode),
+
+        .regs_diff(regs),
+
+        .csr_crmd_diff      (csr_crmd_diff_0    ),
+        .csr_prmd_diff      (csr_prmd_diff_0    ),
+        .csr_ectl_diff      (csr_ectl_diff_0    ),
+        .csr_estat_diff     (csr_estat_diff_0   ),
+        .csr_era_diff       (csr_era_diff_0     ),
+        .csr_badv_diff      (csr_badv_diff_0    ),
+        .csr_eentry_diff    (csr_eentry_diff_0  ),
+        .csr_tlbidx_diff    (csr_tlbidx_diff_0  ),
+        .csr_tlbehi_diff    (csr_tlbehi_diff_0  ),
+        .csr_tlbelo0_diff   (csr_tlbelo0_diff_0 ),
+        .csr_tlbelo1_diff   (csr_tlbelo1_diff_0 ),
+        .csr_asid_diff      (csr_asid_diff_0    ),
+        .csr_save0_diff     (csr_save0_diff_0   ),
+        .csr_save1_diff     (csr_save1_diff_0   ),
+        .csr_save2_diff     (csr_save2_diff_0   ),
+        .csr_save3_diff     (csr_save3_diff_0   ),
+        .csr_tid_diff       (csr_tid_diff_0     ),
+        .csr_tcfg_diff      (csr_tcfg_diff_0    ),
+        .csr_tval_diff      (csr_tval_diff_0    ),
+        .csr_ticlr_diff     (csr_ticlr_diff_0   ),
+        .csr_llbctl_diff    (csr_llbctl_diff_0  ),
+        .csr_tlbrentry_diff (csr_tlbrentry_diff_0),
+        .csr_dmw0_diff      (csr_dmw0_diff_0    ),
+        .csr_dmw1_diff      (csr_dmw1_diff_0    ),
+        .csr_pgdl_diff      (csr_pgdl_diff_0    ),
+        .csr_pgdh_diff      (csr_pgdh_diff_0    )
     );
 
     cache_axi u_cache_axi (
@@ -374,7 +421,7 @@ module core_top (
         cmt_inst    <=  debug0_wb_inst              ;
 
         cmt_excp_flush  <= excp_flush               ;
-        cmt_ertn        <= excp_flush               ;
+        cmt_ertn        <= ertn_flush               ;
         cmt_csr_ecode   <= ws_csr_ecode             ;
         cmt_tlbfill_en  <= tlbfill_en               ;
         cmt_rand_index  <= rand_index               ;

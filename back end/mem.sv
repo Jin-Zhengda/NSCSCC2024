@@ -19,11 +19,28 @@ module mem
     output mem_ctrl_t mem_ctrl,
     output logic is_syscall_break,
 
-    output logic cnt_inst,
-    output logic[63: 0] timer_64,
-    output logic csr_rstat_en,
-    output logic[31: 0] csr_data
+    output logic cnt_inst_diff,
+    output logic[63: 0] timer_64_diff,
+    output logic csr_rstat_en_diff,
+    output logic[31: 0] csr_data_diff,
+
+    output logic[7: 0] inst_st_en_diff,
+    output logic[31: 0] st_paddr_diff,
+    output logic[31: 0] st_vaddr_diff,
+    output logic[31: 0] st_data_diff,
+
+    output logic[7: 0] inst_ld_en_diff,
+    output logic[31: 0] ld_paddr_diff,
+    output logic[31: 0] ld_vaddr_diff
 );
+    assign inst_st_en_diff = ex_mem.inst_st_en;
+    assign st_paddr_diff = ex_mem.st_paddr;
+    assign st_vaddr_diff = ex_mem.st_vaddr;
+    assign st_data_diff = ex_mem.st_data;
+
+    assign inst_ld_en_diff = ex_mem.inst_ld_en;
+    assign ld_paddr_diff = ex_mem.ld_paddr;
+    assign ld_vaddr_diff = ex_mem.ld_vaddr;
 
     assign mem_ctrl.pc = ex_mem.pc;
     assign mem_wb.pc = ex_mem.pc;
@@ -190,20 +207,20 @@ module mem
             end
             `ALU_RDCNTID: begin
                 mem_wb.data_write.write_data = csr_read_data;
-                cnt_inst = 1'b1;
+                cnt_inst_diff = 1'b1;
             end
             `ALU_RDCNTVLW: begin
                 mem_wb.data_write.write_data = cnt[31: 0];
-                cnt_inst = 1'b1;
+                cnt_inst_diff = 1'b1;
             end
             `ALU_RDCNTVHW: begin
                 mem_wb.data_write.write_data = cnt[63: 32];
-                cnt_inst = 1'b1;
+                cnt_inst_diff = 1'b1;
             end
             default: begin
                 mem_wb.data_write.write_data = ex_mem.reg_write_data;
                 pause_uncache = 1'b0;
-                cnt_inst = 1'b0;
+                cnt_inst_diff = 1'b0;
             end 
         endcase
     end
@@ -211,10 +228,10 @@ module mem
     assign mem_wb.csr_write.csr_write_data = (ex_mem.aluop == `ALU_CSRXCHG) ? 
                                         ((csr_read_data & !ex_mem.csr_mask) | (ex_mem.csr_write_data & ex_mem.csr_mask)): ex_mem.csr_write_data;
     
-    assign csr_rstat_en = (ex_mem.aluop == `ALU_CSRXCHG || ex_mem.aluop == `ALU_CSRRD || ex_mem.aluop == `ALU_CSRWR) && (csr_master.csr_read_addr == `CSR_ESTAT || csr_master.csr_write_addr == `CSR_ESTAT)
+    assign csr_rstat_en_diff = (ex_mem.aluop == `ALU_CSRXCHG || ex_mem.aluop == `ALU_CSRRD || ex_mem.aluop == `ALU_CSRWR) && (csr_master.csr_read_addr == `CSR_ESTAT || mem_wb.csr_write.csr_write_addr == `CSR_ESTAT)
                             ? 1'b1 : 1'b0;
     
-    assign csr_data = csr_rstat_en ? csr_read_data: 32'b0;
+    assign csr_data_diff = csr_rstat_en_diff ? csr_read_data: 32'b0;
 
-    assign timer_64 = cnt;
+    assign timer_64_diff = cnt;
 endmodule
