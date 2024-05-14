@@ -1,21 +1,21 @@
-module axi_interface (
-    input logic clk,
-    input logic resetn,  // 低有效
-    input logic flush,
+module axi_interface(
+    input                   logic                   clk,
+    input                   logic                   resetn,     // 低有效
+    input                   logic                   flush,      // 给定值0，忽略该信号
     // input                   logic [5:0]             stall,
     // output                  logic                   stallreq, // Stall请求
 
     // Cache接口
-    input logic cache_ce,  // axi_ce_o
-    input logic cache_wen,  // axi_wen_o
-    input logic cache_ren,  // axi_ren_o
-    input wire [3:0] cache_wsel,  // wstrb????? 或许接dcache的wr_strb?
-    input logic [31:0] cache_raddr,  // axi_raddr_o
-    input logic [31:0] cache_waddr,  // axi_waddr_o
-    input logic [31:0] cache_wdata,  // axi_wdata_o
-    input logic cache_rready,  // Cache读准备好      axi_rready_o
-    input logic cache_wvalid,  // Cache写数据准备好  axi_wvalid_o
-    input logic cache_wlast,  // Cache写最后一个数据 axi_wlast_o
+    input                   logic                   cache_ce,   // axi_ce_o
+    input                   logic                   cache_wen,  // axi_wen_o
+    input                   logic                   cache_ren,  // axi_ren_o
+    input wire [3:0]         cache_wsel,         // wstrb????? 或许接dcache的wr_strb?
+    input   logic [31:0]      cache_raddr,       // axi_raddr_o
+    input   logic [31:0]      cache_waddr,       // axi_waddr_o
+    input   logic [31:0]     cache_wdata,        // axi_wdata_o
+    input                   logic                   cache_rready, // Cache读准备好      axi_rready_o
+    input                   logic                   cache_wvalid, // Cache写数据准备好  axi_wvalid_o
+    input                   logic                   cache_wlast,  // Cache写最后一个数据 axi_wlast_o
     output                  logic                   wdata_resp_o, // 写响应信号，每个beat发一次，成功则可以传下一数据   wdata_resp_i
 
     // AXI接口

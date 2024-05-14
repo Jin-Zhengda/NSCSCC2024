@@ -58,36 +58,6 @@ module cache_axi(
     assign axi_ce_o = rst ? 1'b0 : 1'b1;
 
     ///////////////////////////////////////////////////////////////
-    //////////////////////keep data(MASK)//////////////////////////
-    ///////////////////////////////////////////////////////////////
-
-    // ICache: Read Channel
-    logic [31:0]  inst_araddr_2;
-
-    // DCache: Read Channel
-    logic [31:0]  data_araddr_2;
-
-    // DCache: Write Channel
-    logic [255:0]  data_wdata_2;
-    logic [31:0]  data_awaddr_2;
-
-    always_ff @(posedge clk) begin
-        if (rst) begin
-            inst_araddr_2 <= '0;
-            data_araddr_2 <= '0;
-            data_wdata_2 <= '0;
-            data_awaddr_2 <= '0;
-        end else begin
-            if (read_state == STATE_READ_DCACHE || read_state == STATE_READ_ICACHE)
-                inst_araddr_2 <= inst_araddr_i; 
-            if (write_state == STATE_WRITE_BUSY) begin
-                data_wdata_2  <= data_wdata_i;     
-                data_awaddr_2 <= data_awaddr_i;
-            end
-        end
-    end
-
-    ///////////////////////////////////////////////////////////////
     //////////////////////////Main Body////////////////////////////
     ///////////////////////////////////////////////////////////////
 
@@ -145,10 +115,11 @@ module cache_axi(
     // AXI
     assign axi_ren_o   = (read_state == STATE_READ_FREE) ? 1'b0 : 1'b1;
     assign axi_rready_o = axi_ren_o; // ready when starts reading
+    
     // 如果突发长度为8的话，按道理是cpu给的地址直接低五位置0就行了，这样实现的话应该也不影响(应该还能算是可以适应突发长度改变的情况)
     // 后面七个地址会被直接忽略了，如果真的出bug了记得关注这个地方
-    assign axi_raddr_o = (read_state == STATE_READ_DCACHE) ? {data_araddr_2[31:5], read_count, 2'b00} : 
-                         (read_state == STATE_READ_ICACHE) ? {inst_araddr_2[31:5], read_count, 2'b00} :
+    assign axi_raddr_o = (read_state == STATE_READ_DCACHE) ? {data_araddr_i[31:5], read_count, 2'b00} : 
+                         (read_state == STATE_READ_ICACHE) ? {inst_araddr_i[31:5], read_count, 2'b00} :
                          32'h0;
 
     // ICache/DCache
@@ -204,7 +175,7 @@ module cache_axi(
 
     // 如果突发长度为8的话，按道理是cpu给的地址直接低五位置0就行了，这样实现的话应该也不影响(应该还能算是可以适应突发长度改变的情况)
     // 后面七个地址会被直接忽略了，如果真的出bug了记得关注这个地方
-    assign axi_waddr_o  = {data_awaddr_2[31:5], write_count, 2'b00};
+    assign axi_waddr_o  = {data_awaddr_i[31:5], write_count, 2'b00};
     assign axi_wlast_o  = (write_state == STATE_WRITE_BUSY && write_count == 3'h7) ? 1'b1 : 1'b0; // write last word
     
     // DCache
@@ -214,18 +185,16 @@ module cache_axi(
 
     always_comb begin
         case (write_count)
-            3'h0: axi_wdata_o <= data_wdata_2[32*1-1:32*0];
-            3'h1: axi_wdata_o <= data_wdata_2[32*2-1:32*1];
-            3'h2: axi_wdata_o <= data_wdata_2[32*3-1:32*2];
-            3'h3: axi_wdata_o <= data_wdata_2[32*4-1:32*3];
-            3'h4: axi_wdata_o <= data_wdata_2[32*5-1:32*4];
-            3'h5: axi_wdata_o <= data_wdata_2[32*6-1:32*5];
-            3'h6: axi_wdata_o <= data_wdata_2[32*7-1:32*6];
-            3'h7: axi_wdata_o <= data_wdata_2[32*8-1:32*7];
+            3'h0: axi_wdata_o <= data_wdata_i[32*1-1:32*0];
+            3'h1: axi_wdata_o <= data_wdata_i[32*2-1:32*1];
+            3'h2: axi_wdata_o <= data_wdata_i[32*3-1:32*2];
+            3'h3: axi_wdata_o <= data_wdata_i[32*4-1:32*3];
+            3'h4: axi_wdata_o <= data_wdata_i[32*5-1:32*4];
+            3'h5: axi_wdata_o <= data_wdata_i[32*6-1:32*5];
+            3'h6: axi_wdata_o <= data_wdata_i[32*7-1:32*6];
+            3'h7: axi_wdata_o <= data_wdata_i[32*8-1:32*7];
             default: axi_wdata_o <= 32'h0;
         endcase
     end
 
 endmodule
-
-
