@@ -6,15 +6,15 @@ module addr_trans
 )
 (
     input                  clk                  ,
-    input  [ 9:0]          asid                 ,
+    input  [ 9:0]          asid                 ,//CSR.ASID信息
     //trans mode
-    input                  inst_addr_trans_en   ,//指令地址转换使能
+    input                  inst_addr_trans_en   ,//指令地址转换使能，assign inst_addr_trans_en = pg_mode && !dmw0_en && !dmw1_en;assign pg_mode = csr_pg && !csr_da;
     input                  data_addr_trans_en   ,//数据地址转换使能
     //inst addr trans
-    input                  inst_fetch           ,//指令地址转换信息有效的信号
+    input                  inst_fetch           ,//指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
     input  [31:0]          inst_vaddr           ,//指令的虚拟地址
-    input                  inst_dmw0_en         ,//使用dmw0翻译地址
-    input                  inst_dmw1_en         ,//使用dmw1翻译地址
+    input                  inst_dmw0_en         ,//使用dmw0翻译地址assign dmw0_en = ((csr_dmw0[`PLV0] && csr_plv == 2'd0) || (csr_dmw0[`PLV3] && csr_plv == 2'd3)) && (fs_pc[31:29] == csr_dmw0[`VSEG]) && pg_mode;
+    input                  inst_dmw1_en         ,//使用dmw1翻译地址assign dmw1_en = ((csr_dmw1[`PLV0] && csr_plv == 2'd0) || (csr_dmw1[`PLV3] && csr_plv == 2'd3)) && (fs_pc[31:29] == csr_dmw1[`VSEG]) && pg_mode;
     output [ 7:0]          inst_index           ,//指令物理地址的index部分
     output [19:0]          inst_tag             ,//指令物理地址的tag部分
     output [ 3:0]          inst_offset          ,//指令物理地址的offset部分
@@ -42,7 +42,7 @@ module addr_trans
     input                  tlbfill_en           ,
     input                  tlbwr_en             ,
     input  [ 4:0]          rand_index           ,
-    input  [31:0]          tlbehi_in            ,
+    input  [31:0]          tlbehi_in            ,//CSR.TLBEHI信息
     input  [31:0]          tlbelo0_in           ,
     input  [31:0]          tlbelo1_in           ,
     input  [31:0]          tlbidx_in            , 
@@ -53,7 +53,7 @@ module addr_trans
     output [31:0]          tlbelo1_out          ,
     output [31:0]          tlbidx_out           ,
     output [ 9:0]          asid_out             ,
-    //invtlb 
+    //invtlb ——用于实现无效tlb的指令
     input                  invtlb_en            ,
     input  [ 9:0]          invtlb_asid          ,
     input  [18:0]          invtlb_vpn           ,
