@@ -19,6 +19,7 @@ module dispatch
 );
     assign dispatch_ex.pc = id_dispatch.pc; 
     assign dispatch_ex.inst = id_dispatch.inst;
+    assign dispatch_ex.inst_valid = id_dispatch.inst_valid;
     assign dispatch_ex.cacop_code = id_dispatch.cacop_code;
 
     assign dispatch_ex.is_exception = id_dispatch.is_exception;

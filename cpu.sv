@@ -87,17 +87,17 @@ module cpu
 
     mem_dcache mem_dcache_io();
     pc_icache pc_icache_io();
+    frontend_backend fb();
 
-
-    cpu_core u_cpu_core (
+    backend u_backend (
         .clk,
         .rst,
-        
-        .icache_master(pc_icache_io.master),
+
+        .continue_idle(1'b0),
+
         .dcache_master(mem_dcache_io.master),
+        .fb_slave(fb.slave),
         .cache_inst(cache_inst),
-        .ctrl(ctrl),
-        .branch_flush(branch_flush),
 
         .debug0_wb_pc,
         .debug0_wb_rf_wen,
@@ -152,6 +152,17 @@ module cpu
         .csr_dmw1_diff,
         .csr_pgdl_diff,
         .csr_pgdh_diff
+    );
+
+    assign branch_flush = fb.update_info.branch_flush;
+    assign ctrl = fb.ctrl;
+
+    frontend_top u_frontend_top (
+        .clk,
+        .rst,
+        
+        .pi_master(pc_icache_io.master),
+        .fb_master(fb.master)
     );
 
     icache u_icache (
