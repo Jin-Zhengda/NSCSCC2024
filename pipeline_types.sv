@@ -83,6 +83,7 @@ package pipeline_types;
 
         logic[5: 0] is_exception;
         logic[5: 0][6: 0] exception_cause;
+        logic inst_valid;
 
         alu_op_t aluop;
         alu_sel_t alusel;
@@ -129,6 +130,7 @@ package pipeline_types;
 
         logic[5: 0] is_exception;
         logic[5: 0][6: 0] exception_cause;
+        logic inst_valid;
 
         alu_op_t aluop;
         alu_sel_t alusel;
@@ -154,6 +156,7 @@ package pipeline_types;
 
         logic[5: 0] is_exception;
         logic[5: 0][6: 0] exception_cause;
+        logic inst_valid;
 
         logic reg_write_en;
         reg_addr_t reg_write_addr;
@@ -196,6 +199,7 @@ package pipeline_types;
     typedef struct packed {
         bus32_t pc;
         bus32_t inst;
+        logic inst_valid;
         data_write_t data_write;
         csr_write_t csr_write;
     } mem_wb_t;

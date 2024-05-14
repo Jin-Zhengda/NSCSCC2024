@@ -2,7 +2,7 @@
 `include "csr_defines.sv"
 `timescale 1ns / 1ps
 
-module ctrl 
+module ctrl
     import pipeline_types::*;
 (
     input pause_t pause_request,
@@ -22,8 +22,8 @@ module ctrl
 
     bus32_t EEBTRY_VA_current;
     bus32_t ERA_PC_current;
-    logic[11: 0] ECFG_LIE_current;
-    logic[11: 0] ESTAT_IS_current;
+    logic [11:0] ECFG_LIE_current;
+    logic [11:0] ESTAT_IS_current;
     logic CRMD_IE_current;
 
     assign ERA_PC_current = (wb_push_forward.csr_write_en && (wb_push_forward.csr_write_addr == `CSR_ERA)) ? wb_push_forward.csr_write_data : master.ERA_PC;
@@ -32,46 +32,39 @@ module ctrl
     assign ESTAT_IS_current = (wb_push_forward.csr_write_en && (wb_push_forward.csr_write_addr == `CSR_ESTAT)) ? {wb_push_forward.csr_write_data[12: 11], wb_push_forward.csr_write_data[9: 0]} : master.ESTAT_IS;
     assign CRMD_IE_current = (wb_push_forward.csr_write_en && (wb_push_forward.csr_write_addr == `CSR_CRMD)) ? wb_push_forward.csr_write_data[2] : master.CRMD_IE;
 
-    assign ctrl_pc.exception_new_pc = (mem_i.is_ertn) ? ERA_PC_current: EEBTRY_VA_current;
+    assign ctrl_pc.exception_new_pc = (mem_i.is_ertn) ? ERA_PC_current : EEBTRY_VA_current;
     assign ctrl_o.exception_flush = (mem_i.is_exception != 6'b0 || mem_i.is_ertn) ? 1'b1 : 1'b0;
 
     assign master.exception_pc = mem_i.pc;
     assign master.exception_addr = mem_i.exception_addr;
 
-    logic[11: 0] int_vec;
+    logic [11:0] int_vec;
 
-    assign int_vec = CRMD_IE_current ? ECFG_LIE_current & ESTAT_IS_current: 12'b0;
- 
+    assign int_vec = CRMD_IE_current ? ECFG_LIE_current & ESTAT_IS_current : 12'b0;
+
     assign ctrl_pc.is_interrupt = (int_vec != 12'b0) ? 1'b1 : 1'b0;
 
     exception_cause_t exception_cause;
 
-    always_comb begin: exception
-        if (mem_i.pc != 32'hfc && mem_i.is_exception != 6'b0) begin
+    always_comb begin : exception
+        if (mem_i.pc != 32'hfc && mem_i.pc != 32'b0 && mem_i.is_exception != 6'b0) begin
             master.is_exception = 1'b1;
             if (mem_i.is_exception[5]) begin
                 exception_cause = mem_i.exception_cause[5];
-            end
-            else if (mem_i.is_exception[4]) begin
+            end else if (mem_i.is_exception[4]) begin
                 exception_cause = mem_i.exception_cause[4];
-            end 
-            else if (mem_i.is_exception[3]) begin
+            end else if (mem_i.is_exception[3]) begin
                 exception_cause = mem_i.exception_cause[3];
-            end
-            else if (mem_i.is_exception[2]) begin
+            end else if (mem_i.is_exception[2]) begin
                 exception_cause = mem_i.exception_cause[2];
-            end
-            else if (mem_i.is_exception[1]) begin
+            end else if (mem_i.is_exception[1]) begin
                 exception_cause = mem_i.exception_cause[1];
-            end
-            else if (mem_i.is_exception[0]) begin
+            end else if (mem_i.is_exception[0]) begin
                 exception_cause = mem_i.exception_cause[0];
-            end
-            else begin
+            end else begin
                 exception_cause = `EXCEPTION_NOP;
             end
-        end
-        else begin
+        end else begin
             master.is_exception = 1'b0;
             exception_cause = `EXCEPTION_NOP;
         end
@@ -79,7 +72,7 @@ module ctrl
 
     assign master.exception_cause = exception_cause;
 
-    always_comb begin 
+    always_comb begin
         case (exception_cause)
             `EXCEPTION_INT: begin
                 master.ecode = 6'h0;
@@ -148,7 +141,7 @@ module ctrl
             default: begin
                 master.ecode = 6'h0;
                 master.esubcode = 9'b0;
-            end 
+            end
         endcase
     end
 
@@ -159,28 +152,23 @@ module ctrl
 
     // pause[0] PC, pause[1] icache, pause[2] instbuffer, pause[3] id
     // pause[4] dispatch, pause[5] ex, pause[6] mem, pause[7] wb
-    always_comb begin: pause_ctrl
+    always_comb begin : pause_ctrl
         if (pause_request.pause_if) begin
-            ctrl_o.pause = 7'b00000001;
-        end
-        else if (pause_request.pause_id) begin
-            ctrl_o.pause = 7'b00001111;
-        end
-        else if (pause_request.pause_dispatch) begin
-            ctrl_o.pause = 7'b00011111;
-        end
-        else if (pause_request.pause_ex) begin
-            ctrl_o.pause = 7'b00111111;
-        end
-        else if (pause_request.pause_mem || pause_idle) begin
-            ctrl_o.pause = 7'b01111111;
-        end
-        else begin
-            ctrl_o.pause = 7'b0;
+            ctrl_o.pause = 8'b00000001;
+        end else if (pause_request.pause_id) begin
+            ctrl_o.pause = 8'b00001111;
+        end else if (pause_request.pause_dispatch) begin
+            ctrl_o.pause = 8'b00011111;
+        end else if (pause_request.pause_ex) begin
+            ctrl_o.pause = 8'b00111111;
+        end else if (pause_request.pause_mem || pause_idle) begin
+            ctrl_o.pause = 8'b01111111;
+        end else begin
+            ctrl_o.pause = 8'b0;
         end
     end
 
     assign send_inst1_en = ctrl_o.pause[2] ? 1'b0 : 1'b1;
 
-    
+
 endmodule

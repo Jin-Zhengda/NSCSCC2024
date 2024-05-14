@@ -1,7 +1,6 @@
-`timescale 1ns/1ps
+`timescale 1ns / 1ps
 
-module testbench (
-);
+module testbench ();
 
     logic CLOCK_50;
     logic rst;
@@ -28,5 +27,5 @@ module testbench (
         #100 continue_idle = 1'b0;
         #100 $finish;
     end
-    
+
 endmodule

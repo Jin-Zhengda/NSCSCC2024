@@ -8,28 +8,24 @@ module dispatch_ex
 
     input ctrl_t ctrl,
 
-    input dispatch_ex_t dispatch_i,
+    input  dispatch_ex_t dispatch_i,
     output dispatch_ex_t ex_o
 );
 
     always_ff @(posedge clk) begin
         if (rst) begin
             ex_o <= 0;
-        end
-        else if (ctrl.exception_flush) begin
+        end else if (ctrl.exception_flush) begin
             ex_o <= 0;
-        end
-        else if (ctrl.pause[4] && !ctrl.pause[5]) begin
+        end else if (ctrl.pause[4] && !ctrl.pause[5]) begin
             ex_o <= 0;
-        end
-        else if (!ctrl.pause[4]) begin
+        end else if (!ctrl.pause[4]) begin
             ex_o <= dispatch_i;
-        end
-        else begin
+        end else begin
             ex_o <= ex_o;
         end
     end
 
 
-    
+
 endmodule
