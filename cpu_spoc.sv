@@ -48,6 +48,11 @@ module cpu_spoc
         .branch_flush(branch_flush)
     );
 
+    logic icache_cacop;
+    logic dcache_cacop;
+    assign icache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2: 0] == 3'b0);
+    assign dcache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2: 0] == 3'b1);
+
     icache u_icache (
         .clk,
         .reset(rst),
@@ -58,7 +63,11 @@ module cpu_spoc
         .rd_req(icache_mem_io.rd_req),
         .rd_addr(icache_mem_io.rd_addr),
         .ret_valid(icache_mem_io.ret_valid),
-        .ret_data(icache_mem_io.ret_data)
+        .ret_data(icache_mem_io.ret_data),
+
+        .icacop_op_en(icache_cacop),
+        .icacop_op_mode(cache_inst.cacop_code[4: 3]),
+        .icacop_addr(cache_inst.addr)
     );
 
     dcache u_dcache (

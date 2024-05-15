@@ -92,12 +92,15 @@ module pc_reg
         else if(ctrl.exception_flush) begin
             pc.pc_o_1 <= ctrl_pc.exception_new_pc;
         end
-        else if(ctrl.pause[0]|stall) begin
+        else if(ctrl.pause[0]) begin
             pc.pc_o_1 <= pc.pc_o_1;
         end
         else begin
             if(branch_flush) begin
                 pc.pc_o_1 <= branch_actual_addr;
+            end
+            else if (stall) begin
+                pc.pc_o_1 <= pc.pc_o_1;
             end
             else if(is_branch_i_1&&pre_taken_or_not&&btb_valid) begin
                 pc.pc_o_1 <= pre_branch_addr;

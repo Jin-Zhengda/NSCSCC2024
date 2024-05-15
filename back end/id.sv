@@ -5,7 +5,13 @@
 module id
     import pipeline_types::*;
 (
-    input pc_id_t pc_id,
+    input bus32_t pc,
+    input bus32_t inst,
+    input logic pre_is_branch,
+    input logic pre_is_branch_taken,
+    input bus32_t pre_branch_addr,
+    input logic[5: 0] is_exception,
+    input logic[5: 0][6: 0] exception_cause,
 
     input logic [1:0] CRMD_PLV,
     input csr_push_forward_t csr_push_forward,
@@ -14,11 +20,11 @@ module id
     output id_dispatch_t id_dispatch
 );
 
-    assign id_dispatch.pc = pc_id.pc;
-    assign id_dispatch.inst = pc_id.inst;
-    assign id_dispatch.pre_is_branch = pc_id.pre_is_branch;
-    assign id_dispatch.pre_is_branch_taken = pc_id.pre_is_branch_taken;
-    assign id_dispatch.pre_branch_addr = pc_id.pre_branch_addr;
+    assign id_dispatch.pc = pc;
+    assign id_dispatch.inst = inst;
+    assign id_dispatch.pre_is_branch = pre_is_branch;
+    assign id_dispatch.pre_is_branch_taken = pre_is_branch_taken;
+    assign id_dispatch.pre_branch_addr = pre_branch_addr;
 
     logic [1:0] CRMD_PLV_current;
     assign CRMD_PLV_current = (csr_push_forward.csr_write_en && csr_push_forward.csr_write_addr == `CSR_CRMD) 
@@ -46,40 +52,40 @@ module id
     logic [13:0] csr;
     logic [ 9:0] level;
 
-    assign opcode1 = pc_id.inst[31:22];
-    assign opcode2 = pc_id.inst[31:15];
-    assign opcode3 = pc_id.inst[31:25];
-    assign opcode4 = pc_id.inst[31:24];
-    assign opcode5 = pc_id.inst[31:26];
-    assign opcode6 = pc_id.inst[31:10];
-    assign opcode7 = pc_id.inst[31:5];
+    assign opcode1 = inst[31:22];
+    assign opcode2 = inst[31:15];
+    assign opcode3 = inst[31:25];
+    assign opcode4 = inst[31:24];
+    assign opcode5 = inst[31:26];
+    assign opcode6 = inst[31:10];
+    assign opcode7 = inst[31:5];
 
-    assign si20 = pc_id.inst[24:5];
-    assign ui12 = pc_id.inst[21:10];
-    assign si12 = pc_id.inst[21:10];
-    assign si14 = pc_id.inst[23:10];
-    assign ui5 = pc_id.inst[14:10];
+    assign si20 = inst[24:5];
+    assign ui12 = inst[21:10];
+    assign si12 = inst[21:10];
+    assign si14 = inst[23:10];
+    assign ui5 = inst[14:10];
 
-    assign rk = pc_id.inst[14:10];
-    assign rj = pc_id.inst[9:5];
-    assign rd = pc_id.inst[4:0];
-    assign code = pc_id.inst[14:0];
-    assign csr = pc_id.inst[23:10];
-    assign level = pc_id.inst[9:0];
+    assign rk = inst[14:10];
+    assign rj = inst[9:5];
+    assign rd = inst[4:0];
+    assign code = inst[14:0];
+    assign csr = inst[23:10];
+    assign level = inst[9:0];
 
     logic inst_valid;
     logic id_exception;
     exception_cause_t id_exception_cause;
 
     assign id_dispatch.is_exception = {
-        pc_id.is_exception[5:3],
-        {((inst_valid || pc_id.inst == 32'b0) ? id_exception : 1'b1)},
-        pc_id.is_exception[1:0]
+        is_exception[5:3],
+        {((inst_valid || inst == 32'b0) ? id_exception : 1'b1)},
+        is_exception[1:0]
     };
     assign id_dispatch.exception_cause = {
-        pc_id.exception_cause[5:3],
-        {((inst_valid || pc_id.inst == 32'b0) ? id_exception_cause : `EXCEPTION_INE)},
-        pc_id.exception_cause[1:0]
+        exception_cause[5:3],
+        {((inst_valid || inst == 32'b0) ? id_exception_cause : `EXCEPTION_INE)},
+        exception_cause[1:0]
     };
     assign id_dispatch.inst_valid = inst_valid;
 

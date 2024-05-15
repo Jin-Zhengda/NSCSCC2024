@@ -11,8 +11,8 @@ module data_ram
     input bus32_t data_i,
     input logic read_en,
 
-    // output logic[7: 0][31: 0] data_o,
-    output bus32_t data_o,
+    output logic[7: 0][31: 0] data_o,
+    // output bus32_t data_o,
     output logic data_valid
 );
 
@@ -44,35 +44,20 @@ module data_ram
         end
     end
 
-    // always_ff @(posedge clk) begin
-    //     if (!ram_en) begin
-    //         data_o <= 32'b0;
-    //         data_valid <= 1'b0;
-    //     end
-    //     else if (read_en) begin
-    //         data_o[0] <= {ram3[data_addr1], ram2[data_addr1], ram1[data_addr1], ram0[data_addr1]};
-    //         data_o[1] <= {ram3[data_addr1 + 1], ram2[data_addr1 + 1], ram1[data_addr1 + 1], ram0[data_addr1 + 1]};
-    //         data_o[2] <= {ram3[data_addr1 + 2], ram2[data_addr1 + 2], ram1[data_addr1 + 2], ram0[data_addr1 + 2]};
-    //         data_o[3] <= {ram3[data_addr1 + 3], ram2[data_addr1 + 3], ram1[data_addr1 + 3], ram0[data_addr1 + 3]};
-    //         data_o[4] <= {ram3[data_addr1 + 4], ram2[data_addr1 + 4], ram1[data_addr1 + 4], ram0[data_addr1 + 4]};
-    //         data_o[5] <= {ram3[data_addr1 + 5], ram2[data_addr1 + 5], ram1[data_addr1 + 5], ram0[data_addr1 + 5]};
-    //         data_o[6] <= {ram3[data_addr1 + 6], ram2[data_addr1 + 6], ram1[data_addr1 + 6], ram0[data_addr1 + 6]};
-    //         data_o[7] <= {ram3[data_addr1 + 7], ram2[data_addr1 + 7], ram1[data_addr1 + 7], ram0[data_addr1 + 7]};
-    //         data_valid <= 1'b1;
-    //     end 
-    //     else begin
-    //         data_o <= 32'b0;
-    //         data_valid <= 1'b0;
-    //     end
-    // end
-
-    always_ff @( posedge clk ) begin : blockName
+    always_ff @(posedge clk) begin
         if (!ram_en) begin
             data_o <= 32'b0;
             data_valid <= 1'b0;
         end
         else if (read_en) begin
-            data_o <= {ram3[data_addr1], ram2[data_addr1], ram1[data_addr1], ram0[data_addr1]};
+            data_o[0] <= {ram3[data_addr1], ram2[data_addr1], ram1[data_addr1], ram0[data_addr1]};
+            data_o[1] <= {ram3[data_addr1 + 1], ram2[data_addr1 + 1], ram1[data_addr1 + 1], ram0[data_addr1 + 1]};
+            data_o[2] <= {ram3[data_addr1 + 2], ram2[data_addr1 + 2], ram1[data_addr1 + 2], ram0[data_addr1 + 2]};
+            data_o[3] <= {ram3[data_addr1 + 3], ram2[data_addr1 + 3], ram1[data_addr1 + 3], ram0[data_addr1 + 3]};
+            data_o[4] <= {ram3[data_addr1 + 4], ram2[data_addr1 + 4], ram1[data_addr1 + 4], ram0[data_addr1 + 4]};
+            data_o[5] <= {ram3[data_addr1 + 5], ram2[data_addr1 + 5], ram1[data_addr1 + 5], ram0[data_addr1 + 5]};
+            data_o[6] <= {ram3[data_addr1 + 6], ram2[data_addr1 + 6], ram1[data_addr1 + 6], ram0[data_addr1 + 6]};
+            data_o[7] <= {ram3[data_addr1 + 7], ram2[data_addr1 + 7], ram1[data_addr1 + 7], ram0[data_addr1 + 7]};
             data_valid <= 1'b1;
         end 
         else begin
@@ -80,5 +65,20 @@ module data_ram
             data_valid <= 1'b0;
         end
     end
+
+    // always_ff @( posedge clk ) begin
+    //     if (!ram_en) begin
+    //         data_o <= 32'b0;
+    //         data_valid <= 1'b0;
+    //     end
+    //     else if (read_en) begin
+    //         data_o <= {ram3[data_addr1], ram2[data_addr1], ram1[data_addr1], ram0[data_addr1]};
+    //         data_valid <= 1'b1;
+    //     end 
+    //     else begin
+    //         data_o <= 32'b0;
+    //         data_valid <= 1'b0;
+    //     end
+    // end
     
 endmodule

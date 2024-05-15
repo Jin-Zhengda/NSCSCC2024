@@ -109,17 +109,14 @@ module backend
     ctrl_csr ctrl_csr_io ();
     pause_t pause_request;
 
-    assign id_i.pc = fb_slave.inst_and_pc_o.pc_o_1;
-    assign id_i.inst = fb_slave.inst_and_pc_o.inst_o_1;
-    assign id_i.is_exception = fb_slave.inst_and_pc_o.is_exception;
-    assign id_i.exception_cause = fb_slave.inst_and_pc_o.exception_cause;
-    assign id_i.pre_is_branch = fb_slave.branch_info.is_branch;
-    assign id_i.pre_is_branch_taken = fb_slave.branch_info.pre_taken_or_not;
-    assign id_i.pre_branch_addr = fb_slave.branch_info.pre_branch_addr;
-
-
     id u_id (
-        .pc_id(id_i),
+        .pc(fb_slave.inst_and_pc_o.pc_o_1),
+        .inst(fb_slave.inst_and_pc_o.inst_o_1),
+        .pre_is_branch(fb_slave.branch_info.is_branch),
+        .pre_is_branch_taken(fb_slave.branch_info.pre_taken_or_not),
+        .pre_branch_addr(fb_slave.branch_info.pre_branch_addr),
+        .is_exception(fb_slave.inst_and_pc_o.is_exception),
+        .exception_cause(fb_slave.inst_and_pc_o.exception_cause),
 
         .CRMD_PLV(CRMD_PLV),
         .csr_push_forward(csr_push_forward),
@@ -276,7 +273,7 @@ module backend
     assign debug0_wb_rf_wdata = wb.data_write.write_data;
     assign debug0_wb_inst = wb.inst;
 
-    assign inst_valid_diff = wb.inst_valid;
+    assign inst_valid_diff = fb_slave.ctrl.exception_flush ? 1'b0: wb.inst_valid;
 
     ctrl u_ctrl (
         .pause_request(pause_request),
