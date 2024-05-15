@@ -49,6 +49,7 @@ import pipeline_types::*;
     logic is_branch_i_2;
     logic pre_taken_or_not;
     logic [31:0] pre_branch_addr;
+    logic btb_valid;
     pc_out_t pc;
     logic inst_en_1;
     logic inst_en_2;
@@ -80,6 +81,8 @@ import pipeline_types::*;
         .is_branch_i_2,
         .pre_taken_or_not,
         .pre_branch_addr,
+        .btb_valid,
+
         .branch_actual_addr(fb_master.update_info.branch_actual_addr),
         .branch_flush(fb_master.update_info.branch_flush),
 
@@ -95,7 +98,7 @@ import pipeline_types::*;
         .clk,
         .rst,
         .update_info(fb_master.update_info),
-        .stall(pi_master.stall_for_buffer),
+        .stall(pi_master.stall),
 
         .pc_i(pc),
         .inst_1_i(pi_master.inst),
@@ -111,6 +114,7 @@ import pipeline_types::*;
         .pre_taken_or_not,
 
         .pre_branch_addr,
+        .btb_valid,
 
         .fetch_inst_1_en,
         .fetch_inst_2_en
@@ -121,10 +125,10 @@ import pipeline_types::*;
         .rst,
         .branch_flush(fb_master.update_info.branch_flush),
         .ctrl(fb_master.ctrl),
-        .stall(pi_master.stall_for_buffer),
+        .stall(pi_master.stall),
 
         .inst(pi_master.inst),
-        .pc(pi_master.pc_out),
+        .pc(pi_master.pc),
         .is_valid_out(pi_master.icache_is_valid),
         .is_exception(pi_master.icache_is_exception),
         .exception_cause(pi_master.icache_exception_cause),
