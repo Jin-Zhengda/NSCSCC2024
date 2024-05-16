@@ -19,7 +19,7 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 `define InstAddrWidth 31:0
-`include "csr_define.sv"
+`include "csr_defines.sv"
 
 module pc_reg
     import pipeline_types::*;

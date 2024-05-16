@@ -195,7 +195,7 @@ module bpu
         .pc(pc_i.pc_o_1),
         .update_en(update_info.update_en),
         .pc_dispatch(update_info.pc_dispatch),
-        .taken_actual(update_info.taken_actual),
+        .taken_actual(update_info.taken_or_not_actual),
 
         .taken_or_not(pre_taken_or_not_1)
     );
