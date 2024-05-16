@@ -125,10 +125,10 @@ import pipeline_types::*;
         .rst,
         .branch_flush(fb_master.update_info.branch_flush),
         .ctrl(fb_master.ctrl),
-        .stall(pi_master.stall),
+        .stall(pi_master.stall_for_buffer),
 
         .inst(pi_master.inst),
-        .pc(pi_master.pc),
+        .pc(pi_master.pc_out),
         .is_valid_out(pi_master.icache_is_valid),
         .is_exception(pi_master.icache_is_exception),
         .exception_cause(pi_master.icache_exception_cause),

@@ -55,6 +55,7 @@ package pipeline_types;
         logic update_en;
         logic taken_or_not_actual;
         bus32_t branch_actual_addr;
+        bus32_t pc_dispatch;
     } branch_update;
 
     // ctrl and pc
