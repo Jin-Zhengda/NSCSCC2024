@@ -46,6 +46,7 @@ module btb (
         end else begin
             if ((btb[pc_index][43:32] == pc_tag) && (btb[pc_index][44] == 1)) begin
                 pre_branch_addr <= btb[pc_index][31:0];
+                btb_valid <= 1'b1;
             end else begin
                 pre_branch_addr <= 32'b0;
                 btb_valid <= 0;
