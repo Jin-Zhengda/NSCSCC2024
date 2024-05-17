@@ -1,6 +1,8 @@
 module cache_axi(
     input logic                   clk,      
     input logic                   rst,      // 高有效
+
+    input wire[3:0]               cache_wsel_i,     // duncache_write_wstrb
     
     // ICache: Read Channel
     input logic                   inst_ren_i,       // rd_req
@@ -20,8 +22,28 @@ module cache_axi(
     input logic [31:0]            data_awaddr_i,    // wr_addr
     output logic                  data_bvalid_o,    // 在顶层模块直接定义     logic   data_bvalid_o; 下面会给它赋值并输出
     
+    //I-uncached Read channel
+	input wire                 iucache_ren_i,
+	input wire[31:0]           iucache_addr_i,
+	output reg                 iucache_rvalid_o,
+	output reg[31:0]           iucache_rdata_o, 
+
+    //D-uncache: Read Channel
+    input wire                 ducache_ren_i,
+    input wire [31:0]          ducache_araddr_i,
+    output reg                 ducache_rvalid_o,   
+    output reg [31:0]          ducache_rdata_o,
+
+    //D-uncache: Write Channel
+	input wire 					ducache_wen_i,
+	input wire [31:0]	     	ducache_wdata_i,
+    input wire [31:0]	        ducache_awaddr_i,
+    output reg 					ducache_bvalid_o,
+
     // AXI Communicate
     output logic                  axi_ce_o,
+
+    output wire[3:0]              axi_wsel_o,    // 连接总线的wstrb
     
     // AXI read
     input logic [31:0]            rdata_i,
@@ -42,12 +64,15 @@ module cache_axi(
 );
 
     // Define state enum
-    typedef enum logic [2:0] {
+    typedef enum logic [3:0] {
         STATE_READ_FREE,
-        STATE_READ_DCACHE,
         STATE_READ_ICACHE,
+        STATE_READ_IUNCACHED,
+        STATE_READ_DCACHE,
+        STATE_READ_DUNCACHED,
         STATE_WRITE_FREE,
-        STATE_WRITE_BUSY
+        STATE_WRITE_BUSY,
+        STATE_WRITE_DUNCACHED
     } StateType;
 
     // State variables
@@ -61,40 +86,53 @@ module cache_axi(
     //////////////////////////Main Body////////////////////////////
     ///////////////////////////////////////////////////////////////
 
-    // READ(DCache first) -- 自定义规定
+    // READ(DCache first && uncache first) -- 自定义规定
     // State transition for read and write operation
+    // Read state machine
     always_ff @(posedge clk) begin
-        if (rst) begin
+        if (rst) 
             read_state <= STATE_READ_FREE;
-            write_state <= STATE_WRITE_FREE;
-        end else begin
-            case (read_state)
-                STATE_READ_FREE: begin
-                    if (data_ren_i) // DCache
-                        read_state <= STATE_READ_DCACHE;
-                    else if (inst_ren_i) // ICache
-                        read_state <= STATE_READ_ICACHE;
-                end
-                STATE_READ_DCACHE, STATE_READ_ICACHE: begin
-                    if (rdata_valid_i && read_count == 3'h7) // last read successful
-                        read_state <= STATE_READ_FREE;
-                end
-            endcase
-
-            case (write_state)
-                STATE_WRITE_FREE: begin
-                    if (data_wen_i) // Write
-                        write_state <= STATE_WRITE_BUSY;
-                end
-                STATE_WRITE_BUSY: begin
-                    if (wdata_resp_i && write_count == 3'h7) // last write successful
-                        write_state <= STATE_WRITE_FREE;
-                end
-            endcase
-        end
+        else case (read_state)
+            STATE_READ_FREE: begin
+                if (ducache_ren_i) 
+                    read_state <= STATE_READ_DUNCACHED;
+                else if (data_ren_i) 
+                    read_state <= STATE_READ_DCACHE;
+                else if (iucache_ren_i) 
+                    read_state <= STATE_READ_IUNCACHED;
+                else if (inst_ren_i) 
+                    read_state <= STATE_READ_ICACHE;
+            end
+            STATE_READ_DUNCACHED: 
+                if (rdata_valid_i) read_state <= STATE_READ_FREE;
+            STATE_READ_DCACHE: 
+                if (rdata_valid_i && read_count == 3'h7) read_state <= STATE_READ_FREE;
+            STATE_READ_IUNCACHED: 
+                if (rdata_valid_i) read_state <= STATE_READ_FREE;
+            STATE_READ_ICACHE: 
+                if (rdata_valid_i && read_count == 3'h7) read_state <= STATE_READ_FREE;
+        endcase
     end
 
-    // Counter for read operations
+    // Write state machine
+    always_ff @(posedge clk) begin
+        if (rst) 
+            write_state <= STATE_WRITE_FREE;
+        else case (write_state)
+            STATE_WRITE_FREE: begin
+                if (ducache_wen_i) 
+                    write_state <= STATE_WRITE_DUNCACHED;
+                else if (data_wen_i) 
+                    write_state <= STATE_WRITE_BUSY;
+            end
+            STATE_WRITE_DUNCACHED: 
+                if (wdata_resp_i) write_state <= STATE_WRITE_FREE;
+            STATE_WRITE_BUSY: 
+                if (wdata_resp_i && write_count == 3'h7) write_state <= STATE_WRITE_FREE;
+        endcase
+    end
+
+    // Counter for read and write operations
     always_ff @(posedge clk) begin
         if (rst) begin
             read_count <= 3'h0;
@@ -118,20 +156,37 @@ module cache_axi(
     
     // 如果突发长度为8的话，按道理是cpu给的地址直接低五位置0就行了，这样实现的话应该也不影响(应该还能算是可以适应突发长度改变的情况)
     // 后面七个地址会被直接忽略了，如果真的出bug了记得关注这个地方
-    assign axi_raddr_o = (read_state == STATE_READ_DCACHE) ? {data_araddr_i[31:5], read_count, 2'b00} : 
-                         (read_state == STATE_READ_ICACHE) ? {inst_araddr_i[31:5], read_count, 2'b00} :
-                         32'h0;
+	assign axi_raddr_o = (read_state == STATE_READ_DUNCACHED) ? ducache_araddr_i:
+	                     (read_state == STATE_READ_DCACHE)    ? {data_araddr_i[31:5],read_count,2'b00}:
+	                     (read_state == STATE_READ_IUNCACHED) ? iucache_addr_i:
+						 (read_state == STATE_READ_ICACHE)    ? {inst_araddr_i[31:5],read_count,2'b00}:
+						 32'h0;
 
-    // ICache/DCache
+    // ICache/I-uncached/DCache
     always_ff @(posedge clk) begin
-        case (read_state)
-            STATE_READ_ICACHE: inst_rvalid_o <= (rdata_valid_i && read_count == 3'h7);
-            STATE_READ_DCACHE: data_rvalid_o <= (rdata_valid_i && read_count == 3'h7);
-            default: begin   
-                inst_rvalid_o <= 1'b0;
-                data_rvalid_o <= 1'b0;
-            end
-        endcase
+        if (read_state == STATE_READ_ICACHE && rdata_valid_i == 1'b1 && read_count == 3'h7)
+            inst_rvalid_o <= 1'b1;
+        else if (read_state == STATE_READ_IUNCACHED && rdata_valid_i == 1'b1)
+            iucache_rvalid_o <= 1'b1;
+        else begin
+            inst_rvalid_o <= 1'b0;
+            iucache_rvalid_o <= 1'b0;
+        end
+    end
+
+    always_ff @(posedge clk) begin
+        if (read_state == STATE_READ_DCACHE && rdata_valid_i == 1'b1 && read_count == 3'h7)
+            data_rvalid_o <= 1'b1;
+        else
+            data_rvalid_o <= 1'b0;
+    end
+
+    // D-uncached
+    always_ff @(posedge clk) begin
+        if (read_state == STATE_READ_DUNCACHED && rdata_valid_i == 1'b1)
+            ducache_rvalid_o <= 1'b1;
+        else
+            ducache_rvalid_o <= 1'b0;
     end
 
     // Assigning data for ICache/DCache reads
@@ -165,36 +220,64 @@ module cache_axi(
         end
     end
 
+    // Uncached rdata_o
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            iucache_rdata_o <= 32'd0;
+            ducache_rdata_o <= 32'd0;
+        end else begin
+            if (rdata_valid_i && read_state == STATE_READ_DUNCACHED) begin
+                ducache_rdata_o <= rdata_i;
+            end
+            if (rdata_valid_i && read_state == STATE_READ_IUNCACHED) begin
+                iucache_rdata_o <= rdata_i;
+            end
+        end
+    end
+
     // WRITE
     // AXI
     assign axi_wen_o    = (write_state == STATE_WRITE_FREE) ? 1'b0 : 1'b1;
     assign axi_wvalid_o = (write_state == STATE_WRITE_FREE) ? 1'b0 : 1'b1;
     
-    assign axi_wlen_o   = 8'h7; // byte select  这个信号我有点懵
-    assign axi_rlen_o   = 8'h7;
+	assign axi_wlen_o   = (write_state == STATE_WRITE_DUNCACHED) ? 4'h0 : 4'h7; // byte select  这个信号我有点懵
+    assign axi_rlen_o   = (read_state == STATE_READ_IUNCACHED || read_state == STATE_READ_DUNCACHED ) ? 4'h0 : 4'h7;//byte select
+
+    assign axi_wsel_o = (write_state == STATE_WRITE_DUNCACHED) ? cache_wsel_i : 4'b1111;
 
     // 如果突发长度为8的话，按道理是cpu给的地址直接低五位置0就行了，这样实现的话应该也不影响(应该还能算是可以适应突发长度改变的情况)
     // 后面七个地址会被直接忽略了，如果真的出bug了记得关注这个地方
-    assign axi_waddr_o  = {data_awaddr_i[31:5], write_count, 2'b00};
-    assign axi_wlast_o  = (write_state == STATE_WRITE_BUSY && write_count == 3'h7) ? 1'b1 : 1'b0; // write last word
-    
+    assign axi_waddr_o = (write_state == STATE_WRITE_DUNCACHED) ?
+                         ducache_awaddr_i : {data_awaddr_i[31:5], write_count, 2'b00};
+
+    assign axi_wlast_o = (write_state == STATE_WRITE_BUSY && write_count == 3'h7) ? 
+                          1'b1 : (write_state == STATE_WRITE_DUNCACHED) ? 1'b1 : 1'b0; // write last word
+
     // DCache
     always_ff @(posedge clk) begin
         data_bvalid_o <= (write_state == STATE_WRITE_BUSY && wdata_resp_i && write_count == 3'h7) ? 1'b1 : 1'b0;
     end
+    // D-uncached
+    always_ff @(posedge clk) begin
+        ducache_bvalid_o <= (write_state == STATE_WRITE_DUNCACHED && wdata_resp_i) ? 1'b1 : 1'b0;
+    end
 
     always_comb begin
-        case (write_count)
-            3'h0: axi_wdata_o <= data_wdata_i[32*1-1:32*0];
-            3'h1: axi_wdata_o <= data_wdata_i[32*2-1:32*1];
-            3'h2: axi_wdata_o <= data_wdata_i[32*3-1:32*2];
-            3'h3: axi_wdata_o <= data_wdata_i[32*4-1:32*3];
-            3'h4: axi_wdata_o <= data_wdata_i[32*5-1:32*4];
-            3'h5: axi_wdata_o <= data_wdata_i[32*6-1:32*5];
-            3'h6: axi_wdata_o <= data_wdata_i[32*7-1:32*6];
-            3'h7: axi_wdata_o <= data_wdata_i[32*8-1:32*7];
-            default: axi_wdata_o <= 32'h0;
-        endcase
+        if(write_state == STATE_WRITE_DUNCACHED) begin
+            axi_wdata_o = ducache_araddr_i;
+        end else begin
+            case (write_count)
+                3'h0: axi_wdata_o <= data_wdata_i[32*1-1:32*0];
+                3'h1: axi_wdata_o <= data_wdata_i[32*2-1:32*1];
+                3'h2: axi_wdata_o <= data_wdata_i[32*3-1:32*2];
+                3'h3: axi_wdata_o <= data_wdata_i[32*4-1:32*3];
+                3'h4: axi_wdata_o <= data_wdata_i[32*5-1:32*4];
+                3'h5: axi_wdata_o <= data_wdata_i[32*6-1:32*5];
+                3'h6: axi_wdata_o <= data_wdata_i[32*7-1:32*6];
+                3'h7: axi_wdata_o <= data_wdata_i[32*8-1:32*7];
+                default: axi_wdata_o <= 32'h0;
+            endcase
+        end
     end
 
 endmodule
