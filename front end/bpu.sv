@@ -165,15 +165,16 @@ module bpu
         end
     end
 
-    // always @(*) begin
-    //     pre_taken_or_not <= pre_taken_or_not_1&pre_taken_or_not_2;
-    // end
+    
+    always_comb begin
+        pre_taken_or_not = pre_taken_or_not_1|pre_taken_or_not_2;
+    end
 
-    // always_comb begin
+    always_comb begin
     //     pre_taken_or_not = 0;
     //     pre_taken_or_not_1 = 0;
-    //     pre_taken_or_not_2 = 0;
-    // end
+        pre_taken_or_not_2 = 0;
+    end
 
 
 
@@ -209,7 +210,7 @@ module bpu
         .pc_dispatch(update_info.pc_dispatch),
         .pc_actual(update_info.branch_actual_addr),
 
-        .pre_branch_addr(pre_branch_addr),
+        .pre_branch_addr(prediction_addr_1),
         .btb_valid(btb_valid)
     );
 
