@@ -35,8 +35,8 @@ module bht(
     output logic taken_or_not
     );
 
-    logic [7:0]bht [7:0];
-    logic [1:0]pht [7:0][7:0];
+    logic [7:0]bht [255: 0];
+    logic [1:0]pht [255:0][255:0];
 
     logic [7:0]history;
     logic [7:0]pht_index;

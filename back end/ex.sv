@@ -105,12 +105,12 @@ module ex
     end
 
     always_comb begin: to_dcache
-        mem_is_valid = 1'b0;
-        dcache_master.wdata = 32'b0;
-        dcache_master.op = 1'b0;
-        dcache_master.wstrb = 4'b1111;
-        ex_is_exception = 1'b0;
-        ex_exception_cause = 7'b0;
+        // mem_is_valid = 1'b0;
+        // dcache_master.wdata = 32'b0;
+        // dcache_master.op = 1'b0;
+        // dcache_master.wstrb = 4'b1111;
+        // ex_is_exception = 1'b0;
+        // ex_exception_cause = 7'b0;
 
         case (dispatch_ex.aluop) 
             `ALU_LDB, `ALU_LDBU: begin
@@ -195,6 +195,14 @@ module ex
                     mem_is_valid = 1'b0;
                     dcache_master.wstrb = 4'b1111;
                 end
+            end
+            default: begin
+                mem_is_valid = 1'b0;
+                dcache_master.wdata = 32'b0;
+                dcache_master.op = 1'b0;
+                dcache_master.wstrb = 4'b1111;
+                ex_is_exception = 1'b0;
+                ex_exception_cause = 7'b0;
             end
         endcase
     end

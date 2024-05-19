@@ -161,6 +161,7 @@ module bpu
             end else begin
                 fetch_inst_1_en = 1'b1;
                 fetch_inst_2_en = 1'b0;
+                pre_branch_addr = 32'b0;
             end
         end
     end
