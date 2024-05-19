@@ -101,7 +101,9 @@ import pipeline_types::*;
         .stall(pi_master.stall),
 
         .pc_i(pc),
-        .inst_1_i(pi_master.inst),
+        .pc(pi_master.pc_for_bpu),
+
+        .inst(pi_master.inst),
         .inst_2_i,
         .inst_en_1,
         .inst_en_2,
@@ -111,14 +113,18 @@ import pipeline_types::*;
 
         .is_branch_1(is_branch_i_1),
         .is_branch_2(is_branch_i_2),
-        .pre_taken_or_not,
+        .pre_taken_or_not(pi_master.front_pre_taken_or_not),
 
-        .pre_branch_addr,
+        .pre_branch_addr(pre_branch_addr),
         .btb_valid,
 
-        .fetch_inst_1_en,
+        .fetch_inst_1_en(pi_master.front_fetch_inst_1_en),
         .fetch_inst_2_en
     );
+
+        assign pi_master.front_is_branch_i_1 = is_branch_i_1;
+        assign pi_master.front_pre_taken_or_not = pre_taken_or_not;
+        assign pi_master.front_pre_branch_addr = pre_branch_addr;
 
     instbuffer u_instbuffer(
         .clk,
@@ -128,20 +134,20 @@ import pipeline_types::*;
         .stall(pi_master.stall_for_buffer),
 
         .inst(pi_master.inst_for_buffer),
-        .pc(pi_master.pc_out),
+        .pc(pi_master.pc_for_buffer),
         .is_valid_out(pi_master.icache_is_valid),
         .is_exception(pi_master.icache_is_exception),
         .exception_cause(pi_master.icache_exception_cause),
 
-        .is_branch_1(is_branch_i_1),
+        .is_branch_1(pi_master.icache_is_branch_i_1),
         .is_branch_2(is_branch_i_2),
-        .pre_taken_or_not,
-        .pre_branch_addr,
+        .pre_taken_or_not(pi_master.icache_pre_taken_or_not),
+        .pre_branch_addr(pi_master.icache_pre_branch_addr),
 
         .send_inst_1_en(fb_master.send_inst_en),
         .send_inst_2_en,
 
-        .fetch_inst_1_en(fetch_inst_1_en),
+        .icache_fetch_inst_1_en(pi_master.icache_fetch_inst_1_en),
         .fetch_inst_2_en,
 
         .inst_and_pc_o(fb_master.inst_and_pc_o),

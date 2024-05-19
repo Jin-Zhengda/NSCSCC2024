@@ -30,7 +30,9 @@ module bpu
 
 
     input pc_out_t pc_i,
-    input logic [`InstBus] inst_1_i,
+    input bus32_t pc,
+    // input logic [`InstBus] inst_1_i,
+    input logic [`InstBus] inst,
     input logic [`InstBus] inst_2_i,
     input logic inst_en_1,
     input logic inst_en_2,
@@ -56,6 +58,9 @@ module bpu
 
     logic [5:0] branch_judge_1;
     logic [5:0] branch_judge_2;
+
+    bus32_t inst_1_i;
+    assign inst_1_i = stall ? 32'b0 : inst; 
 
     assign branch_judge_1 = inst_1_i[31:26];
     assign branch_judge_2 = inst_2_i[31:26];
@@ -146,10 +151,10 @@ module bpu
     logic pre_taken_or_not_2;
 
     always_comb begin
-        if (rst | update_info.branch_flush | stall) begin
-            fetch_inst_1_en = 0;
-            fetch_inst_2_en = 0;
-        end else begin
+        // if (rst | update_info.branch_flush) begin
+        //     fetch_inst_1_en = 0;
+        //     fetch_inst_2_en = 0;
+        // end else begin
             if (is_branch_1 && pre_taken_or_not_1 && inst_en_1) begin
                 fetch_inst_1_en = 1'b1;
                 fetch_inst_2_en = 1'b0;
@@ -163,7 +168,7 @@ module bpu
                 fetch_inst_2_en = 1'b0;
                 pre_branch_addr = 32'b0;
             end
-        end
+        // end
     end
 
     
@@ -194,7 +199,7 @@ module bpu
         .clk,
         .rst,
 
-        .pc(pc_i.pc_o_1),
+        .pc(pc),
         .update_en(update_info.update_en),
         .pc_dispatch(update_info.pc_dispatch),
         .taken_actual(update_info.taken_or_not_actual),
@@ -206,7 +211,7 @@ module bpu
         .clk,
         .rst,
 
-        .pc(pc_i.pc_o_1),
+        .pc(pc),
         .update_en(update_info.update_en),
         .pc_dispatch(update_info.pc_dispatch),
         .pc_actual(update_info.branch_actual_addr),

@@ -51,7 +51,7 @@ import pipeline_types::*;
     input logic send_inst_2_en,
 
     //从bpu取指令的使能信号
-    input logic fetch_inst_1_en,
+    input logic icache_fetch_inst_1_en,
     input logic fetch_inst_2_en,
 
     //输出给if_id的
@@ -81,6 +81,9 @@ import pipeline_types::*;
     always_ff @( posedge clk ) begin
         pause <= ctrl.pause;
     end
+
+    logic fetch_inst_1_en;
+    assign fetch_inst_1_en = stall ? 32'b0: icache_fetch_inst_1_en;
 
 
     always_ff @(posedge clk) begin
