@@ -200,9 +200,8 @@ assign hit_way1 = (tagv_cache_w1[19:0]==pre_physical_addr[`TAG_LOC] && tagv_cach
 assign hit_success = (hit_way0 | hit_way1) & pre_inst_en;
 assign hit_fail = ~(hit_success) & pre_inst_en;
 
-bus32_t inst;
 assign pc2icache.stall=reset?1'b1:((icacop_op_en||pre_cacop_en)?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0));
-assign inst=branch_flush_delay? 32'b0:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0)));
+assign pc2icache.inst=(branch_flush_delay || reset)? 32'b0:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0)));
 
 assign wea_way0=(cacop_op_0||cacop_op_1||cacop_op_2)?4'b1111:(pre_inst_en&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
 assign wea_way1=(cacop_op_0||cacop_op_1||cacop_op_2)?4'b1111:(pre_inst_en&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
@@ -217,7 +216,7 @@ always_ff @( posedge clk ) begin
         pc2icache.icache_is_valid <= 1'b0;
         pc2icache.icache_is_exception <= 6'b0;
         pc2icache.icache_exception_cause <= 42'b0;
-        pc2icache.inst <= 32'b0;
+        pc2icache.inst_for_buffer <= 32'b0;
         pc2icache.stall_for_buffer <= 1'b1;
     end
     // else if (!ctrl.pause[1]) begin
@@ -226,7 +225,7 @@ always_ff @( posedge clk ) begin
             pc2icache.icache_is_valid <= 1'b0;
             pc2icache.icache_is_exception <= 6'b0;
             pc2icache.icache_exception_cause <= 42'b0;
-            pc2icache.inst <= 32'b0;
+            pc2icache.inst_for_buffer <= 32'b0;
             pc2icache.stall_for_buffer <= 1'b1;
         end
         else begin
@@ -234,7 +233,7 @@ always_ff @( posedge clk ) begin
             pc2icache.icache_is_valid <= pc2icache.front_is_valid;
             pc2icache.icache_is_exception <= pc2icache.front_is_exception;
             pc2icache.icache_exception_cause <= pc2icache.front_exception_cause;
-            pc2icache.inst <= inst;
+            pc2icache.inst_for_buffer <= pc2icache.inst;
             pc2icache.stall_for_buffer <= pc2icache.stall;
         end
 end

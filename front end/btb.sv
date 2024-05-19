@@ -35,7 +35,10 @@ module btb (
 );
 
     //第44位为valid_bit，43-32位为tag，31-0位为BTA
-    logic [44:0] btb[8:0];
+    logic [44:0] btb[511: 0];
+
+    logic[11: 0] pc_tag;
+    logic[8: 0] pc_index;
 
     assign pc_tag   = {pc[30:28], pc[19:11]};
     assign pc_index = pc[10:2];
@@ -54,15 +57,17 @@ module btb (
         end
     end
 
+    logic[8: 0] pc_dispatch_index;
+    assign pc_dispatch_index = pc_dispatch[10:2];
 
     always_ff @(posedge clk) begin
         if (rst) begin
             btb <= '{default: 0};
         end else begin
             if (update_en) begin
-                btb[pc_dispatch[10:2]][44] <= 1'b1;
-                btb[pc_dispatch[10:2]][43:32] <= {pc_dispatch[30:28], pc_dispatch[19:11]};
-                btb[pc_dispatch[10:2]][31:0] <= pc_dispatch;
+                btb[pc_dispatch_index][44] <= 1'b1;
+                btb[pc_dispatch_index][43:32] <= {pc_dispatch[30:28], pc_dispatch[19:11]};
+                btb[pc_dispatch_index][31:0] <= pc_dispatch;
             end else begin
 
             end
