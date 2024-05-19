@@ -43,17 +43,27 @@ module btb (
     assign pc_tag   = {pc[30:28], pc[19:11]};
     assign pc_index = pc[10:2];
 
-    always_ff @(posedge clk) begin
-        if (rst) begin
-            pre_branch_addr <= 0;
+    // always_ff @(posedge clk) begin
+    //     if (rst) begin
+    //         pre_branch_addr <= 0;
+    //     end else begin
+    //         if ((btb[pc_index][43:32] == pc_tag) && (btb[pc_index][44] == 1)) begin
+    //             pre_branch_addr <= btb[pc_index][31:0];
+    //             btb_valid <= 1'b1;
+    //         end else begin
+    //             pre_branch_addr <= 32'b0;
+    //             btb_valid <= 0;
+    //         end
+    //     end
+    // end
+
+    always_comb begin
+        if ((btb[pc_index][43:32] == pc_tag) && (btb[pc_index][44] == 1)) begin
+            pre_branch_addr <= btb[pc_index][31:0];
+            btb_valid <= 1'b1;
         end else begin
-            if ((btb[pc_index][43:32] == pc_tag) && (btb[pc_index][44] == 1)) begin
-                pre_branch_addr <= btb[pc_index][31:0];
-                btb_valid <= 1'b1;
-            end else begin
-                pre_branch_addr <= 32'b0;
-                btb_valid <= 0;
-            end
+            pre_branch_addr <= 32'b0;
+            btb_valid <= 0;
         end
     end
 
@@ -67,7 +77,7 @@ module btb (
             if (update_en) begin
                 btb[pc_dispatch_index][44] <= 1'b1;
                 btb[pc_dispatch_index][43:32] <= {pc_dispatch[30:28], pc_dispatch[19:11]};
-                btb[pc_dispatch_index][31:0] <= pc_dispatch;
+                btb[pc_dispatch_index][31:0] <= pc_actual;
             end else begin
 
             end

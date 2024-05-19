@@ -54,7 +54,8 @@ import pipeline_types::*;
         bus32_t inst; 
         bus32_t inst_for_buffer; // 读 icache 的结果，即给出的指令
         logic stall_for_buffer;
-        bus32_t pc_out;
+        bus32_t pc_for_bpu;
+        bus32_t pc_for_buffer;
         logic front_is_valid;
         logic icache_is_valid;
         logic [5:0] front_is_exception;
@@ -63,14 +64,27 @@ import pipeline_types::*;
         logic [5:0][6:0] icache_exception_cause;
         logic stall;
 
+        logic front_fetch_inst_1_en;
+        logic icache_fetch_inst_1_en;
+        logic front_is_branch_i_1;
+        logic front_pre_taken_or_not;
+        bus32_t front_pre_branch_addr;
+        logic icache_is_branch_i_1;
+        logic icache_pre_taken_or_not;
+        bus32_t icache_pre_branch_addr;
+
         modport master (
-            input inst, stall, icache_is_valid,icache_is_exception,icache_exception_cause,pc_out, stall_for_buffer, inst_for_buffer,
-            output pc, inst_en,front_is_valid,front_is_exception,front_exception_cause
+            input inst, stall, icache_is_valid,icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
+                stall_for_buffer, inst_for_buffer, icache_fetch_inst_1_en, icache_is_branch_i_1, icache_pre_taken_or_not, icache_pre_branch_addr,
+            output pc, inst_en,front_is_valid,front_is_exception,front_exception_cause, front_fetch_inst_1_en, front_is_branch_i_1, 
+                front_pre_taken_or_not, front_pre_branch_addr
         );
 
         modport slave (
-            output inst, stall,icache_is_valid,icache_is_exception,icache_exception_cause,pc_out, stall_for_buffer, inst_for_buffer,
-            input pc, inst_en,front_is_valid,front_is_exception,front_exception_cause
+            output inst, stall,icache_is_valid,icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
+                stall_for_buffer, inst_for_buffer, icache_fetch_inst_1_en, icache_is_branch_i_1, icache_pre_taken_or_not, icache_pre_branch_addr,
+            input pc, inst_en,front_is_valid,front_is_exception,front_exception_cause, front_fetch_inst_1_en, front_is_branch_i_1, 
+                front_pre_taken_or_not, front_pre_branch_addr
         );
     endinterface: pc_icache
 

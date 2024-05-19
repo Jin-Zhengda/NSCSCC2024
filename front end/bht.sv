@@ -42,31 +42,55 @@ module bht(
     logic [7:0]pht_index;
     logic [1:0]judge;
 
-    always_ff @(posedge clk) begin
-        if(rst) begin
-            taken_or_not <= 0;
-        end else begin
-            history = bht[pc[`Index]];
-            pht_index = history^pc[`Index];
-            judge = pht[pht_index][history];
-            case(judge)
-                2'b00:begin
-                    taken_or_not <= 0;
-                end
-                2'b01:begin
-                    taken_or_not <= 0;
-                end
-                2'b10:begin
-                    taken_or_not <= 1;
-                end
-                2'b11:begin
-                    taken_or_not <= 1;
-                end
-                default:begin
-                    taken_or_not <= 0;
-                end
-            endcase
-        end
+    // always_ff @(posedge clk) begin
+    //     if(rst) begin
+    //         taken_or_not <= 0;
+    //     end else begin
+    //         history = bht[pc[`Index]];
+    //         pht_index = history^pc[`Index];
+    //         judge = pht[pht_index][history];
+    //         case(judge)
+    //             2'b00:begin
+    //                 taken_or_not <= 0;
+    //             end
+    //             2'b01:begin
+    //                 taken_or_not <= 0;
+    //             end
+    //             2'b10:begin
+    //                 taken_or_not <= 1;
+    //             end
+    //             2'b11:begin
+    //                 taken_or_not <= 1;
+    //             end
+    //             default:begin
+    //                 taken_or_not <= 0;
+    //             end
+    //         endcase
+    //     end
+    // end
+    assign history = bht[pc[`Index]];
+    assign pht_index = history^pc[`Index];
+    assign judge = pht[pht_index][history];
+
+    always_comb begin
+        case(judge)
+            2'b00:begin
+                taken_or_not = 0;
+            end
+            2'b01:begin
+                taken_or_not = 0;
+            end
+            2'b10:begin
+                taken_or_not = 1;
+            end
+            2'b11:begin
+                taken_or_not = 1;
+            end
+            default:begin
+                taken_or_not = 0;
+            end
+        endcase
+
     end
 
     logic [7:0]history_up;
