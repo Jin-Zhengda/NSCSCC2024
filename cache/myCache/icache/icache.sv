@@ -221,11 +221,10 @@ assign hit_fail = ~(hit_success) & pre_inst_en;
 assign pc2icache.stall=reset?1'b1:((icacop_op_en||pre_cacop_en)?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0));
 assign pc2icache.inst=branch_flush_delay? 32'b0:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0)));
 
-bus32_t inst;
 assign pc2icache.stall=reset?1'b1:((icacop_op_en||pre_cacop_en||uncache_stall||icache_uncache)?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0));
 //assign inst=branch_flush_delay? 32'b0:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0)));
 //这个inst该我代码了不知道我现在写的对不对！！！！！！！！！！！！！！！！！！！！！！！
-assign inst=branch_flush_delay? 32'b0:((pre_uncache_en&&iucache_rvalid_o)?iucache_rdata_o:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0))));
+assign pc2icache.inst=branch_flush_delay? 32'b0:((pre_uncache_en&&iucache_rvalid_o)?iucache_rdata_o:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0))));
 
 assign wea_way0=(cacop_op_0||cacop_op_1||cacop_op_2)?4'b1111:(pre_inst_en&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
 assign wea_way1=(cacop_op_0||cacop_op_1||cacop_op_2)?4'b1111:(pre_inst_en&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
