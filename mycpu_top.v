@@ -80,7 +80,7 @@ module core_top (
     wire[255:0] dcache_ret_data;
 
     wire dcache_wr_req;
-    wire[3:0] dcache_wr_wstrb;
+    // wire[3:0] dcache_wr_wstrb;
     wire[255:0] dcache_wr_data;
     wire[31:0] dcache_wr_addr;
 
@@ -110,6 +110,22 @@ module core_top (
     wire[7:0] axi_wlen_o;
     wire[2: 0] dcache_rd_type;
 
+    wire iucache_ren_i;
+    wire[31:0] iucache_adddr_i;
+    wire iucache_rvalid_o;
+    wire[31:0] iucache_rdata_o;
+
+    wire ducache_ren_i;
+    wire[31:0] ducache_araddr_i;
+    wire ducache_rvalid_o;
+    wire[31:0] ducache_rdata_o;
+
+    wire ducache_wen_i;
+    wire[31:0] ducache_wdata_i;
+    wire[31:0] ducache_awaddr_i;
+    wire[3:0] ducache_strb;
+    wire ducache_bvalid_o;
+    wire[3:0] axi_wsel_o;
 
     // difftest
     // from wb_stage
@@ -206,6 +222,11 @@ module core_top (
         .icache_rd_req(icache_rd_req),
         .icache_rd_addr(icache_rd_addr),
 
+        .iucache_ren_i(iucache_ren_i),
+        .iucache_addr_i(iucache_addr_i),
+        .iucache_rvalid_o(iucache_rvalid_o),
+        .iucache_rdata_o(iucache_rdata_o),
+
         .dcache_wr_rdy(1'b1),
         .dcache_rd_rdy(1'b1),
         .dcache_ret_valid(dcache_ret_valid),
@@ -216,8 +237,19 @@ module core_top (
         .dcache_rd_addr(dcache_rd_addr),
         .dcache_wr_req(dcache_wr_req),
         .dcache_wr_addr(dcache_wr_addr),
-        .dcache_wr_wstrb(dcache_wr_wstrb),
+        // .dcache_wr_wstrb(dcache_wr_wstrb),
         .dcache_wr_data(dcache_wr_data),
+
+        .ducache_ren_i(ducache_ren_i),
+        .ducache_araddr_i(ducache_araddr_i),
+        .ducache_rvalid_o(ducache_rvalid_o),
+        .ducache_rdata_o(ducache_rdata_o),
+
+        .ducache_wen_i(ducache_wen_i),
+        .ducache_wdata_i(ducache_wdata_i),
+        .ducache_awaddr_i(ducache_awaddr_i),
+        .ducache_strb(ducache_strb),//改了个名
+        .ducache_bvalid_o(ducache_bvalid_o),
 
         .debug0_wb_pc(debug0_wb_pc),
         .debug0_wb_rf_wen(debug0_wb_rf_wen),
@@ -277,6 +309,8 @@ module core_top (
     cache_axi u_cache_axi (
         .clk(aclk),      
         .rst(rst),      // 高有效
+
+        .cache_wsel_i(ducache_strb),
         
         // ICache: Read Channel
         .inst_ren_i(icache_rd_req),         // icache_rd_req
@@ -296,8 +330,29 @@ module core_top (
         .data_awaddr_i(dcache_wr_addr),     // dcache_wr_addr
         .data_bvalid_o(data_bvalid_o),      // 在顶层模块直接定义     wire   data_bvalid_o; 模块内会给它赋值并输出
         
+        //I-uncached Read channel
+        .iucache_ren_i(iucache_ren_i),
+        .iucache_addr_i(iucache_adddr_i),
+        .iucache_rvalid_o(iucache_rvalid_o),
+        .iucache_rdata_o(iucache_rdata_o), 
+
+        //D-uncache: Read Channel
+        .ducache_ren_i(ducache_ren_i),
+        .ducache_araddr_i(ducache_araddr_i),
+        .ducache_rvalid_o(ducache_rvalid_o),   
+        .ducache_rdata_o(ducache_rdata_o),
+
+        //D-uncache: Write Channel
+        .ducache_wen_i(ducache_wen_i),
+        .ducache_wdata_i(ducache_wdata_i),
+        .ducache_awaddr_i(ducache_awaddr_i),
+        .ducache_bvalid_o(ducache_bvalid_o),
+
+
         // AXI Communicate
         .axi_ce_o(axi_ce_o),
+
+        .axi_wsel_o(axi_wsel_o),
         
         // AXI read
         .rdata_i(rdata_i),
@@ -328,7 +383,7 @@ module core_top (
         .cache_ce(axi_ce_o),   // axi_ce_o
         .cache_wen(axi_wen_o),  // axi_wen_o
         .cache_ren(axi_ren_o),  // axi_ren_o
-        .cache_wsel(dcache_wr_wstrb),        // wstrb????? 或许接dcache_wr_wstrb???
+        .cache_wsel(axi_wsel_o),        // wstrb
         .cache_raddr(axi_raddr_o),       // axi_raddr_o
         .cache_waddr(axi_waddr_o),       // axi_waddr_o
         .cache_wdata(axi_wdata_o),       // axi_wdata_o

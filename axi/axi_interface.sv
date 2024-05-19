@@ -9,7 +9,7 @@ module axi_interface(
     input                   logic                   cache_ce,   // axi_ce_o
     input                   logic                   cache_wen,  // axi_wen_o
     input                   logic                   cache_ren,  // axi_ren_o
-    input wire [3:0]         cache_wsel,         // wstrb????? 或许接dcache的wr_strb?
+    input wire [3:0]         cache_wsel,         // cache_wsel_i
     input   logic [31:0]      cache_raddr,       // axi_raddr_o
     input   logic [31:0]      cache_waddr,       // axi_waddr_o
     input   logic [31:0]     cache_wdata,        // axi_wdata_o

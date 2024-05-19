@@ -13,6 +13,11 @@ module cpu
     output logic icache_rd_req,
     output bus32_t icache_rd_addr,
 
+    output logic iucache_ren_i,
+    output bus32_t iucache_addr_i,
+    input logic iucache_rvalid_o,
+    input bus32_t iucache_rdata_o,
+
     input logic dcache_wr_rdy,
     input logic dcache_rd_rdy,
     input logic dcache_ret_valid,
@@ -25,6 +30,17 @@ module cpu
     output bus32_t dcache_wr_addr,
     output logic[3: 0] dcache_wr_wstrb,
     output bus256_t dcache_wr_data,
+
+    output logic ducache_ren_i,
+    output bus32_t ducache_araddr_i,
+    input logic ducache_rvalid_o,
+    input bus32_t ducache_rdata_o,
+
+    output logic ducache_wen_i,
+    output bus32_t ducache_wdata_i,
+    output bus32_t ducache_awaddr_i,
+    output wire[3:0]ducache_strb,    //改了个名
+    input logic ducache_bvalid_o,
 
     output logic[31:0] debug0_wb_pc,
     output logic[ 3:0] debug0_wb_rf_wen,
@@ -184,7 +200,13 @@ module cpu
 
         .icacop_op_en(icache_cacop),
         .icacop_op_mode(cache_inst.cacop_code[4: 3]),
-        .icacop_addr(cache_inst.addr)
+        .icacop_addr(cache_inst.addr),
+
+        .iucache_ren_i(iucache_ren_i),
+        .iucache_addr_i(iucache_addr_i),
+        .iucache_rvalid_o(iucache_rvalid_o),
+        .iucache_rdata_o(iucache_rdata_o)
+
     );
 
     dcache u_dcache (
@@ -203,6 +225,17 @@ module cpu
         .wr_rdy(dcache_wr_rdy),
         .rd_rdy(dcache_rd_rdy),
         .ret_data(dcache_ret_data),
-        .ret_valid(dcache_ret_valid)
+        .ret_valid(dcache_ret_valid),
+
+        .ducache_ren_i(ducache_ren_i),
+        .ducache_araddr_i(ducache_araddr_i),
+        .ducache_rvalid_o(ducache_rvalid_o),
+        .ducache_rdata_o(ducache_rdata_o),
+
+        .ducache_wen_i(ducache_wen_i),
+        .ducache_wdata_i(ducache_wdata_i),
+        .ducache_awaddr_i(ducache_awaddr_i),
+        .ducache_strb(ducache_strb),//改了个名
+        .ducache_bvalid_o(ducache_bvalid_o)
     );
 endmodule
