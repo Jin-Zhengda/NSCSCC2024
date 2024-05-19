@@ -46,7 +46,14 @@ s6: ori $t1, $zero, 0x8
     ori $t1, $zero, 0xe
     ori $t1, $zero, 0xd
 s7: ori $t1, $zero, 0x9
+    ori $t2, $zero, 0x0
+loop:
+    blt $t1, $t2, exit
+    addi.w $t2, $t2, 0x1
+    b loop
+exit:
+    ori $t1, $zero, 0xa
 
-    // t1 1, 2, 3, 5, 6, 9
-    // t2 4 
+    // t1 1, 2, 3, 5, 6, 9, a
+    // t2 4, 0, 1, 2, 3, 4, 5, 6 ,7, 8, 9, a
     // t3 ffffffff

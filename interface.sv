@@ -1,3 +1,7 @@
+`ifndef INTERFACE_SV
+`define INTERFACE_SV
+`timescale 1ns / 1ps
+
 import pipeline_types::*;
 
     interface mem_dcache;
@@ -153,9 +157,11 @@ import pipeline_types::*;
         logic CRMD_IE;
 
         logic is_exception;
-        exception_cause_t exception_cause;
         bus32_t exception_pc;
         bus32_t exception_addr;
+        logic[5: 0] ecode;
+        logic[8: 0] esubcode;
+        exception_cause_t exception_cause;
 
         modport master (
             input EENTRY_VA,
@@ -164,9 +170,11 @@ import pipeline_types::*;
             input ESTAT_IS,
             input CRMD_IE,
             output is_exception,
-            output exception_cause,
             output exception_pc,
-            output exception_addr
+            output exception_addr,
+            output ecode,
+            output esubcode,
+            output exception_cause
         );
 
         modport slave (
@@ -176,9 +184,11 @@ import pipeline_types::*;
             output ESTAT_IS,
             output CRMD_IE,
             input is_exception,
-            input exception_cause,
             input exception_pc,
-            input exception_addr
+            input exception_addr,
+            input ecode,
+            input esubcode,
+            input exception_cause
         );
     endinterface:ctrl_csr
 
@@ -195,3 +205,5 @@ import pipeline_types::*;
             output ret_valid,ret_data
         );
     endinterface //icache_mem
+
+`endif

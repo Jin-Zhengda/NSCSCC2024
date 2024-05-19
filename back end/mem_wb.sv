@@ -1,6 +1,6 @@
-`include "pipeline_types.sv"
+`timescale 1ns / 1ps
 
-module mem_wb 
+module mem_wb
     import pipeline_types::*;
 (
     input logic clk,
@@ -8,23 +8,19 @@ module mem_wb
 
     input ctrl_t ctrl,
 
-    input mem_wb_t mem_i,
+    input  mem_wb_t mem_i,
     output mem_wb_t wb_o
 );
     always_ff @(posedge clk) begin
         if (rst) begin
             wb_o <= 0;
-        end
-        else if (ctrl.exception_flush) begin
+        end else if (ctrl.exception_flush) begin
             wb_o <= 0;
-        end
-        else if (ctrl.pause[6] && !ctrl.pause[7]) begin
+        end else if (ctrl.pause[6] && !ctrl.pause[7]) begin
             wb_o <= 0;
-        end
-        else if (!ctrl.pause[6]) begin
+        end else if (!ctrl.pause[6]) begin
             wb_o <= mem_i;
-        end
-        else begin
+        end else begin
             wb_o <= wb_o;
         end
     end

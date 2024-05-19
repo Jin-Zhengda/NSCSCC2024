@@ -1,6 +1,6 @@
-`include "pipeline_types.sv"
+`timescale 1ns / 1ps
 
-module regfile 
+module regfile
     import pipeline_types::*;
 (
     input logic clk,
@@ -8,10 +8,13 @@ module regfile
 
     input data_write_t data_write,
 
-    dispatch_regfile slave
+    dispatch_regfile slave,
+
+    output logic [31:0] regs_diff[31:0]
 );
 
-    logic [31: 0] regs [0: 31];
+    logic [31:0] regs[31:0];
+    assign regs_diff = regs;
 
     always_ff @(posedge clk) begin
         if (!rst) begin
@@ -21,40 +24,34 @@ module regfile
         end
     end
 
-    always_comb begin: read1
+    always_comb begin : read1
         if (rst) begin
             slave.reg1_read_data = 32'b0;
-        end
-        else if (slave.reg1_read_addr == 5'b0) begin
-            slave.reg1_read_data = 32'b0;        
+        end else if (slave.reg1_read_addr == 5'b0) begin
+            slave.reg1_read_data = 32'b0;
         end
         else if (slave.reg1_read_addr == data_write.write_addr && data_write.write_en && slave.reg1_read_en) begin
             slave.reg1_read_data = data_write.write_data;
-        end
-        else if (slave.reg1_read_en) begin
+        end else if (slave.reg1_read_en) begin
             slave.reg1_read_data = regs[slave.reg1_read_addr];
-        end 
-        else begin
+        end else begin
             slave.reg1_read_data = 32'b0;
         end
     end
 
-    always_comb begin: read2
+    always_comb begin : read2
         if (rst) begin
             slave.reg2_read_data = 32'b0;
-        end
-        else if (slave.reg2_read_addr == 5'b0) begin
-            slave.reg2_read_data = 32'b0;        
+        end else if (slave.reg2_read_addr == 5'b0) begin
+            slave.reg2_read_data = 32'b0;
         end
         else if (slave.reg2_read_addr == data_write.write_addr && data_write.write_en && slave.reg2_read_en) begin
             slave.reg2_read_data = data_write.write_data;
-        end
-        else if (slave.reg2_read_en) begin
+        end else if (slave.reg2_read_en) begin
             slave.reg2_read_data = regs[slave.reg2_read_addr];
-        end 
-        else begin
+        end else begin
             slave.reg2_read_data = 32'b0;
         end
     end
-    
+
 endmodule

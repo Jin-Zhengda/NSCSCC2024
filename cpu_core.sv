@@ -1,5 +1,4 @@
-`include "pipeline_types.sv"
-`include "interface.sv"
+`timescale 1ns / 1ps
 
 module cpu_core 
     import pipeline_types::*;
@@ -13,6 +12,7 @@ module cpu_core
     output cache_inst_t cache_inst,
     output ctrl_t ctrl,
     output logic branch_flush
+
 );
 
     frontend_backend fb();

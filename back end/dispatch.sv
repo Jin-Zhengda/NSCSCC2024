@@ -1,5 +1,5 @@
 `include "defines.sv"
-`include "pipeline_types.sv"
+`timescale 1ns / 1ps
 
 module dispatch 
     import pipeline_types::*;
@@ -19,6 +19,7 @@ module dispatch
 );
     assign dispatch_ex.pc = id_dispatch.pc; 
     assign dispatch_ex.inst = id_dispatch.inst;
+    assign dispatch_ex.inst_valid = id_dispatch.inst_valid;
     assign dispatch_ex.cacop_code = id_dispatch.cacop_code;
 
     assign dispatch_ex.is_exception = id_dispatch.is_exception;
@@ -115,6 +116,7 @@ module dispatch
     end
 
     always_comb begin: branch_target
+        branch_update_info.pc_dispatch = id_dispatch.pc;
         if (is_branch && id_dispatch.pre_is_branch_taken) begin
             branch_update_info.update_en = 1'b1;
             branch_update_info.taken_or_not_actual = 1'b1;

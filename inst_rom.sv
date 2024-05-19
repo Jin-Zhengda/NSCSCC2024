@@ -7,6 +7,7 @@ module inst_rom
     input bus32_t rom_inst_addr,
 
     output bus256_t rom_inst,
+    // output bus32_t rom_inst,
     output logic rom_inst_valid
 );
 
@@ -39,6 +40,18 @@ module inst_rom
             inst[7] <= rom[inst_addr + 12'h7];
         end
     end
+
+    // always_ff @( posedge clk ) begin
+    //     if (rst) begin
+    //         rom_inst <= 32'b0;
+    //     end
+    //     else if (~rom_inst_en) begin
+    //         rom_inst <= 32'b0;
+    //     end
+    //     else begin
+    //         rom_inst <= rom[inst_addr];
+    //     end
+    // end
 
     always_ff @(posedge clk) begin
         if (rst) begin

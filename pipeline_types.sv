@@ -55,6 +55,7 @@ package pipeline_types;
         logic update_en;
         logic taken_or_not_actual;
         bus32_t branch_actual_addr;
+        bus32_t pc_dispatch;
     } branch_update;
 
     // ctrl and pc
@@ -83,6 +84,7 @@ package pipeline_types;
 
         logic[5: 0] is_exception;
         logic[5: 0][6: 0] exception_cause;
+        logic inst_valid;
 
         alu_op_t aluop;
         alu_sel_t alusel;
@@ -129,6 +131,7 @@ package pipeline_types;
 
         logic[5: 0] is_exception;
         logic[5: 0][6: 0] exception_cause;
+        logic inst_valid;
 
         alu_op_t aluop;
         alu_sel_t alusel;
@@ -150,9 +153,11 @@ package pipeline_types;
 
     typedef struct packed {
         bus32_t pc;
+        bus32_t inst;
 
         logic[5: 0] is_exception;
         logic[5: 0][6: 0] exception_cause;
+        logic inst_valid;
 
         logic reg_write_en;
         reg_addr_t reg_write_addr;
@@ -168,6 +173,15 @@ package pipeline_types;
         bus32_t csr_write_data;
         bus32_t csr_mask;
         logic is_llw_scw;
+
+        logic[7: 0] inst_st_en;
+        bus32_t st_paddr;
+        bus32_t st_vaddr;
+        bus32_t st_data;
+
+        logic[7: 0] inst_ld_en;
+        bus32_t ld_paddr;
+        bus32_t ld_vaddr;
     } ex_mem_t;
 
     typedef struct packed {
@@ -184,6 +198,9 @@ package pipeline_types;
     } csr_write_t;
 
     typedef struct packed {
+        bus32_t pc;
+        bus32_t inst;
+        logic inst_valid;
         data_write_t data_write;
         csr_write_t csr_write;
     } mem_wb_t;

@@ -27,7 +27,8 @@ pc_icache pc2icache();
 
 logic rd_req;
 bus32_t rd_addr;
-
+logic branch_flush;
+ctrl_t ctrl;
 logic[31:0] pc_get_data;
 always_ff @( posedge clk ) begin
     if(!pc2icache.stall&&pc2icache.inst_en)pc_get_data<=pc2icache.inst;
@@ -39,7 +40,7 @@ end
 
 
 initial begin
-    clk=1'b0;reset=1'b1;
+    clk=1'b0;reset=1'b1;ctrl.pause=8'b0;ctrl.exception_flush=1'b0;branch_flush=1'b0;
 
     #20 begin reset=1'b0;end
     
@@ -72,7 +73,7 @@ always_ff @( posedge clk ) begin
 end
 */
 wire[31:0] base_addr;
-assign base_addr={rd_addr[31:3],3'b000};
+assign base_addr={rd_addr[31:5],5'b00000};
 always_ff @( posedge clk ) begin
     if(rd_req)begin
         ret_valid<=1'b1;
@@ -87,8 +88,8 @@ end
 
 
 always_ff @( posedge clk ) begin
-    if(counter==13)pc2icache.front_is_valid<=1'b0;
-    else if(counter==8)pc2icache.front_is_valid<=1'b0;
+    if(counter==15)pc2icache.front_is_valid<=1'b0;
+    else if(counter==10)pc2icache.front_is_valid<=1'b0;
     else pc2icache.front_is_valid<=1'b1;
 end
 
@@ -101,23 +102,23 @@ end
 
 //cacop
 logic             icacop_op_en   ;//使能信号
-logic[ 1:0]       cacop_op_mode  ;//缓存操作的模式
-bus32_t cacop_addr;
+logic[ 1:0]       icacop_op_mode  ;//缓存操作的模式
+bus32_t icacop_addr;
 always_ff @( posedge clk ) begin
-    if(counter==7)begin
+    if(counter==8)begin
         icacop_op_en<=1'b1;
-        cacop_op_mode<=2'b0;
-        cacop_addr<=pc2icache.pc;
+        icacop_op_mode<=2'b0;
+        icacop_addr<=pc2icache.pc;
     end
-    else if(counter==13)begin
+    else if(counter==14)begin
         icacop_op_en<=1'b1;
-        cacop_op_mode<=2'b1;
-        cacop_addr<=pc2icache.pc;
+        icacop_op_mode<=2'b1;
+        icacop_addr<=pc2icache.pc;
     end
     else if(counter==16)begin
         icacop_op_en<=1'b1;
-        cacop_op_mode<=2'd2;
-        cacop_addr<=pc2icache.pc;
+        icacop_op_mode<=2'd2;
+        icacop_addr<=pc2icache.pc;
     end
     else begin
         icacop_op_en<=1'b0;
@@ -128,14 +129,16 @@ end
 icache u_icache(
     .clk(clk),
     .reset(reset),
+    .ctrl(ctrl),
+    .branch_flush(branch_flush),
     .pc2icache(pc2icache),
     .rd_req(rd_req),
     .rd_addr(rd_addr),
     .ret_valid(ret_valid),
     .ret_data(ret_data),
     .icacop_op_en(icacop_op_en),
-    .cacop_op_mode(cacop_op_mode),
-    .cacop_addr(cacop_addr)
+    .icacop_op_mode(icacop_op_mode),
+    .icacop_addr(icacop_addr)
 );
 
 
