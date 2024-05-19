@@ -1,4 +1,4 @@
-/*
+
 typedef struct packed {
         logic[7: 0] pause;
         logic exception_flush;
@@ -31,7 +31,7 @@ interface pc_icache;
             input pc, inst_en,front_is_valid,front_is_exception,front_exception_cause
         );
     endinterface: pc_icache
-*/
+
 
 
 
@@ -52,8 +52,9 @@ interface pc_icache;
 `define TAGV_SIZE 21
 
 
+
 module icache 
-import pipeline_types::*;
+//import pipeline_types::*;
 (
     input logic clk,
     input logic reset,
@@ -61,6 +62,7 @@ import pipeline_types::*;
     input logic branch_flush,
     //front-icache
     pc_icache pc2icache,
+    input logic icache_uncache,
     //icache-axi
     output logic rd_req,
     output bus32_t rd_addr,
@@ -69,8 +71,24 @@ import pipeline_types::*;
 
     input  logic             icacop_op_en   ,//使能信号
     input  logic[ 1:0]       icacop_op_mode  ,//缓存操作的模�?
-    input bus32_t icacop_addr
+    input bus32_t icacop_addr,
+
+    output logic iucache_ren_i,
+    output bus32_t iucache_addr_i,
+    input logic iucache_rvalid_o,
+    input bus32_t iucache_rdata_o
 );
+
+logic uncache_stall;
+//ucache
+logic pre_uncache_en;
+assign uncache_stall=pre_uncache_en&&!iucache_rvalid_o;
+always_ff @( posedge clk ) begin
+    if(reset)pre_uncache_en<=1'b0;
+    else if(uncache_stall)pre_uncache_en<=pre_uncache_en;
+    else pre_uncache_en<=icache_uncache;
+end
+
 
 logic[`TAG_SIZE-1:0] cacop_op_addr_tag;
 logic [`INDEX_SIZE-1:0]cacop_op_addr_index;
@@ -201,9 +219,10 @@ assign hit_success = (hit_way0 | hit_way1) & pre_inst_en;
 assign hit_fail = ~(hit_success) & pre_inst_en;
 
 bus32_t inst;
-assign pc2icache.stall=reset?1'b1:((icacop_op_en||pre_cacop_en)?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0));
-assign inst=branch_flush_delay? 32'b0:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0)));
-
+assign pc2icache.stall=reset?1'b1:((icacop_op_en||pre_cacop_en||uncache_stall||icache_uncache)?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0));
+//assign inst=branch_flush_delay? 32'b0:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0)));
+//这个inst该我代码了不知道我现在写的对不对！！！！！！！！！！！！！！！！！！！！！！！
+assign inst=branch_flush_delay? 32'b0:((pre_uncache_en&&iucache_rvalid_o)?iucache_rdata_o:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0))));
 
 assign wea_way0=(cacop_op_0||cacop_op_1||cacop_op_2)?4'b1111:(pre_inst_en&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
 assign wea_way1=(cacop_op_0||cacop_op_1||cacop_op_2)?4'b1111:(pre_inst_en&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
@@ -211,6 +230,13 @@ assign wea_way1=(cacop_op_0||cacop_op_1||cacop_op_2)?4'b1111:(pre_inst_en&&ret_v
 
 assign rd_req=!icacop_op_en&&!read_success&&hit_fail&&!ret_valid&&pc2icache.icache_is_valid;
 assign rd_addr=pre_physical_addr;
+
+
+assign iucache_ren_i=pre_uncache_en;
+assign iucache_addr_i=iucache_ren_i?pre_physical_addr:32'b0;
+
+
+
 
 always_ff @( posedge clk ) begin
     if (reset | ctrl.exception_flush | (ctrl.pause[1] && !ctrl.pause[2])) begin
@@ -230,7 +256,7 @@ always_ff @( posedge clk ) begin
             pc2icache.inst <= 32'b0;
             pc2icache.stall_for_buffer <= 1'b1;
         end
-        else if(!pc2icache.stall) begin
+        else begin
             pc2icache.pc_out <= pre_physical_addr;
             pc2icache.icache_is_valid <= pc2icache.front_is_valid;
             pc2icache.icache_is_exception <= pc2icache.front_is_exception;
@@ -239,5 +265,6 @@ always_ff @( posedge clk ) begin
             pc2icache.stall_for_buffer <= pc2icache.stall;
         end
 end
+
 
 endmodule
