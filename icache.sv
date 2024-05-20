@@ -212,11 +212,6 @@ assign rd_addr=pre_physical_addr;
 
 assign pc2icache.pc_for_bpu = pre_physical_addr;
 
-logic icache_is_branch_i_1;
-logic icache_pre_taken_or_not;
-bus32_t icache_pre_branch_addr;
-
-
 always_ff @( posedge clk ) begin
     if (reset | ctrl.exception_flush | (ctrl.pause[1] && !ctrl.pause[2])) begin
         pc2icache.pc_for_buffer <= 32'b0;
@@ -231,31 +226,30 @@ always_ff @( posedge clk ) begin
         pc2icache.icache_pre_taken_or_not <= 1'b0;
         pc2icache.icache_pre_branch_addr <= 32'b0;
     end
-    // else if (!ctrl.pause[1]) begin
-       else if (branch_flush) begin
-            pc2icache.pc_for_buffer <= 32'b0;
-            pc2icache.icache_is_valid <= 1'b0;
-            pc2icache.icache_is_exception <= 6'b0;
-            pc2icache.icache_exception_cause <= 42'b0;
-            pc2icache.inst_for_buffer <= 32'b0;
-            pc2icache.stall_for_buffer <= 1'b1;
-            pc2icache.icache_fetch_inst_1_en <= 1'b0;
-            pc2icache.icache_is_branch_i_1 <= 1'b0;
-            pc2icache.icache_pre_taken_or_not <= 1'b0;
-            pc2icache.icache_pre_branch_addr <= 32'b0;
-        end
-        else begin
-            pc2icache.pc_for_buffer <= pre_physical_addr;
-            pc2icache.icache_is_valid <= pc2icache.front_is_valid;
-            pc2icache.icache_is_exception <= pc2icache.front_is_exception;
-            pc2icache.icache_exception_cause <= pc2icache.front_exception_cause;
-            pc2icache.inst_for_buffer <= pc2icache.inst;
-            pc2icache.stall_for_buffer <= pc2icache.stall;
-            pc2icache.icache_fetch_inst_1_en <= pc2icache.front_fetch_inst_1_en;
-            pc2icache.icache_is_branch_i_1 <= pc2icache.front_is_branch_i_1;
-            pc2icache.icache_pre_taken_or_not <= pc2icache.front_pre_taken_or_not;
-            pc2icache.icache_pre_branch_addr <= pc2icache.front_pre_branch_addr;
-        end
+    else if (branch_flush) begin
+        pc2icache.pc_for_buffer <= 32'b0;
+        pc2icache.icache_is_valid <= 1'b0;
+        pc2icache.icache_is_exception <= 6'b0;
+        pc2icache.icache_exception_cause <= 42'b0;
+        pc2icache.inst_for_buffer <= 32'b0;
+        pc2icache.stall_for_buffer <= 1'b1;
+        pc2icache.icache_fetch_inst_1_en <= 1'b0;
+        pc2icache.icache_is_branch_i_1 <= 1'b0;
+        pc2icache.icache_pre_taken_or_not <= 1'b0;
+        pc2icache.icache_pre_branch_addr <= 32'b0;
+    end
+    else begin
+        pc2icache.pc_for_buffer <= pre_physical_addr;
+        pc2icache.icache_is_valid <= pc2icache.front_is_valid;
+        pc2icache.icache_is_exception <= pc2icache.front_is_exception;
+        pc2icache.icache_exception_cause <= pc2icache.front_exception_cause;
+        pc2icache.inst_for_buffer <= pc2icache.inst;
+        pc2icache.stall_for_buffer <= pc2icache.stall;
+        pc2icache.icache_fetch_inst_1_en <= pc2icache.front_fetch_inst_1_en;
+        pc2icache.icache_is_branch_i_1 <= pc2icache.front_is_branch_i_1;
+        pc2icache.icache_pre_taken_or_not <= pc2icache.front_pre_taken_or_not;
+        pc2icache.icache_pre_branch_addr <= pc2icache.front_pre_branch_addr;
+    end
 end
 
 endmodule

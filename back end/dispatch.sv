@@ -148,12 +148,11 @@ module dispatch
             if (is_branch_taken && id_dispatch.pre_is_branch_taken) begin
                 branch_update_info.update_en = 1'b1;
                 branch_update_info.taken_or_not_actual = 1'b1;
+                branch_update_info.branch_actual_addr = branch_target_addr;
                 if (id_dispatch.pre_branch_addr == branch_target_addr) begin
                     branch_update_info.branch_flush = 1'b0;
-                    branch_update_info.branch_actual_addr = 32'b0;
                 end else begin
                     branch_update_info.branch_flush = 1'b1;
-                    branch_update_info.branch_actual_addr = branch_target_addr;
                 end
             end else if (is_branch_taken && !id_dispatch.pre_is_branch_taken) begin
                 branch_update_info.update_en = 1'b1;
