@@ -113,7 +113,7 @@ import pipeline_types::*;
 
         .is_branch_1(is_branch_i_1),
         .is_branch_2(is_branch_i_2),
-        .pre_taken_or_not(pi_master.front_pre_taken_or_not),
+        .pre_taken_or_not(pre_taken_or_not),
 
         .pre_branch_addr(pre_branch_addr),
         .btb_valid,
@@ -122,9 +122,9 @@ import pipeline_types::*;
         .fetch_inst_2_en
     );
 
-        assign pi_master.front_is_branch_i_1 = is_branch_i_1;
-        assign pi_master.front_pre_taken_or_not = pre_taken_or_not;
-        assign pi_master.front_pre_branch_addr = pre_branch_addr;
+    assign pi_master.front_is_branch_i_1 = is_branch_i_1;
+    assign pi_master.front_pre_taken_or_not = pre_taken_or_not;
+    assign pi_master.front_pre_branch_addr = pre_branch_addr;
 
     instbuffer u_instbuffer(
         .clk,
@@ -135,7 +135,7 @@ import pipeline_types::*;
 
         .inst(pi_master.inst_for_buffer),
         .pc(pi_master.pc_for_buffer),
-        .is_valid_out(pi_master.icache_is_valid),
+        .is_valid(pi_master.icache_is_valid),
         .is_exception(pi_master.icache_is_exception),
         .exception_cause(pi_master.icache_exception_cause),
 
