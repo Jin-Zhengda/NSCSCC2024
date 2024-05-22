@@ -97,21 +97,23 @@ module ex
 
     always_comb begin
         if (ex_mem.is_exception == 6'b0) begin
-            dcache_master.valid = mem_is_valid;
+            // if (dispatch_ex.pc < 32'h1c000100) begin
+            if (dispatch_ex.pc < 32'h00000120) begin
+                dcache_master.uncache_en = mem_is_valid;
+                dcache_master.valid = 1'b0;
+            end 
+            else begin
+                dcache_master.uncache_en = 1'b0;
+                dcache_master.valid = mem_is_valid;
+            end
         end
         else begin
+            dcache_master.uncache_en = 1'b0;
             dcache_master.valid = 1'b0;
         end
     end
 
     always_comb begin: to_dcache
-        // mem_is_valid = 1'b0;
-        // dcache_master.wdata = 32'b0;
-        // dcache_master.op = 1'b0;
-        // dcache_master.wstrb = 4'b1111;
-        // ex_is_exception = 1'b0;
-        // ex_exception_cause = 7'b0;
-
         case (dispatch_ex.aluop) 
             `ALU_LDB, `ALU_LDBU: begin
                 dcache_master.op = 1'b0;

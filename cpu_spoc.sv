@@ -53,6 +53,22 @@ module cpu_spoc
     assign icache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2: 0] == 3'b0);
     assign dcache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2: 0] == 3'b1);
 
+    logic iucache_ren_i;
+    bus32_t iucache_addr_i;
+    logic iucache_rvalid_o;
+    bus32_t iucache_rdata_o;
+
+    logic ducache_ren_i;
+    bus32_t ducache_araddr_i;
+    logic ducache_rvalid_o;
+    bus32_t ducache_rdata_o;  
+    logic ducache_wen_i;
+    bus32_t ducache_wdata_i;
+    bus32_t ducache_awaddr_i;
+    logic[3: 0] ducache_strb;
+    logic ducache_bvalid_o;
+
+
     icache u_icache (
         .clk,
         .reset(rst),
@@ -67,13 +83,22 @@ module cpu_spoc
 
         .icacop_op_en(icache_cacop),
         .icacop_op_mode(cache_inst.cacop_code[4: 3]),
-        .icacop_addr(cache_inst.addr)
+        .icacop_addr(cache_inst.addr),
+
+        .icache_uncache(pc_icache_io.uncache_en),
+        .iucache_ren_i(iucache_ren_i),
+        .iucache_addr_i(iucache_addr_i),
+        .iucache_rvalid_o(iucache_rvalid_o),
+        .iucache_rdata_o(iucache_rdata_o)
     );
 
     dcache u_dcache (
         .clk,
         .reset(rst),
         .mem2dcache(mem_dcache_io.slave),
+        .dcache_uncache(mem_dcache_io.uncache_en),
+        .cache_inst(cache_inst),
+
         .rd_req(read_en),
         .rd_addr(read_addr),
         .wr_req(write_en),
@@ -83,7 +108,18 @@ module cpu_spoc
         .wr_rdy(1'b1),
         .rd_rdy(1'b1),
         .ret_data(data_o),
-        .ret_valid(data_valid)
+        .ret_valid(data_valid),
+
+        .ducache_ren_i(ducache_ren_i),
+        .ducache_araddr_i(ducache_araddr_i),
+        .ducache_rvalid_o(ducache_rvalid_o),
+        .ducache_rdata_o(ducache_rdata_o),
+
+        .ducache_wen_i(ducache_wen_i),
+        .ducache_wdata_i(ducache_wdata_i),
+        .ducache_awaddr_i(ducache_awaddr_i),
+        .ducache_strb(ducache_strb),
+        .ducache_bvalid_o(ducache_bvalid_o)
     );
 
     inst_rom u_inst_rom (
@@ -91,6 +127,11 @@ module cpu_spoc
         .rst,
         .rom_inst_en(inst_en),
         .rom_inst_addr(inst_addr),
+
+        .uncache_en(iucache_addr_i),
+        .uncache_addr(iucache_addr_i),
+        .uncache_valid(iucache_rvalid_o),
+        .uncache_inst(iucache_rdata_o),
 
         .rom_inst(inst),
         .rom_inst_valid(inst_valid)
@@ -109,7 +150,17 @@ module cpu_spoc
         .read_en(read_en),
 
         .data_o(data_o),
-        .data_valid(data_valid)
+        .data_valid(data_valid),
+
+        .uncache_read_en(ducache_ren_i),
+        .uncache_read_addr(ducache_araddr_i),
+        .uncache_read_data(ducache_rdata_o),
+        .uncache_read_valid(ducache_rvalid_o),
+
+        .uncache_write_en(ducache_wen_i),
+        .uncache_write_addr(ducache_awaddr_i),
+        .uncache_write_data(ducache_wdata_i),
+        .uncache_select(ducache_strb)
     );
 
 endmodule

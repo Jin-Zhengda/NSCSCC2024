@@ -12,7 +12,19 @@ module csr
     input csr_write_t wb_i,
 
     input logic is_ertn,
-    input logic is_syscall_break,
+    input logic is_tlbsrch,
+    input logic is_tlbrd,
+    input logic is_tlbrd_valid,
+    input logic is_tlbwr,
+    input logic is_tlbfill,
+    input logic tlbsrch_found,
+    input logic[4: 0] tlbsrch_index,
+
+    input bus32_t tlb_line,
+    input bus32_t tlblo0_line,
+    input bus32_t tlblo1_line,
+
+    input logic is_tlb_exception,
 
     input logic is_ipi,
     input logic [7:0] is_hwi,
@@ -203,11 +215,7 @@ module csr
         if (rst) begin
             era <= 32'b0;
         end else if (ctrl_slave.is_exception) begin
-            if (is_syscall_break) begin
-                era <= ctrl_slave.exception_pc + 4'h4;
-            end else begin
-                era <= ctrl_slave.exception_pc;
-            end
+            era <= ctrl_slave.exception_pc;
         end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_ERA) begin
             era <= wb_i.csr_write_data;
         end else begin
@@ -246,6 +254,234 @@ module csr
             eentry[31:6] <= wb_i.csr_write_data[31:6];
         end else begin
             eentry <= eentry;
+        end
+    end
+
+    // TLBIDX write
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            tlbidx <= 32'b0;
+        end
+        else if (is_tlbsrch) begin
+            if (tlbsrch_found) begin
+                tlbidx[4: 0] <= tlbsrch_index;
+                tlbidx[31] <= 1'b0;
+            end
+            else begin
+                tlbidx[31] <= 1'b1;
+            end
+        end
+        else if (is_tlbrd) begin
+            if (is_tlbrd_valid) begin
+                tlbidx[29: 24] <= tlb_line[17: 12];
+                tlbidx[31] <= ~tlb_line[0];
+            end 
+            else begin
+                tlbidx[29: 24] <= 6'b0;
+                tlbidx[31] <= 1'b1;
+            end
+        end
+        else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_TLBIDX) begin
+            tlbidx[4: 0] <= wb_i.csr_write_data[4: 0]; // index
+            tlbidx[29: 24] <= wb_i.csr_write_data[29: 24]; // ps
+            tlbidx[31] <= wb_i.csr_write_data[31]; // ne
+        end
+        else begin
+            tlbidx <= tlbidx;
+        end
+    end
+
+    // TLBEHI write
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            tlbehi <= 32'b0;
+        end
+        else if (is_tlbrd) begin
+            if (is_tlbrd_valid) begin
+                tlbehi[31: 13] <=  tlb_line;
+            end 
+            else begin
+                tlbehi[31: 13] <=  19'b0;
+            end
+        end
+        else if (is_tlb_exception) begin
+            tlbehi[31: 13] <= ctrl_slave.exception_pc[31: 13];
+        end
+        else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_TLBEHI) begin
+            tlbehi[31: 13] <= wb_i.csr_write_data[31: 13]; // vppn
+        end
+        else begin
+            tlbehi <= tlbehi;
+        end
+    end
+
+    // TLBELO0 write
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            tlbelo0 <= 32'b0;
+        end
+        else if (is_tlbrd) begin
+            if (is_tlbrd_valid) begin
+                tlbelo0[0] <= tlblo0_line[0];
+                tlbelo0[1] <= tlblo0_line[1];
+                tlbelo0[3: 2] <= tlblo0_line[3: 2];
+                tlbelo0[5: 4] <= tlblo0_line[5: 4];
+                tlbelo0[6] <= tlblo0_line[6];
+                tlbelo0[31: 8] <= tlblo0_line[31: 8];
+            end
+            else begin
+                tlbelo0[0] <= 1'b0;
+                tlbelo0[1] <= 1'b0;
+                tlbelo0[3: 2] <= 2'b0;
+                tlbelo0[5: 4] <= 2'b0;
+                tlbelo0[6] <= 1'b0;
+                tlbelo0[31: 8] <= 24'b0;
+            end
+        end
+        else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_TLBELO0) begin
+            tlbelo0[0] <= wb_i.csr_write_data[0]; // V
+            tlbelo0[1] <= wb_i.csr_write_data[1]; // D
+            tlbelo0[3: 2] <= wb_i.csr_write_data[3: 2]; // PLV
+            tlbelo0[5: 4] <= wb_i.csr_write_data[5: 4]; // MAT
+            tlbelo0[6] <= wb_i.csr_write_data[6]; // G
+            tlbelo0[31: 8] <= wb_i.csr_write_data[31: 8]; // PPN
+        end
+        else begin
+            tlbelo0 <= tlbelo0;
+        end
+    end
+
+    // TLBELO1 write
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            tlbelo1 <= 32'b0;
+        end
+        else if (is_tlbrd) begin
+            if (is_tlbrd_valid) begin
+                tlbelo1[0] <= tlblo1_line[0];
+                tlbelo1[1] <= tlblo1_line[1];
+                tlbelo1[3: 2] <= tlblo1_line[3: 2];
+                tlbelo1[5: 4] <= tlblo1_line[5: 4];
+                tlbelo1[6] <= tlblo1_line[6];
+                tlbelo1[31: 8] <= tlblo1_line[31: 8];
+            end
+            else begin
+                tlbelo1[0] <= 1'b0;
+                tlbelo1[1] <= 1'b0;
+                tlbelo1[3: 2] <= 2'b0;
+                tlbelo1[5: 4] <= 2'b0;
+                tlbelo1[6] <= 1'b0;
+                tlbelo1[31: 8] <= 24'b0;
+            end
+        end
+        else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_TLBELO1) begin
+            tlbelo1[0] <= wb_i.csr_write_data[0]; // V
+            tlbelo1[1] <= wb_i.csr_write_data[1]; // D
+            tlbelo1[3: 2] <= wb_i.csr_write_data[3: 2]; // PLV
+            tlbelo1[5: 4] <= wb_i.csr_write_data[5: 4]; // MAT
+            tlbelo1[6] <= wb_i.csr_write_data[6]; // G
+            tlbelo1[31: 8] <= wb_i.csr_write_data[31: 8]; // PPN
+        end
+        else begin
+            tlbelo1 <= tlbelo1;
+        end
+    end
+
+    // ASID write
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            asid[15: 0] <= 16'b0;
+            asid[23: 16] <= 8'd10;
+            asid[31: 24] <= 7'b0; 
+        end
+        else if (is_tlbrd) begin
+            if (is_tlbrd_valid) begin
+                asid[9: 0] <= tlb_line[9: 0];
+            end
+            else begin
+                asid[9: 0] <= 10'b0;
+            end
+        end
+        else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_ASID) begin
+            asid[9: 0] <= wb_i.csr_write_data[9: 0];
+        end
+        else begin
+            asid <= asid;
+        end
+    end
+
+    // PGDL write
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            pgdl <= 32'b0;
+        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_PGDL) begin
+            pgdl[31: 12] <= wb_i.csr_write_data[31: 12]; // BASE
+        end else begin
+            pgdl <= pgdl;
+        end
+    end 
+
+    // PGDH write
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            pgdh <= 32'b0;
+        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_PGDH) begin
+            pgdh[31: 12] <= wb_i.csr_write_data[31: 12]; // BASE
+        end else begin
+            pgdh <= pgdh;
+        end
+    end
+
+    // PGD write
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            pgd <= 32'b0;
+        end
+        else begin
+            pgd <= pgd;
+        end
+    end
+
+    // TLBRENTRY write
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            tlbrentry <= 32'b0;
+        end
+        else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_TLBRENTRY) begin
+            tlbrentry[31: 6] <= wb_i.csr_write_data[31: 6]; // PA
+        end
+        else begin
+            tlbrentry <= tlbrentry;
+        end
+    end
+
+    // DMW0 write
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            dmw0 <= 32'b0;
+        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_DMW0) begin
+            dmw0[0] <= wb_i.csr_write_data[0]; // PLV0
+            dmw0[3] <= wb_i.csr_write_data[3]; // PLV3
+            dmw0[5: 4] <= wb_i.csr_write_data[5: 4]; // MAT
+            dmw0[27: 25] <= wb_i.csr_write_data[27: 25]; // PSEG
+            dmw0[31: 29] <= wb_i.csr_write_data[31: 29]; // VSEG
+        end else begin
+            dmw0 <= dmw0;
+        end
+    end
+
+    // DMW1 write
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            dmw1 <= 32'b0;
+        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_DMW1) begin
+            dmw1[0] <= wb_i.csr_write_data[0]; // PLV0
+            dmw1[3] <= wb_i.csr_write_data[3]; // PLV3
+            dmw1[5: 4] <= wb_i.csr_write_data[5: 4]; // MAT
+            dmw1[27: 25] <= wb_i.csr_write_data[27: 25]; // PSEG
+            dmw1[31: 29] <= wb_i.csr_write_data[31: 29]; // VSEG
+        end else begin
+            dmw1 <= dmw1;
         end
     end
 

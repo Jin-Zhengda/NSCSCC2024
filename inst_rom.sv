@@ -6,6 +6,11 @@ module inst_rom
     input logic rom_inst_en,
     input bus32_t rom_inst_addr,
 
+    input logic uncache_en,
+    input bus32_t uncache_addr,
+    output logic uncache_valid,
+    output bus32_t uncache_inst,
+
     output bus256_t rom_inst,
     // output bus32_t rom_inst,
     output logic rom_inst_valid
@@ -57,6 +62,7 @@ module inst_rom
         if (rst) begin
             rom_inst_valid <= 1'b0;
         end
+        
         else if (~rom_inst_en) begin
             rom_inst_valid <= 1'b0;
         end
@@ -66,5 +72,32 @@ module inst_rom
     end
 
     assign rom_inst = {inst[7], inst[6], inst[5], inst[4], inst[3], inst[2], inst[1], inst[0]};
+
+
+    always_ff @( posedge clk ) begin
+        if (rst) begin
+            uncache_valid <= 1'b0;
+        end
+        else if (uncache_en) begin
+            uncache_valid <= 1'b1;
+        end
+        else begin
+            uncache_valid <= 1'b0;
+        end
+    end
+
+    logic[11: 0] uncache_inst_addr;
+    assign uncache_inst_addr = uncache_addr[13: 2];
+    always_ff @( posedge clk ) begin
+        if (rst) begin
+            uncache_inst <= 32'b0;
+        end
+        else if (~uncache_en) begin
+            uncache_inst <= 32'b0;
+        end
+        else begin
+            uncache_inst <= rom[uncache_inst_addr];
+        end
+    end
     
 endmodule
