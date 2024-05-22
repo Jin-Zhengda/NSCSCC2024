@@ -35,7 +35,7 @@ import pipeline_types::*;
     //icache传来的信号
     input logic [31:0] inst,
     input logic [31:0] pc,
-    input logic is_valid,
+    input logic is_valid_out,
     input logic is_exception,
     input logic exception_cause,
 
@@ -85,16 +85,16 @@ import pipeline_types::*;
     logic fetch_inst_1_en;
     assign fetch_inst_1_en = stall ? 1'b0: icache_fetch_inst_1_en;
 
-    logic last_is_branch;
-    logic last_taken_or_not;
+    // logic last_is_branch;
+    // logic last_taken_or_not;
 
-    always_ff @( posedge clk ) begin
-        last_is_branch <= is_branch_1;
-        last_taken_or_not <= pre_taken_or_not;
-    end
+    // always_ff @( posedge clk ) begin
+    //     last_is_branch <= is_branch_1;
+    //     last_taken_or_not <= pre_taken_or_not;
+    // end
 
-    logic is_valid_out;
-    assign is_valid_out = ((last_is_branch & last_taken_or_not) || stall || branch_flush) ? 1'b0 : 1'b1;
+    // logic is_valid_out;
+    // assign is_valid_out = ((last_is_branch & last_taken_or_not) || stall || branch_flush) ? 1'b0 : 1'b1;
         
 
     always_ff @(posedge clk) begin
