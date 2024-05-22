@@ -100,7 +100,6 @@ import pipeline_types::*;
         .update_info(fb_master.update_info),
         .stall(pi_master.stall),
 
-        .pc_i(pc),
         .pc(pi_master.pc_for_bpu),
 
         .inst(pi_master.inst),
@@ -135,7 +134,7 @@ import pipeline_types::*;
 
         .inst(pi_master.inst_for_buffer),
         .pc(pi_master.pc_for_buffer),
-        .is_valid(pi_master.icache_is_valid),
+        .is_valid_out(pi_master.icache_is_valid),
         .is_exception(pi_master.icache_is_exception),
         .exception_cause(pi_master.icache_exception_cause),
 
