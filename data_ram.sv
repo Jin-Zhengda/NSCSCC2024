@@ -13,7 +13,17 @@ module data_ram
 
     output logic[7: 0][31: 0] data_o,
     // output bus32_t data_o,
-    output logic data_valid
+    output logic data_valid,
+
+    input logic uncache_read_en,
+    input bus32_t uncache_read_addr,
+    output bus32_t uncache_read_data,
+    output logic uncache_read_valid,
+
+    input logic uncache_write_en,
+    input bus32_t uncache_write_addr,
+    input bus32_t uncache_write_data,
+    input logic[3: 0] uncache_select
 );
 
     logic[7: 0] ram0[0: 1023];
@@ -24,8 +34,8 @@ module data_ram
     logic[9: 0] data_addr1;
     logic[9: 0] data_addr2;
 
-    assign data_addr1 = read_addr[11: 2];
-    assign data_addr2 = write_addr[11: 2];
+    assign data_addr1 = uncache_read_en ? uncache_read_addr[11: 2]: read_addr[11: 2];
+    assign data_addr2 = uncache_write_en ? uncache_write_addr[11: 2]: write_addr[11: 2];
 
     always_ff @(posedge clk) begin
         if (write_en) begin
@@ -40,6 +50,20 @@ module data_ram
             end
             if (select[0]) begin
                 ram0[data_addr2] <= data_i[7: 0];
+            end
+        end
+        else if (uncache_write_en) begin
+            if (uncache_select[3]) begin
+                ram3[data_addr2] <= uncache_write_data[31: 24];
+            end
+            if (uncache_select[2]) begin
+                ram2[data_addr2] <= uncache_write_data[23: 16];
+            end
+            if (uncache_select[1]) begin
+                ram1[data_addr2] <= uncache_write_data[15: 8];
+            end
+            if (uncache_select[0]) begin
+                ram0[data_addr2] <= uncache_write_data[7: 0];
             end
         end
     end
@@ -63,6 +87,21 @@ module data_ram
         else begin
             data_o <= 32'b0;
             data_valid <= 1'b0;
+        end
+    end
+
+    always_ff @( posedge clk ) begin
+        if (!ram_en) begin
+            uncache_read_data <= 32'b0;
+            uncache_read_valid <= 1'b0;
+        end
+        else if (uncache_read_en) begin
+            uncache_read_data <= {ram3[data_addr1], ram2[data_addr1], ram1[data_addr1], ram0[data_addr1]};
+            uncache_read_valid <= 1'b1;
+        end 
+        else begin
+            uncache_read_data <= 32'b0;
+            uncache_read_valid <= 1'b0;
         end
     end
 

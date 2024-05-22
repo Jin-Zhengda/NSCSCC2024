@@ -43,7 +43,9 @@ module pc_reg
 
     output pc_out_t pc,
     output logic inst_en_1,
-    output logic inst_en_2
+    output logic inst_en_2,
+
+    output logic uncache_en
 );
 
 
@@ -109,6 +111,16 @@ module pc_reg
                 pc.pc_o_1 <= pc.pc_o_1 + 4'h4;
             end
         end
+    end
+
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            uncache_en <= 1'b0;
+        end
+        // else if (pc < 32'h1c000100) begin
+        else if (pc < 32'h00000120) begin
+            uncache_en <= 1'b1;   
+        end        
     end
 
 

@@ -91,7 +91,9 @@ import pipeline_types::*;
 
         .pc,
         .inst_en_1,
-        .inst_en_2
+        .inst_en_2,
+
+        .uncache_en(pi_master.uncache_en)
     );
 
     bpu u_bpu(

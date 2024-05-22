@@ -17,7 +17,6 @@ module mem
     output logic pause_mem,
     output mem_wb_t mem_wb,
     output mem_ctrl_t mem_ctrl,
-    output logic is_syscall_break,
 
     output logic cnt_inst_diff,
     output logic [63:0] timer_64_diff,
@@ -53,7 +52,6 @@ module mem
     assign mem_ctrl.exception_addr = ex_mem.mem_addr;
 
     assign mem_ctrl.is_ertn = (mem_ctrl.is_exception == 6'b0 && ex_mem.aluop == `ALU_ERTN) ? 1'b1 : 1'b0;
-    assign is_syscall_break = (ex_mem.aluop == `ALU_SYSCALL || ex_mem.aluop == `ALU_BREAK) ? 1'b1 : 1'b0;
     assign mem_ctrl.is_idle = (ex_mem.aluop == `ALU_IDLE) ? 1'b1 : 1'b0;
     assign mem_ctrl.is_exception = ex_mem.is_exception;
     assign mem_ctrl.exception_cause = ex_mem.exception_cause;

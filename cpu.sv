@@ -192,6 +192,7 @@ module cpu
         .pc2icache(pc_icache_io.slave),
         .ctrl(ctrl),
         .branch_flush(branch_flush),
+        .icache_uncache(pc_icache_io.uncache_en),
 
         .rd_req(icache_rd_req),
         .rd_addr(icache_rd_addr),
@@ -213,6 +214,7 @@ module cpu
         .clk,
         .reset(rst),
         .mem2dcache(mem_dcache_io.slave),
+        .dcache_uncache(mem_dcache_io.uncache_en),
 
         .rd_req(dcache_rd_req),
         .rd_type(dcache_rd_type),

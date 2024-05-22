@@ -100,7 +100,6 @@ module backend
     bus64_t cnt;
     mem_wb_t mem_o;
     mem_ctrl_t mem_ctrl;
-    logic is_syscall_break;
 
     // wb 
     mem_wb_t wb;
@@ -228,7 +227,6 @@ module backend
         .pause_mem(pause_request.pause_mem),
         .mem_wb(mem_o),
         .mem_ctrl(mem_ctrl),
-        .is_syscall_break(is_syscall_break),
 
         .cnt_inst_diff,
         .csr_rstat_en_diff,
@@ -303,7 +301,6 @@ module backend
         .wb_i(wb.csr_write),
 
         .is_ertn(mem_ctrl.is_ertn),
-        .is_syscall_break(is_syscall_break),
 
         .is_ipi(1'b0),
         .is_hwi(0),
