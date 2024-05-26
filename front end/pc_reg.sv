@@ -117,10 +117,13 @@ module pc_reg
         if (rst) begin
             uncache_en <= 1'b0;
         end
-        // else if (pc < 32'h1c000100) begin
-        else if (pc < 32'h00000120) begin
+        // else if (pc.pc_o_1 < 32'h1c000100) begin
+        else if (pc.pc_o_1 < 32'h200) begin
             uncache_en <= 1'b1;   
         end        
+        else begin
+            uncache_en <= 1'b0;
+        end
     end
 
 

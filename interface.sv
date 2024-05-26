@@ -94,6 +94,40 @@ interface pc_icache;
     );
 endinterface : pc_icache
 
+interface mem_tlb;
+    logic is_tlbsrch;
+    logic srch_asid;
+    logic tlbehi;
+
+    logic is_tlbrd;
+    logic index;
+
+    logic tlb_miss;
+    logic tlb_hit_valid;
+    logic tlb_line;
+
+    logic is_tlbwr;
+    logic is_tlbfill;
+    logic tlb_waddr;
+    logic tlb_wdata;
+    
+    logic is_invtlb;
+    logic[4: 0] op;
+    logic inv_asid;
+    bus32_t va;
+
+    modport master(
+        input tlb_miss, tlb_hit_valid, tlb_line,
+        output is_tlbsrch, srch_asid, tlbehi, is_tlbrd, index, is_tlbwr, is_tlbfill, tlb_waddr, tlb_wdata, is_invtlb, inv_asid, va, op
+    );
+
+    modport slave(
+        output tlb_miss, tlb_hit_valid, tlb_line,
+        input is_tlbsrch, srch_asid, tlbehi, is_tlbrd, index, is_tlbwr, is_tlbfill, tlb_waddr, tlb_wdata, is_invtlb, inv_asid, va, op
+    );
+
+endinterface: mem_tlb
+
 interface dispatch_regfile;
     bus32_t reg1_read_data;
     bus32_t reg2_read_data;

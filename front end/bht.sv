@@ -104,7 +104,7 @@ module bht(
     always_ff @(posedge clk) begin
         if(rst) begin
             bht <= '{default:0};
-            pht <= '{default:0};
+            pht <= '{default: '{default: 2'b0}};
         end
         else begin
             if(update_en) begin

@@ -355,21 +355,21 @@ module ex
                     div_master.div_data1= dispatch_ex.reg1;
                     div_master.div_data2 = dispatch_ex.reg2;
                     div_master.div_start = 1'b1;
-                   div_master.div_signed = 1'b0;
+                    div_master.div_signed = 1'b0;
                     pause_ex_div = 1'b1;
                 end 
                 else if (div_master.div_done) begin
                     div_master.div_data1= dispatch_ex.reg1;
                     div_master.div_data2 = dispatch_ex.reg2;
                     div_master.div_start = 1'b0;
-                   div_master.div_signed = 1'b0;
+                    div_master.div_signed = 1'b0;
                     pause_ex_div = 1'b0;
                 end
                 else begin
                     div_master.div_data1= 32'b0;
                     div_master.div_data2 = 32'b0;
                     div_master.div_start = 1'b0;
-                   div_master.div_signed = 1'b0;
+                    div_master.div_signed = 1'b0;
                     pause_ex_div = 1'b0;
                 end
             end

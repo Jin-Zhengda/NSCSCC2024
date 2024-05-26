@@ -81,6 +81,9 @@ always_ff @( posedge clk ) begin
     branch_flush_delay<=branch_flush;
 end
 
+logic flush;
+assign flush=branch_flush_delay || ctrl.exception_flush | (ctrl.pause[1] && !ctrl.pause[2]);
+
 
 //TLB转换(未实�?)
 bus32_t physical_addr;
@@ -181,10 +184,7 @@ assign hit_way1 = (tagv_cache_w1[19:0]==pre_physical_addr[`TAG_LOC] && tagv_cach
 assign hit_success = (hit_way0 | hit_way1) & pre_inst_en;
 assign hit_fail = ~(hit_success) & pre_inst_en;
 
-assign pc2icache.stall=reset?1'b1:((icacop_op_en||pre_cacop_en)?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0));
-assign pc2icache.inst=branch_flush_delay? 32'b0:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0)));
-
-assign pc2icache.stall=reset?1'b1:((icacop_op_en||pre_cacop_en||uncache_stall||icache_uncache)?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0));
+assign pc2icache.stall=reset?1'b1:((icacop_op_en||pre_cacop_en||uncache_stall)?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0));
 //assign inst=branch_flush_delay? 32'b0:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0)));
 //这个inst该我代码了不知道我现在写的对不对！！！！！！！！！！！！！！！！！！！！！！！
 assign pc2icache.inst=branch_flush_delay? 32'b0:((pre_uncache_en&&iucache_rvalid_o)?iucache_rdata_o:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0))));

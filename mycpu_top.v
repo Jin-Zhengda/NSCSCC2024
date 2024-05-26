@@ -111,7 +111,7 @@ module core_top (
     wire[2: 0] dcache_rd_type;
 
     wire iucache_ren_i;
-    wire[31:0] iucache_adddr_i;
+    wire[31:0] iucache_addr_i;
     wire iucache_rvalid_o;
     wire[31:0] iucache_rdata_o;
 
@@ -332,7 +332,7 @@ module core_top (
         
         //I-uncached Read channel
         .iucache_ren_i(iucache_ren_i),
-        .iucache_addr_i(iucache_adddr_i),
+        .iucache_addr_i(iucache_addr_i),
         .iucache_rvalid_o(iucache_rvalid_o),
         .iucache_rdata_o(iucache_rdata_o), 
 
