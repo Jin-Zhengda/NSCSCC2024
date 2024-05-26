@@ -97,7 +97,7 @@ module cpu_spoc
         .reset(rst),
         .mem2dcache(mem_dcache_io.slave),
         .dcache_uncache(mem_dcache_io.uncache_en),
-        .cache_inst(cache_inst),
+        .dcache_inst(cache_inst),
 
         .rd_req(read_en),
         .rd_addr(read_addr),
@@ -128,7 +128,7 @@ module cpu_spoc
         .rom_inst_en(inst_en),
         .rom_inst_addr(inst_addr),
 
-        .uncache_en(iucache_addr_i),
+        .uncache_en(iucache_ren_i),
         .uncache_addr(iucache_addr_i),
         .uncache_valid(iucache_rvalid_o),
         .uncache_inst(iucache_rdata_o),

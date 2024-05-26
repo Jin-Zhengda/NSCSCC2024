@@ -20,13 +20,15 @@ typedef logic[255:0] bus256_t;
 `define TAGV_SIZE 21
 
 
-module dcache (
+module dcache 
+    import pipeline_types::*;
+(
     input logic clk,
     input logic reset,
     //to cpu
     mem_dcache mem2dcache,
     input logic dcache_uncache,
-    cache_inst_t dcache_inst,
+    input cache_inst_t dcache_inst,
 
     output logic stall,//比interface.sv里面的多了这个信号，你可以不接
 

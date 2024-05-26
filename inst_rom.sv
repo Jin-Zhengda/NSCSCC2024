@@ -16,6 +16,31 @@ module inst_rom
     output logic rom_inst_valid
 );
 
+    logic cnt_en;
+    logic cnt_end;
+    logic[4: 0] cnt;
+
+    assign cnt_end = cnt_en & (cnt == 5'd5);
+
+    always_comb begin
+        if (rst) begin
+            cnt_en = 1'b0;
+        end else begin
+            cnt_en = 1'b1;
+        end
+    end
+
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            cnt <= 5'h0;
+        end else if (cnt_end) begin
+            cnt <= 5'h0;
+        end else if (cnt_en) begin
+            cnt <= cnt + 5'h1;
+        end
+    end
+
+
     bus32_t rom[0: 4095];
 
     initial begin
@@ -62,11 +87,10 @@ module inst_rom
         if (rst) begin
             rom_inst_valid <= 1'b0;
         end
-        
         else if (~rom_inst_en) begin
             rom_inst_valid <= 1'b0;
         end
-        else begin
+        else if (cnt_end && rom_inst_en)begin
             rom_inst_valid <= 1'b1;
         end
     end
@@ -78,7 +102,10 @@ module inst_rom
         if (rst) begin
             uncache_valid <= 1'b0;
         end
-        else if (uncache_en) begin
+        else if (!uncache_en) begin
+            uncache_valid <= 1'b0;
+        end
+        else if (cnt_end && uncache_en) begin
             uncache_valid <= 1'b1;
         end
         else begin

@@ -61,7 +61,7 @@ module dcache (
     //to cpu
     mem_dcache mem2dcache,
     input logic dcache_uncache,
-    cache_inst_t dcache_inst,
+    input cache_inst_t dcache_inst,
 
     output logic stall,//比interface.sv里面的多了这个信号，你可以不接
 

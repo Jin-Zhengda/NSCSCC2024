@@ -1,3 +1,14 @@
+/**
+ * @file div.sv
+ * @brief This module implements a division operation.
+ *
+ * The div module performs division operation on two 32-bit operands.
+ * It supports both signed and unsigned division.
+ * The module handles division by zero and provides the quotient as the result.
+ *
+ * @author [Your Name]
+ * @date [Date]
+ */
 `timescale 1ns / 1ps
 
 module div
@@ -63,7 +74,7 @@ module div
                     state <= DivEnd;
                 end
                 DivOn: begin
-                    if (cnt != 6'b100000) begin
+                    if (cnt != 6'd32) begin
                         if (div_temp[32]) begin
                             dividend <= {dividend[63:0], 1'b0};
                         end else begin
