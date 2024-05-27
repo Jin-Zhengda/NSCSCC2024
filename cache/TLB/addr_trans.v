@@ -38,29 +38,33 @@ module addr_trans
     output                 data_tlb_d           ,
     output [ 1:0]          data_tlb_mat         ,
     output [ 1:0]          data_tlb_plv         ,
-    //tlbwi tlbwr tlb write
-    input                  tlbfill_en           ,
-    input                  tlbwr_en             ,
-    input  [ 4:0]          rand_index           ,
+    //TLBFILL和TLBWR指令
+    input                  tlbfill_en           ,//TLBFILL指令的使能信号
+    input                  tlbwr_en             ,//TLBWR指令的使能信号
+    input  [ 4:0]          rand_index           ,//TLBFILL指令的index
     input  [31:0]          tlbehi_in            ,//CSR.TLBEHI信息
-    input  [31:0]          tlbelo0_in           ,
-    input  [31:0]          tlbelo1_in           ,
-    input  [31:0]          tlbidx_in            , 
-    input  [ 5:0]          ecode_in             ,
-    //tlbr tlb read
-    output [31:0]          tlbehi_out           ,
-    output [31:0]          tlbelo0_out          ,
-    output [31:0]          tlbelo1_out          ,
-    output [31:0]          tlbidx_out           ,
-    output [ 9:0]          asid_out             ,
+    input  [31:0]          tlbelo0_in           ,//CSR.TLBELO0信息
+    input  [31:0]          tlbelo1_in           ,//CSR.TLBELO1信息
+    input  [31:0]          tlbidx_in            ,//读写共用的信号！包含了TLBWR时的index位于[4:0],以及PS信号位于[29:24]，NE信号位于[31]
+    input  [ 5:0]          ecode_in             ,//使能信号，若为111111则写使能，否则根据tlbindex_in.NE判断是否写使能？
+    //TLBSRCH指令！！！！！！！！！！！！！！！！尚待自己实现！！！！！！！！！！！！！！！！！！！！！
+    input                  tlbsrch_en           ,//TLBSRCH指令使能信号
+    output                 search_tlb_found     ,//TLBSRCH命中
+    output [ 4:0]          search_tlb_index     ,//TLBSRCH所需返回的index信号
+    //TLBRD指令（输入的信号复用tlbidx_in），下一周期开始返回读取的结果
+    output [31:0]          tlbehi_out           ,//{r_vppn, 13'b0}
+    output [31:0]          tlbelo0_out          ,//{4'b0, ppn0, 1'b0, g, mat0, plv0, d0, v0}
+    output [31:0]          tlbelo1_out          ,//{4'b0, ppn1, 1'b0, g, mat1, plv1, d1, v1}
+    output [31:0]          tlbidx_out           ,//只有[29:24]为ps信号，其他位均为0
+    output [ 9:0]          asid_out             ,//读出的asid
     //invtlb ——用于实现无效tlb的指令
-    input                  invtlb_en            ,
-    input  [ 9:0]          invtlb_asid          ,
-    input  [18:0]          invtlb_vpn           ,
-    input  [ 4:0]          invtlb_op            ,
+    input                  invtlb_en            ,//使能
+    input  [ 9:0]          invtlb_asid          ,//asid
+    input  [18:0]          invtlb_vpn           ,//vpn
+    input  [ 4:0]          invtlb_op            ,//op
     //from csr
-    input  [31:0]          csr_dmw0             ,//dmw0的窗口，有效位是[27:25]，会作为最后转换出来的地址的最高三位(为什么是27:25??????????????????????????)
-    input  [31:0]          csr_dmw1             ,//dmw1的窗口，有效位是[27:25]，会作为最后转换出来的地址的最高三位
+    input  [31:0]          csr_dmw0             ,//dmw0，有效位是[27:25]，会作为最后转换出来的地址的最高三位
+    input  [31:0]          csr_dmw1             ,//dmw1，有效位是[27:25]，会作为最后转换出来的地址的最高三位
     input                  csr_da               ,//表示地址翻译模式为数据模式????????????????????????????????????????????????????????????????
     input                  csr_pg                //表示地址翻译模式为分页模式????????????????????????????????????????????????????????????????
 );
