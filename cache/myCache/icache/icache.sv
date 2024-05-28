@@ -80,10 +80,15 @@ module icache
 );
 logic hit_success,hit_fail,hit_way0,hit_way1;
 
+logic ignore_one_ret;
+logic real_iucache_rvalid_o;
+assign real_iucache_rvalid_o=ignore_one_ret?1'b0:iucache_rvalid_o;
+
+
 logic uncache_stall;
 //ucache
 logic pre_uncache_en;
-assign uncache_stall=pre_uncache_en&&!iucache_rvalid_o;
+assign uncache_stall=pre_uncache_en&&!real_iucache_rvalid_o;
 always_ff @( posedge clk ) begin
     if(reset)pre_uncache_en<=1'b0;
     else if(uncache_stall)pre_uncache_en<=pre_uncache_en;
@@ -128,13 +133,14 @@ always_ff @( posedge clk ) begin
 end
 
 //flush会有多久，会持续到主存返回数据吗？1-给pc  2-读出hit_fail，给rd_req  3-ignore_one_ret=1  4及以后主存ret_valid
-logic ignore_one_ret;
+
 always_ff @( posedge clk ) begin
     if(reset)ignore_one_ret<=1'b0;
-    else if(flush_delay&&hit_fail)ignore_one_ret<=1'b1;//flush_delay与hit_fail同拍
-    else if(ret_valid)ignore_one_ret<=1'b0;
+    else if(flush_delay&&(hit_fail||pre_uncache_en))ignore_one_ret<=1'b1;//flush_delay与hit_fail同拍
+    else if(ret_valid||iucache_rvalid_o)ignore_one_ret<=1'b0;
     else ignore_one_ret<=ignore_one_ret;
 end
+logic real_ret_valid;
 assign real_ret_valid=ignore_one_ret?1'b0:ret_valid;
 
 //TLB转换(未实�?)
@@ -240,7 +246,7 @@ assign hit_fail = ~(hit_success) & pre_inst_en;
 assign pc2icache.stall=reset?1'b1:(flush?1'b0:((icacop_op_en||pre_cacop_en||uncache_stall)?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0)));
 //assign inst=branch_flush_delay? 32'b0:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&real_ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0)));
 //这个inst该我代码了不知道我现在写的对不对！！！！！！！！！！！！！！！！！！！！！！！
-assign pc2icache.inst=branch_flush_delay? 32'b0:((pre_uncache_en&&iucache_rvalid_o)?iucache_rdata_o:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&real_ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0))));
+assign pc2icache.inst=branch_flush_delay? 32'b0:((pre_uncache_en&&real_iucache_rvalid_o)?iucache_rdata_o:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&real_ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0))));
 
 assign wea_way0=(cacop_op_0||cacop_op_1||cacop_op_2)?4'b1111:(pre_inst_en&&real_ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
 assign wea_way1=(cacop_op_0||cacop_op_1||cacop_op_2)?4'b1111:(pre_inst_en&&real_ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
