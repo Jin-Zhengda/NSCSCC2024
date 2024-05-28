@@ -1,4 +1,4 @@
-`include "defines.sv"
+`include "core_defines.sv"
 `include "csr_defines.sv"
 `timescale 1ns / 1ps
 
@@ -11,7 +11,7 @@ module id
     input logic pre_is_branch_taken,
     input bus32_t pre_branch_addr,
     input logic [5:0] is_exception,
-    input logic [5:0][6:0] exception_cause,
+    input logic [5:0][EXC_CAUSE_WIDTH - 1:0] exception_cause,
 
     output logic pause_id,
     output id_dispatch_t id_o
@@ -90,10 +90,10 @@ module id
         id_o.reg_write_addr = 5'b0;
         id_o.reg_write_en = 1'b0;
         inst_valid = 1'b0;
-        id_o.reg1_read_en = 1'b0;
-        id_o.reg2_read_en = 1'b0;
-        id_o.reg1_read_addr = rj;
-        id_o.reg2_read_addr = rk;
+        id_o.reg_read_en[0] = 1'b0;
+        id_o.reg_read_en[1] = 1'b0;
+        id_o.reg_read_addr[0] = rj;
+        id_o.reg_read_addr[1] = rk;
         id_o.imm = 32'b0;
         id_o.csr_read_en = 1'b0;
         id_o.csr_write_en = 1'b0;
@@ -108,8 +108,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_SLTI;
                 id_o.alusel = `ALU_SEL_SHIFT;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
                 inst_valid = 1'b1;
             end
@@ -118,8 +118,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_SLTUI;
                 id_o.alusel = `ALU_SEL_SHIFT;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
                 inst_valid = 1'b1;
             end
@@ -128,8 +128,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_ADDIW;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
                 inst_valid = 1'b1;
             end
@@ -138,8 +138,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_ANDI;
                 id_o.alusel = `ALU_SEL_LOGIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {20'b0, ui12};
                 inst_valid = 1'b1;
             end
@@ -148,8 +148,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_ORI;
                 id_o.alusel = `ALU_SEL_LOGIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {20'b0, ui12};
                 inst_valid = 1'b1;
             end
@@ -158,8 +158,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_XORI;
                 id_o.alusel = `ALU_SEL_LOGIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {20'b0, ui12};
                 inst_valid = 1'b1;
             end
@@ -168,8 +168,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_LDB;
                 id_o.alusel = `ALU_SEL_LOAD_STORE;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
                 inst_valid = 1'b1;
             end
@@ -178,8 +178,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_LDH;
                 id_o.alusel = `ALU_SEL_LOAD_STORE;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
                 inst_valid = 1'b1;
             end
@@ -188,8 +188,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_LDW;
                 id_o.alusel = `ALU_SEL_LOAD_STORE;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
                 inst_valid = 1'b1;
             end
@@ -198,8 +198,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_LDBU;
                 id_o.alusel = `ALU_SEL_LOAD_STORE;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
                 inst_valid = 1'b1;
             end
@@ -208,8 +208,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_LDHU;
                 id_o.alusel = `ALU_SEL_LOAD_STORE;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
                 inst_valid = 1'b1;
             end
@@ -217,35 +217,35 @@ module id
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_STB;
                 id_o.alusel = `ALU_SEL_LOAD_STORE;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
-                id_o.reg2_read_addr = rd;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
+                id_o.reg_read_addr[1] = rd;
                 inst_valid = 1'b1;
             end
             `STH_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_STH;
                 id_o.alusel = `ALU_SEL_LOAD_STORE;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
-                id_o.reg2_read_addr = rd;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
+                id_o.reg_read_addr[1] = rd;
                 inst_valid = 1'b1;
             end
             `STW_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_STW;
                 id_o.alusel = `ALU_SEL_LOAD_STORE;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
-                id_o.reg2_read_addr = rd;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
+                id_o.reg_read_addr[1] = rd;
                 inst_valid = 1'b1;
             end
             `PRELD_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_PRELD;
                 id_o.alusel = `ALU_SEL_LOAD_STORE;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
                 inst_valid = 1'b1;
             end
@@ -254,8 +254,8 @@ module id
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_CACOP;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
                 id_o.cacop_code = rd;
                 inst_valid = 1'b1;
@@ -270,8 +270,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_ADDW;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `SUBW_OPCODE: begin
@@ -279,8 +279,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_SUBW;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `SLT_OPCODE: begin
@@ -288,8 +288,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_SLT;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `SLTU_OPCODE: begin
@@ -297,8 +297,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_SLTU;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `NOR_OPCODE: begin
@@ -306,8 +306,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_NOR;
                 id_o.alusel = `ALU_SEL_LOGIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `AND_OPCODE: begin
@@ -315,8 +315,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_AND;
                 id_o.alusel = `ALU_SEL_LOGIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `OR_OPCODE: begin
@@ -324,8 +324,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_OR;
                 id_o.alusel = `ALU_SEL_LOGIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `XOR_OPCODE: begin
@@ -333,8 +333,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_XOR;
                 id_o.alusel = `ALU_SEL_LOGIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `SLLW_OPCODE: begin
@@ -342,8 +342,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_SLLW;
                 id_o.alusel = `ALU_SEL_SHIFT;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `SRLW_OPCODE: begin
@@ -351,8 +351,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_SRLW;
                 id_o.alusel = `ALU_SEL_SHIFT;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `SRAW_OPCODE: begin
@@ -360,8 +360,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_SRAW;
                 id_o.alusel = `ALU_SEL_SHIFT;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `MULW_OPCODE: begin
@@ -369,8 +369,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_MULW;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `MULHW_OPCODE: begin
@@ -378,8 +378,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_MULHW;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `MULHWU_OPCODE: begin
@@ -387,8 +387,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_MULHWU;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `DIVW_OPCODE: begin
@@ -396,8 +396,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_DIVW;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `MODW_OPCODE: begin
@@ -405,8 +405,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_MODW;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `DIVWU_OPCODE: begin
@@ -414,8 +414,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_DIVWU;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `MODWU_OPCODE: begin
@@ -423,8 +423,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_MODWU;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
             end
             `SLLIW_OPCODE: begin
@@ -432,8 +432,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_SLLIW;
                 id_o.alusel = `ALU_SEL_SHIFT;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {27'b0, ui5};
                 inst_valid = 1'b1;
             end
@@ -442,8 +442,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_SRLIW;
                 id_o.alusel = `ALU_SEL_SHIFT;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {27'b0, ui5};
                 inst_valid = 1'b1;
             end
@@ -452,8 +452,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_SRAIW;
                 id_o.alusel = `ALU_SEL_SHIFT;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {27'b0, ui5};
                 inst_valid = 1'b1;
             end
@@ -461,8 +461,8 @@ module id
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_BREAK;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 id_exception = 1'b1;
                 id_exception_cause = `EXCEPTION_BRK;
                 inst_valid = 1'b1;
@@ -471,8 +471,8 @@ module id
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_SYSCALL;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 id_exception = 1'b1;
                 id_exception_cause = `EXCEPTION_SYS;
                 inst_valid = 1'b1;
@@ -482,8 +482,8 @@ module id
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_IDLE;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
             end
             `INVTLB_OPCODE: begin
@@ -491,8 +491,8 @@ module id
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_INVTLB;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
             end
             default: begin
@@ -505,9 +505,9 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_LU12I;
                 id_o.alusel = `ALU_SEL_LOGIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg1_read_addr = 5'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_addr[0] = 5'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {si20, 12'b0};
                 inst_valid = 1'b1;
             end
@@ -516,8 +516,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_PCADDU12I;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {si20, 12'b0};
                 inst_valid = 1'b1;
             end
@@ -531,8 +531,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_LLW;
                 id_o.alusel = `ALU_SEL_LOAD_STORE;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {{16{si14[13]}}, si14, 2'b00};
                 inst_valid = 1'b1;
             end
@@ -541,9 +541,9 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_SCW;
                 id_o.alusel = `ALU_SEL_LOAD_STORE;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b1;
-                id_o.reg2_read_addr = rd;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
+                id_o.reg_read_addr[1] = rd;
                 inst_valid = 1'b1;
             end
             `CSR_OPCODE: begin
@@ -554,8 +554,8 @@ module id
                         id_o.reg_write_addr = rd;
                         id_o.aluop = `ALU_CSRRD;
                         id_o.alusel = `ALU_SEL_NOP;
-                        id_o.reg1_read_en = 1'b0;
-                        id_o.reg2_read_en = 1'b0;
+                        id_o.reg_read_en[0] = 1'b0;
+                        id_o.reg_read_en[1] = 1'b0;
                         id_o.csr_read_en = 1'b1;
                         id_o.csr_write_en = 1'b0;
                         inst_valid = 1'b1;
@@ -565,9 +565,9 @@ module id
                         id_o.reg_write_addr = rd;
                         id_o.aluop = `ALU_CSRWR;
                         id_o.alusel = `ALU_SEL_NOP;
-                        id_o.reg1_read_en = 1'b1;
-                        id_o.reg1_read_addr = rd;
-                        id_o.reg2_read_en = 1'b0;
+                        id_o.reg_read_en[0] = 1'b1;
+                        id_o.reg_read_addr[0] = rd;
+                        id_o.reg_read_en[1] = 1'b0;
                         id_o.csr_read_en = 1'b1;
                         id_o.csr_write_en = 1'b1;
                         inst_valid = 1'b1;
@@ -577,10 +577,10 @@ module id
                         id_o.reg_write_addr = rd;
                         id_o.aluop = `ALU_CSRXCHG;
                         id_o.alusel = `ALU_SEL_NOP;
-                        id_o.reg1_read_en = 1'b1;
-                        id_o.reg1_read_addr = rd;
-                        id_o.reg2_read_en = 1'b1;
-                        id_o.reg2_read_addr = rj;
+                        id_o.reg_read_en[0] = 1'b1;
+                        id_o.reg_read_addr[0] = rd;
+                        id_o.reg_read_en[1] = 1'b1;
+                        id_o.reg_read_addr[1] = rj;
                         id_o.csr_read_en = 1'b1;
                         id_o.csr_write_en = 1'b1;
                         inst_valid = 1'b1;
@@ -597,68 +597,68 @@ module id
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_BEQ;
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg1_read_addr = rj;
-                id_o.reg2_read_en = 1'b1;
-                id_o.reg2_read_addr = rd;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_addr[0] = rj;
+                id_o.reg_read_en[1] = 1'b1;
+                id_o.reg_read_addr[1] = rd;
                 inst_valid = 1'b1;
             end
             `BNE_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_BNE;
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg1_read_addr = rj;
-                id_o.reg2_read_en = 1'b1;
-                id_o.reg2_read_addr = rd;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_addr[0] = rj;
+                id_o.reg_read_en[1] = 1'b1;
+                id_o.reg_read_addr[1] = rd;
                 inst_valid = 1'b1;
             end
             `BLT_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_BLT;
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg1_read_addr = rj;
-                id_o.reg2_read_en = 1'b1;
-                id_o.reg2_read_addr = rd;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_addr[0] = rj;
+                id_o.reg_read_en[1] = 1'b1;
+                id_o.reg_read_addr[1] = rd;
                 inst_valid = 1'b1;
             end
             `BGE_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_BGE;
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg1_read_addr = rj;
-                id_o.reg2_read_en = 1'b1;
-                id_o.reg2_read_addr = rd;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_addr[0] = rj;
+                id_o.reg_read_en[1] = 1'b1;
+                id_o.reg_read_addr[1] = rd;
                 inst_valid = 1'b1;
             end
             `BLTU_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_BLT;
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg1_read_addr = rj;
-                id_o.reg2_read_en = 1'b1;
-                id_o.reg2_read_addr = rd;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_addr[0] = rj;
+                id_o.reg_read_en[1] = 1'b1;
+                id_o.reg_read_addr[1] = rd;
                 inst_valid = 1'b1;
             end
             `BGEU_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_BGE;
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg1_read_addr = rj;
-                id_o.reg2_read_en = 1'b1;
-                id_o.reg2_read_addr = rd;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_addr[0] = rj;
+                id_o.reg_read_en[1] = 1'b1;
+                id_o.reg_read_addr[1] = rd;
                 inst_valid = 1'b1;
             end
             `B_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_B;
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
             end
             `BL_OPCODE: begin
@@ -666,8 +666,8 @@ module id
                 id_o.reg_write_addr = 5'b00001;
                 id_o.aluop = `ALU_BL;
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
             end
             `JIRL_OPCODE: begin
@@ -675,8 +675,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_JIRL;
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
-                id_o.reg1_read_en = 1'b1;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
             end
             default: begin
@@ -689,8 +689,8 @@ module id
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_ERTN;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
             end
             `RDCNTID_OPCDOE: begin
@@ -698,8 +698,8 @@ module id
                 id_o.reg_write_addr = rj;
                 id_o.aluop = `ALU_RDCNTID;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
             end
             `TLBSRCH_OPCODE: begin
@@ -707,8 +707,8 @@ module id
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_TLBSRCH;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
             end
             `TLBRD_OPCODE: begin
@@ -716,8 +716,8 @@ module id
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_TLBRD;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
             end
             `TLBWR_OPCODE: begin
@@ -725,8 +725,8 @@ module id
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_TLBWR;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
             end
             `TLBFILL_OPCODE: begin
@@ -734,8 +734,8 @@ module id
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_TLBFILL;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
             end
             default: begin
@@ -748,8 +748,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_RDCNTVLW;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
             end
             `RDCNTVHW_OPCDOE: begin
@@ -757,8 +757,8 @@ module id
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_RDCNTVHW;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg1_read_en = 1'b0;
-                id_o.reg2_read_en = 1'b0;
+                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
             end
             default: begin

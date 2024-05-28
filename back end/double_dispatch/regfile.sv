@@ -6,13 +6,13 @@ module regfile
     input logic clk,
     input logic rst,
 
-    input data_write_t data_write[WRITE_PORTS - 1:0],
+    input data_write_t data_write,
     dispatch_regfile slave,
 
-    output bus32_t regs_diff[31:0]
+    output bus32_t regs_diff[32]
 );
 
-    (* ram_style="distributed" *) bus32_t ram[31:0];
+    (* ram_style="distributed" *) bus32_t ram[32];
 
     assign regs_diff = ram;
 
@@ -21,8 +21,8 @@ module regfile
             ram <= '{default: 32'b0};
         end else begin
             for (int i = 0; i < WRITE_PORTS; i++) begin
-                if (data_write[i].write_en) begin
-                    ram[data_write[i].write_addr] <= data_write[i].write_data;
+                if (data_write.write_en[i]) begin
+                    ram[data_write.write_addr[i]] <= data_write.write_data[i];
                 end
             end
         end
@@ -34,8 +34,8 @@ module regfile
             slave.reg_read_data[i] = ram[slave.reg_read_addr[i]];
 
             for (int j = 0; j < WRITE_PORTS; j++) begin
-                if (slave.reg_read_addr[i] == data_write[j].write_addr && data_write[j].write_en) begin
-                    slave.reg_read_data[i] = data_write[j].write_data;
+                if (slave.reg_read_addr[i] == data_write.write_addr[j] && data_write.write_en[j]) begin
+                    slave.reg_read_data[i] = data_write.write_data[j];
                 end
             end
 

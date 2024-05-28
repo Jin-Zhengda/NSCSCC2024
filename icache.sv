@@ -41,13 +41,17 @@ module icache
     input logic iucache_rvalid_o,
     input bus32_t iucache_rdata_o
 );
-
 logic hit_success,hit_fail,hit_way0,hit_way1;
+
+logic ignore_one_ret;
+logic real_iucache_rvalid_o;
+assign real_iucache_rvalid_o=ignore_one_ret?1'b0:iucache_rvalid_o;
+
 
 logic uncache_stall;
 //ucache
 logic pre_uncache_en;
-assign uncache_stall=pre_uncache_en&&!iucache_rvalid_o;
+assign uncache_stall=pre_uncache_en&&!real_iucache_rvalid_o;
 always_ff @( posedge clk ) begin
     if(reset)pre_uncache_en<=1'b0;
     else if(uncache_stall)pre_uncache_en<=pre_uncache_en;
@@ -92,13 +96,14 @@ always_ff @( posedge clk ) begin
 end
 
 //flush会有多久，会持续到主存返回数据吗？1-给pc  2-读出hit_fail，给rd_req  3-ignore_one_ret=1  4及以后主存ret_valid
-logic ignore_one_ret;
+
 always_ff @( posedge clk ) begin
     if(reset)ignore_one_ret<=1'b0;
-    else if(flush_delay&&hit_fail)ignore_one_ret<=1'b1;//flush_delay与hit_fail同拍
-    else if(ret_valid)ignore_one_ret<=1'b0;
+    else if(flush_delay&&(hit_fail||pre_uncache_en))ignore_one_ret<=1'b1;//flush_delay与hit_fail同拍
+    else if(ret_valid||iucache_rvalid_o)ignore_one_ret<=1'b0;
     else ignore_one_ret<=ignore_one_ret;
 end
+logic real_ret_valid;
 assign real_ret_valid=ignore_one_ret?1'b0:ret_valid;
 
 //TLB转换(未实�?)

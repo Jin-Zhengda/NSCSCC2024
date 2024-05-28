@@ -5,23 +5,23 @@ module decoder
 (
     input logic  clk,
     input logic  rst,
-    input logic  branch_flush,
+    input logic branch_flush,
     input ctrl_t ctrl,
 
-    input bus32_t pc[DECODER_WIDTH - 1:0],
-    input bus32_t inst[DECODER_WIDTH - 1:0],
-    input logic pre_is_branch[DECODER_WIDTH - 1:0],
-    input logic pre_is_branch_taken[DECODER_WIDTH - 1:0],
-    input bus32_t pre_branch_addr[DECODER_WIDTH - 1:0],
-    input logic [5:0] is_exception[DECODER_WIDTH - 1:0],
-    input logic [5:0][6:0] exception_cause[DECODER_WIDTH - 1:0],
+    input bus32_t pc[DECODER_WIDTH],
+    input bus32_t inst[DECODER_WIDTH],
+    input logic pre_is_branch[DECODER_WIDTH],
+    input logic pre_is_branch_taken[DECODER_WIDTH],
+    input bus32_t pre_branch_addr[DECODER_WIDTH],
+    input logic [5:0] is_exception[DECODER_WIDTH],
+    input logic [5:0][6:0] exception_cause[DECODER_WIDTH],
 
     output logic pause_decoder,
-    output id_dispatch_t dispatch_i[DECODER_WIDTH - 1:0]
+    output id_dispatch_t dispatch_i[DECODER_WIDTH]
 );
 
     logic [DECODER_WIDTH - 1:0] pause_id;
-    id_dispatch_t id_o[DECODER_WIDTH - 1:0];
+    id_dispatch_t id_o[DECODER_WIDTH];
 
     generate
         for (genvar i = 0; i < DECODER_WIDTH; i++) begin
