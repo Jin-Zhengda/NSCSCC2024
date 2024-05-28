@@ -1,7 +1,7 @@
 `include "defines.sv"
 `timescale 1ns / 1ps
 
-module dispatch
+module dispatch_i
     import pipeline_types::*;
 (
     input id_dispatch_t id_dispatch,

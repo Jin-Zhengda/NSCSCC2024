@@ -141,30 +141,18 @@ interface ex_tlb;
 endinterface: ex_tlb
 
 interface dispatch_regfile;
-    bus32_t reg1_read_data;
-    bus32_t reg2_read_data;
-
-    logic reg1_read_en;
-    reg_addr_t reg1_read_addr;
-    logic reg2_read_en;
-    reg_addr_t reg2_read_addr;
+    logic reg_read_en[READ_PORTS - 1: 0];
+    reg_addr_t reg_read_addr[READ_PORTS - 1: 0];
+    bus32_t reg_read_data[READ_PORTS - 1: 0];
 
     modport master(
-        input reg1_read_data,
-        input reg2_read_data,
-        output reg1_read_en,
-        output reg1_read_addr,
-        output reg2_read_en,
-        output reg2_read_addr
+        input reg_read_data,
+        output reg_read_en, reg_read_addr
     );
 
     modport slave(
-        input reg1_read_en,
-        input reg1_read_addr,
-        input reg2_read_en,
-        input reg2_read_addr,
-        output reg1_read_data,
-        output reg2_read_data
+        input reg_read_en, reg_read_addr,
+        output reg_read_data
     );
 
 endinterface : dispatch_regfile

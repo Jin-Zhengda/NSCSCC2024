@@ -77,6 +77,7 @@ module backend
     // id
     pc_id_t id_i;
     id_dispatch_t id_o;
+    csr_push_forward_t csr_push_forward;
 
     // dispatch
     id_dispatch_t dispatch_i;
@@ -115,9 +116,12 @@ module backend
         .is_exception(fb_slave.inst_and_pc_o.is_exception),
         .exception_cause(fb_slave.inst_and_pc_o.exception_cause),
 
+        .csr_push_forward(csr_push_forward),
+
         .pause_id(pause_request.pause_id),
         .id_dispatch(id_o)
     );
+
 
     id_dispatch u_id_dispatch (
         .clk,
@@ -294,7 +298,7 @@ module backend
         .is_ertn(mem_ctrl.is_ertn),
 
         .is_ipi(1'b0),
-        .is_hwi(0),
+        .is_hwi(8'b0),
 
         .ctrl_slave(ctrl_csr_io.slave),
         .LLbit(LLbit),

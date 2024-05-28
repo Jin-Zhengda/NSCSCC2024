@@ -36,8 +36,8 @@ import pipeline_types::*;
     input logic [31:0] inst,
     input logic [31:0] pc,
     input logic is_valid_out,
-    input logic is_exception,
-    input logic exception_cause,
+    input logic[5: 0] is_exception,
+    input logic[5: 0][6: 0] exception_cause,
 
     //bpu传来的信号
     input logic is_branch_1,
