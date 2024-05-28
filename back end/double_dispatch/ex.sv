@@ -11,11 +11,16 @@ module ex
     input csr_push_forward_t mem_push_forward,
     input csr_push_forward_t wb_push_forward,
 
+    input bus32_t asid,
+    input bus32_t tlbehi,
+    input bus32_t tlbidx,
+
     output logic pause_ex,
     output ex_mem_t ex_mem,
     
     mem_dcache dcache_master,
     output cache_inst_t cache_inst,
+    mem_tlb tlb_master,
 
     ex_div div_master
 );
@@ -41,6 +46,22 @@ module ex
 
     assign ex_mem.csr_read_en = dispatch_ex.csr_read_en;
     assign ex_mem.csr_mask = dispatch_ex.reg2;
+
+    always_comb begin
+        case(dispatch_ex.aluop) 
+            `ALU_TLBSRCH: begin
+                tlb_master.is_tlbsrch = 1'b1;
+                tlb_master.srch_asid = asid;
+                tlb_master.tlbehi = tlbehi;
+            end
+            `ALU_TLBRD: begin
+                tlb_master.is_tlbrd = 1'b1;
+                tlb_master.index = dispatch_ex.reg1;
+            end
+        endcase
+    end
+
+
 
     logic LLbit_current;
 
