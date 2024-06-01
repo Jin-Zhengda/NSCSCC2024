@@ -6,9 +6,13 @@ module regfile
     input logic clk,
     input logic rst,
 
+    // from wb
     input data_write_t data_write,
+
+    // with dispatch
     dispatch_regfile slave,
 
+    // for diff
     output bus32_t regs_diff[32]
 );
 

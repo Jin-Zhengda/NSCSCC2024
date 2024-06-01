@@ -217,21 +217,7 @@ module backend
 
         .pause_mem(pause_request.pause_mem),
         .mem_wb(mem_o),
-        .mem_ctrl(mem_ctrl),
-
-        .cnt_inst_diff,
-        .csr_rstat_en_diff,
-        .csr_data_diff,
-        .timer_64_diff,
-
-        .inst_st_en_diff,
-        .st_paddr_diff,
-        .st_vaddr_diff,
-        .st_data_diff,
-
-        .inst_ld_en_diff,
-        .ld_paddr_diff,
-        .ld_vaddr_diff
+        .mem_ctrl(mem_ctrl)
     );
 
     assign mem_push_forward.reg_write_en = mem_o.data_write.write_en;
@@ -249,7 +235,21 @@ module backend
         .ctrl(fb_slave.ctrl),
 
         .mem_i(mem_o),
-        .wb_o (wb)
+        .wb_o (wb),
+
+        .cnt_inst_diff,
+        .csr_rstat_en_diff,
+        .csr_data_diff,
+        .timer_64_diff,
+
+        .inst_st_en_diff,
+        .st_paddr_diff,
+        .st_vaddr_diff,
+        .st_data_diff,
+
+        .inst_ld_en_diff,
+        .ld_paddr_diff,
+        .ld_vaddr_diff
     );
 
     assign wb_push_forward.csr_write_en = wb.csr_write.csr_write_en;

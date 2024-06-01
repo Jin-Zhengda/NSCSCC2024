@@ -121,7 +121,7 @@ module dispatch
                 is_branch_taken = 1'b1;
                 branch_target_addr = id_dispatch.pc + branch26_addr;
             end
-            `ALU_BL, `ALU_JIRL: begin
+            `ALU_BL: begin
                 is_branch = 1'b1;
                 is_branch_taken = 1'b1;
                 branch_target_addr = id_dispatch.pc + branch26_addr;
@@ -130,7 +130,7 @@ module dispatch
             `ALU_JIRL: begin
                 is_branch = 1'b1;
                 is_branch_taken = 1'b1;
-                branch_target_addr = dispatch_ex.reg1 + branch26_addr;
+                branch_target_addr = dispatch_ex.reg1 + branch16_addr;
                 dispatch_ex.reg_write_branch_data = id_dispatch.pc + 4'h4;
             end
             default: begin

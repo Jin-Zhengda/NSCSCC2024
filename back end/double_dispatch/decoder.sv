@@ -5,9 +5,12 @@ module decoder
 (
     input logic  clk,
     input logic  rst,
+
+    // from ctrl
     input logic branch_flush,
     input ctrl_t ctrl,
 
+    // from front
     input bus32_t pc[DECODER_WIDTH],
     input bus32_t inst[DECODER_WIDTH],
     input logic pre_is_branch[DECODER_WIDTH],
@@ -16,7 +19,10 @@ module decoder
     input logic [5:0] is_exception[DECODER_WIDTH],
     input logic [5:0][6:0] exception_cause[DECODER_WIDTH],
 
+    // to ctrl
     output logic pause_decoder,
+
+    // to dispatch
     output id_dispatch_t dispatch_i[DECODER_WIDTH]
 );
 

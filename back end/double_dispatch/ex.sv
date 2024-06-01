@@ -1,4 +1,4 @@
-`include "defines.sv"
+`include "core_defines.sv"
 `include "csr_defines.sv"
 `timescale 1ns / 1ps
 
@@ -442,9 +442,6 @@ module ex
             end 
             `ALU_SEL_SHIFT: begin
                 ex_mem.reg_write_data = shift_res;
-            end
-            `ALU_SEL_MOVE: begin
-                ex_mem.reg_write_data = move_res;
             end
             `ALU_SEL_ARITHMETIC: begin
                 ex_mem.reg_write_data = arithmetic_res;

@@ -101,6 +101,7 @@ module id
         id_exception = 1'b0;
         id_exception_cause = `EXCEPTION_INE;
         id_dispatch.cacop_code = 5'b0;
+        id_dispatch.is_privilege = 1'b0;
 
         case (opcode1)
             `SLTI_OPCODE: begin
