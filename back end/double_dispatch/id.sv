@@ -1,5 +1,6 @@
 `include "core_defines.sv"
 `include "csr_defines.sv"
+`include "pipeline_types.sv"
 `timescale 1ns / 1ps
 
 module id
@@ -395,7 +396,7 @@ module id
                 id_o.reg_write_en = 1'b1;
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_DIVW;
-                id_o.alusel = `ALU_SEL_ARITHMETIC;
+                id_o.alusel = `ALU_SEL_DIV;
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
@@ -404,7 +405,7 @@ module id
                 id_o.reg_write_en = 1'b1;
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_MODW;
-                id_o.alusel = `ALU_SEL_ARITHMETIC;
+                id_o.alusel = `ALU_SEL_DIV;
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
@@ -413,7 +414,7 @@ module id
                 id_o.reg_write_en = 1'b1;
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_DIVWU;
-                id_o.alusel = `ALU_SEL_ARITHMETIC;
+                id_o.alusel = `ALU_SEL_DIV;
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
@@ -422,7 +423,7 @@ module id
                 id_o.reg_write_en = 1'b1;
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_MODWU;
-                id_o.alusel = `ALU_SEL_ARITHMETIC;
+                id_o.alusel = `ALU_SEL_DIV;
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
@@ -553,7 +554,7 @@ module id
                         id_o.reg_write_en = 1'b1;
                         id_o.reg_write_addr = rd;
                         id_o.aluop = `ALU_CSRRD;
-                        id_o.alusel = `ALU_SEL_NOP;
+                        id_o.alusel = `ALU_SEL_CSR;
                         id_o.reg_read_en[0] = 1'b0;
                         id_o.reg_read_en[1] = 1'b0;
                         id_o.csr_read_en = 1'b1;
@@ -564,7 +565,7 @@ module id
                         id_o.reg_write_en = 1'b1;
                         id_o.reg_write_addr = rd;
                         id_o.aluop = `ALU_CSRWR;
-                        id_o.alusel = `ALU_SEL_NOP;
+                        id_o.alusel = `ALU_SEL_CSR;
                         id_o.reg_read_en[0] = 1'b1;
                         id_o.reg_read_addr[0] = rd;
                         id_o.reg_read_en[1] = 1'b0;
@@ -576,7 +577,7 @@ module id
                         id_o.reg_write_en = 1'b1;
                         id_o.reg_write_addr = rd;
                         id_o.aluop = `ALU_CSRXCHG;
-                        id_o.alusel = `ALU_SEL_NOP;
+                        id_o.alusel = `ALU_SEL_CSR;
                         id_o.reg_read_en[0] = 1'b1;
                         id_o.reg_read_addr[0] = rd;
                         id_o.reg_read_en[1] = 1'b1;
@@ -697,9 +698,12 @@ module id
                 id_o.reg_write_en = 1'b1;
                 id_o.reg_write_addr = rj;
                 id_o.aluop = `ALU_RDCNTID;
-                id_o.alusel = `ALU_SEL_NOP;
+                id_o.alusel = `ALU_SEL_CSR;
                 id_o.reg_read_en[0] = 1'b0;
                 id_o.reg_read_en[1] = 1'b0;
+                id_o.csr_read_en = 1'b1;
+                id_o.csr_addr = 14'b01000000;
+                id_o.csr_write_en = 1'b0;
                 inst_valid = 1'b1;
             end
             `TLBSRCH_OPCODE: begin
@@ -747,7 +751,7 @@ module id
                 id_o.reg_write_en = 1'b1;
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_RDCNTVLW;
-                id_o.alusel = `ALU_SEL_NOP;
+                id_o.alusel = `ALU_SEL_CSR;
                 id_o.reg_read_en[0] = 1'b0;
                 id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;
@@ -756,7 +760,7 @@ module id
                 id_o.reg_write_en = 1'b1;
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_RDCNTVHW;
-                id_o.alusel = `ALU_SEL_NOP;
+                id_o.alusel = `ALU_SEL_CSR;
                 id_o.reg_read_en[0] = 1'b0;
                 id_o.reg_read_en[1] = 1'b0;
                 inst_valid = 1'b1;

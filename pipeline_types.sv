@@ -211,6 +211,19 @@ package pipeline_types;
         logic inst_valid;
         data_write_t data_write;
         csr_write_t csr_write;
+
+        logic cnt_inst_diff;
+        logic [63:0] timer_64_diff;
+        logic csr_rstat_en_diff;
+        logic [31:0] csr_data_diff;
+
+        logic [ 7:0] inst_st_en_diff;
+        logic [31:0] st_paddr_diff;
+        logic [31:0] st_vaddr_diff;
+        logic [31:0] st_data_diff;  
+        logic [ 7:0] inst_ld_en_diff;
+        logic [31:0] ld_paddr_diff;
+        logic [31:0] ld_vaddr_diff;
     } mem_wb_t;
 
     typedef struct packed {

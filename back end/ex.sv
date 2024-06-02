@@ -65,7 +65,7 @@ module ex
     logic[13: 9] si14;
 
     assign si12 = dispatch_ex.inst[21: 10];
-    assign si14 = dispatch_ex.inst[14: 10];
+    assign si14 = dispatch_ex.inst[23: 10];
 
     logic pause_ex_mem;
     logic is_mem;
@@ -74,7 +74,8 @@ module ex
                         || dispatch_ex.aluop == `ALU_LDH || dispatch_ex.aluop == `ALU_LDW || dispatch_ex.aluop == `ALU_LLW
                         || dispatch_ex.aluop == `ALU_PRELD || dispatch_ex.aluop == `ALU_CACOP || dispatch_ex.aluop == `ALU_STB
                         || dispatch_ex.aluop == `ALU_STH || dispatch_ex.aluop == `ALU_STW || dispatch_ex.aluop == `ALU_SCW;
-    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.addr_ok;
+
+    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.addr_ok && dcache_master.cache_miss;
 
     always_comb begin
         case (dispatch_ex.aluop)
@@ -99,7 +100,7 @@ module ex
     always_comb begin
         if (ex_mem.is_exception == 6'b0) begin
             // if (dispatch_ex.pc < 32'h1c000100) begin
-            if (dispatch_ex.pc < 32'h00000120) begin
+            if (dispatch_ex.pc < 32'h00000100) begin
                 dcache_master.uncache_en = mem_is_valid;
                 dcache_master.valid = 1'b0;
             end 

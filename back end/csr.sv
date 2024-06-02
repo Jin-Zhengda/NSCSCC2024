@@ -113,7 +113,7 @@ module csr
     assign csr_tcfg_diff      = tcfg;
     assign csr_tval_diff      = tval;
     assign csr_ticlr_diff     = ticlr;
-    assign csr_llbctl_diff    = llbctl[31:1];
+    assign csr_llbctl_diff    = llbctl;
     assign csr_tlbrentry_diff = tlbrentry;
     assign csr_dmw0_diff      = dmw0;
     assign csr_dmw1_diff      = dmw1;
@@ -194,7 +194,7 @@ module csr
             estat <= 32'b0;
         end else if (ctrl_slave.is_exception) begin
             estat[21:16] <= ctrl_slave.ecode;
-            estat[31:22] <= ctrl_slave.esubcode;
+            estat[30:22] <= ctrl_slave.esubcode;
         end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_ESTAT) begin
             estat[1:0] <= wb_i.csr_write_data[1:0];
         end else begin
@@ -389,7 +389,7 @@ module csr
         if (rst) begin
             asid[15: 0] <= 16'b0;
             asid[23: 16] <= 8'd10;
-            asid[31: 24] <= 7'b0; 
+            asid[31: 24] <= 8'b0; 
         end
         else if (is_tlbrd) begin
             if (is_tlbrd_valid) begin
