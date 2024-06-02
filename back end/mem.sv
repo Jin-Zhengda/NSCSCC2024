@@ -30,7 +30,7 @@ module mem
     assign mem_ctrl.pc = ex_mem.pc;
     assign mem_wb.pc = ex_mem.pc;
     assign mem_wb.inst = ex_mem.inst;
-    assign mem_wb.inst_valid = ex_mem.inst_valid;
+    assign mem_wb.inst_valid = ex_mem.inst_valid; 
 
     assign csr_master.csr_read_en = (ex_mem.aluop == `ALU_RDCNTID) ? 1'b1 : ex_mem.csr_read_en;
     assign csr_master.csr_read_addr = (ex_mem.aluop == `ALU_RDCNTID) ? 14'b01000000 :ex_mem.csr_addr;

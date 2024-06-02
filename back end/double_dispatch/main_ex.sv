@@ -13,12 +13,10 @@ module main_ex
 
     // from csr
     input logic LLbit,
+    input bus64_t cnt,
 
     // with dcache
     mem_dcache dcache_master,
-
-    // with div
-    ex_div div_master,
 
     // to bpu
     output branch_update update_info,
@@ -37,6 +35,7 @@ module main_ex
     output ex_mem_t ex_o
 );
 
+    // basic assignmnet 
     assign ex_o.pc = ex_i.pc;
     assign ex_o.inst = ex_i.inst;
     assign ex_o.inst_valid = ex_i.inst_valid;
@@ -63,6 +62,7 @@ module main_ex
     );
    
     // div alu
+    bus32_t div_alu_res;
     logic pause_ex_div;
     logic start_div;
     logic op;
@@ -89,6 +89,30 @@ module main_ex
         .remainder_out(remainder),
         .done
     );
+
+    always_comb begin
+        case (ex_i.aluop)
+            `ALU_DIVW, `ALU_DIVWU: begin
+                if(done) begin
+                    div_alu_res = quotient;
+                end
+                else begin
+                    div_alu_res = 32'b0;
+                end
+            end
+            `ALU_MODW, `ALU_MODWU: begin
+                if (done) begin
+                    div_alu_res = remainder;
+                end
+                else begin
+                    div_alu_res = 32'b0;
+                end
+            end 
+            default: begin
+                div_alu_res = 32'b0;
+            end
+        endcase
+    end
 
     // branch alu
     bus32_t branch_alu_res;
@@ -120,7 +144,7 @@ module main_ex
                         || ex_i.aluop == `ALU_STH || ex_i.aluop == `ALU_STW || ex_i.aluop == `ALU_SCW;
 
     logic pause_ex_mem;
-    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.addr_ok;
+    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.addr_ok && dcache_master.cache_miss;
 
     logic[11: 0] si12;
     logic[13: 9] si14;
@@ -278,27 +302,6 @@ module main_ex
     end
 
     always_comb begin
-        if (ex_i.aluop == `ALU_LLW) begin
-            ex_o.csr_write_en = 1'b1;
-            ex_o.csr_addr = `CSR_LLBCTL;
-            ex_o.csr_write_data = 32'b1;
-            ex_o.is_llw_scw = 1'b1;
-        end
-        else if (ex_i.aluop == `ALU_SCW && LLbit) begin
-            ex_o.csr_write_en = 1'b1;
-            ex_o.csr_addr = `CSR_LLBCTL;
-            ex_o.csr_write_data = 1'b0;
-            ex_o.is_llw_scw = 1'b1;
-        end
-        else begin
-            ex_o.csr_write_en = ex_i.csr_write_en;
-            ex_o.csr_addr = ex_i.csr_addr;
-            ex_o.csr_write_data = ex_i.reg1;
-            ex_o.is_llw_scw = 1'b0;
-        end
-    end
-
-    always_comb begin
         case (ex_i.aluop)
             `ALU_PRELD: begin
                 cache_inst.is_cacop = 1'b0;
@@ -321,9 +324,51 @@ module main_ex
         endcase
     end
 
-    // csr alu
+    // csr && privilege alu
     bus32_t csr_alu_res;
     bus32_t csr_mask;
+
+    always_comb begin
+        if (ex_i.aluop == `ALU_LLW) begin
+            ex_o.csr_write_en = 1'b1;
+            ex_o.csr_addr = `CSR_LLBCTL;
+            ex_o.csr_write_data = 32'b1;
+            ex_o.is_llw_scw = 1'b1;
+        end
+        else if (ex_i.aluop == `ALU_SCW && LLbit) begin
+            ex_o.csr_write_en = 1'b1;
+            ex_o.csr_addr = `CSR_LLBCTL;
+            ex_o.csr_write_data = 1'b0;
+            ex_o.is_llw_scw = 1'b1;
+        end
+        else begin
+            ex_o.csr_write_en = ex_i.csr_write_en;
+            ex_o.csr_addr = ex_i.csr_addr;
+            ex_o.csr_write_data = (ex_i.aluop == `ALU_CSRXCHG)?((ex_i.csr_read_data & ~ex_i.reg2) | (ex_i.reg1 & ex_i.reg2)): ex_i.reg1;
+            ex_o.csr_write_data = ex_i.reg1;
+            ex_o.is_llw_scw = 1'b0;
+        end
+    end
+
+    always_comb begin
+        case(ex_i.aluop) 
+            `ALU_CSRRD, `ALU_CSRWR, `ALU_CSRXCHG: begin
+                csr_alu_res = ex_i.csr_read_data;
+            end
+            `ALU_RDCNTID: begin
+                csr_alu_res = ex_i.csr_read_data;
+            end
+            `ALU_RDCNTVLW: begin
+                csr_alu_res = cnt[31:0];
+            end
+            `ALU_RDCNTVHW: begin
+                csr_alu_res = cnt[63:32];
+            end
+            default: begin
+                csr_alu_res = 32'b0;
+            end
+        endcase
+    end
 
 
     // reg data 
@@ -335,18 +380,25 @@ module main_ex
             `ALU_SEL_LOGIC, `ALU_SEL_SHIFT,`ALU_SEL_ARITHMETIC: begin
                 ex_o.reg_write_data = regular_alu_res;
             end
+            `ALU_SEL_DIV: begin
+                ex_o.reg_write_data = div_alu_res;
+            end
             `ALU_SEL_JUMP_BRANCH: begin
                 ex_o.reg_write_data = branch_alu_res;
             end
             `ALU_SEL_LOAD_STORE: begin
                 ex_o.reg_write_data = load_store_alu_res;
             end
+            `ALU_SEL_CSR: begin
+                ex_o.reg_write_data = csr_alu_res;
+            end
             default: begin
-                ex_o.reg_write_data = LLbit;
+                ex_o.reg_write_data = {31'b0, LLbit};
             end
         endcase
     end
 
+    // pause
     assign pause_alu = pause_ex_div || pause_ex_mem;
 
 endmodule

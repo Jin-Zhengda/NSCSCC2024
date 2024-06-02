@@ -189,24 +189,14 @@ package pipeline_types;
     } ex_mem_t;
 
     typedef struct packed {
-        logic[ISSUE_WIDTH - 1: 0] write_en;
-        logic[ISSUE_WIDTH - 1: 0][REG_ADDR_WIDTH - 1: 0] write_addr;
-        logic[ISSUE_WIDTH - 1: 0][REG_WIDTH - 1: 0] write_data;
-    } data_write_t;
+        logic reg_write_en;
+        logic reg_write_addr;
+        logic reg_write_data;
 
-    typedef struct packed {
         logic is_llw_scw;
         logic csr_write_en;
         csr_addr_t csr_write_addr;
         bus32_t csr_write_data;
-    } csr_write_t;
-
-    typedef struct packed {
-        bus32_t pc;
-        bus32_t inst;
-        logic inst_valid;
-        data_write_t data_write;
-        csr_write_t csr_write;
     } mem_wb_t;
 
     typedef struct packed {
@@ -216,12 +206,9 @@ package pipeline_types;
         bus32_t pc;
         bus32_t exception_addr;
 
+        logic is_privilege;
         logic is_ertn;
         logic is_idle;
-
-        logic pause_mem;
-
-        logic is_privilege;
     } mem_ctrl_t;
 
     typedef struct packed {

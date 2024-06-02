@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "../../core_defines.sv"
+`include "core_defines.sv"
 
 module regular_alu
     import pipeline_types::*;

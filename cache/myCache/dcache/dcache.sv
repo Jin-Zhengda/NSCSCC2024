@@ -323,8 +323,15 @@ assign hit_success = (hit_way0 | hit_way1) & pre_valid;
 assign hit_fail = ~(hit_success) & pre_valid;
 
 
+logic wr_read_stall;
+always_ff @( posedge clk ) begin
+    if(reset)wr_read_stall<=1'b0;
+    else if(pre_physical_addr==physical_addr&&mem2dcache.op==0&&(wea_way0||wea_way1))wr_read_stall<=1'b1;
+    else wr_read_stall<=1'b0;
+end
 
-assign stall=(reset||pre_cacop_en||dcache_inst.is_cacop||dcache_inst.is_preld||preld_stall||uncache_stall)?1'b1:(pre_valid&&(hit_fail||read_success)?1'b1:1'b0);
+
+assign stall=(reset||pre_cacop_en||dcache_inst.is_cacop||dcache_inst.is_preld||preld_stall||uncache_stall)?1'b1:(pre_valid&&(hit_fail||read_success||wr_read_stall)?1'b1:1'b0);
 assign mem2dcache.rdata=ducache_rvalid_o?ducache_rdata_o:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'hffffffff)));
 
 

@@ -68,11 +68,14 @@ module ex
     assign si14 = dispatch_ex.inst[23: 10];
 
     logic pause_ex_mem;
-    logic is_load;
+    logic is_mem;
 
-    assign is_load = dispatch_ex.aluop == `ALU_LDB || dispatch_ex.aluop == `ALU_LDBU || dispatch_ex.aluop == `ALU_LDH 
-                        || dispatch_ex.aluop == `ALU_LDH || dispatch_ex.aluop == `ALU_LDW || dispatch_ex.aluop == `ALU_LLW;
-    assign pause_ex_mem = is_load && dcache_master.valid && !dcache_master.addr_ok;
+    assign is_mem = dispatch_ex.aluop == `ALU_LDB || dispatch_ex.aluop == `ALU_LDBU || dispatch_ex.aluop == `ALU_LDH 
+                        || dispatch_ex.aluop == `ALU_LDH || dispatch_ex.aluop == `ALU_LDW || dispatch_ex.aluop == `ALU_LLW
+                        || dispatch_ex.aluop == `ALU_PRELD || dispatch_ex.aluop == `ALU_CACOP || dispatch_ex.aluop == `ALU_STB
+                        || dispatch_ex.aluop == `ALU_STH || dispatch_ex.aluop == `ALU_STW || dispatch_ex.aluop == `ALU_SCW;
+
+    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.addr_ok && dcache_master.cache_miss;
 
     always_comb begin
         case (dispatch_ex.aluop)
