@@ -71,7 +71,7 @@ initial begin
 
     #20 begin reset=1'b0;end
     
-    #900 $finish;
+    #1100 $finish;
 end
 
 integer counter;

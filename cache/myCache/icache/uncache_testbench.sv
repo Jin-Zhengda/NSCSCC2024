@@ -155,12 +155,16 @@ end
 assign icacop_op_en=1'b0;
 
 
+
+
+
 icache u_icache(
     .clk(clk),
     .reset(reset),
     .ctrl(ctrl),
     .branch_flush(branch_flush),
     .pc2icache(pc2icache),
+    .icache_uncache(icache_uncache),
     .rd_req(rd_req),
     .rd_addr(rd_addr),
     .ret_valid(ret_valid),
@@ -168,11 +172,10 @@ icache u_icache(
     .icacop_op_en(icacop_op_en),
     .icacop_op_mode(icacop_op_mode),
     .icacop_addr(icacop_addr),
-    .icache_uncache(icache_uncache),
-    .iucache_addr_i(iucache_addr_i),
     .iucache_ren_i(iucache_ren_i),
-    .iucache_rdata_o(iucache_rdata_o),
-    .iucache_rvalid_o(iucache_rvalid_o)
+    .iucache_addr_i(iucache_addr_i),
+    .iucache_rvalid_o(iucache_rvalid_o),
+    .iucache_rdata_o(iucache_rdata_o)
 );
 
 
