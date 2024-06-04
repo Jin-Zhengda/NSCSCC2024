@@ -49,15 +49,16 @@ module pc_reg
 );
 
 
-    always_ff @(posedge clk) begin
-        if (rst) begin
-            inst_en_1 <= 1'b0;
-            inst_en_2 <= 1'b0;
-        end else begin
-            inst_en_1 <= 1'b1;
-            inst_en_2 <= 1'b0;
-        end
-    end
+    // always_ff @(posedge clk) begin
+    //     if (rst) begin
+    //         inst_en_1 <= 1'b0;
+    //         inst_en_2 <= 1'b0;
+    //     end else if (!uncache_en)begin
+    //         inst_en_1 <= 1'b1;
+    //         inst_en_2 <= 1'b0;
+    //     end
+    // end
+    assign inst_en_1 = uncache_en? 1'b0: 1'b1;
 
 
     // always_ff @(posedge clk) begin
@@ -88,7 +89,7 @@ module pc_reg
 
         if(rst) begin
             // pc.pc_o_1 <= 32'h1bfffffc;
-            pc.pc_o_1 <= 32'hfc;
+            pc.pc_o_1 <= 32'h100;
             pc.pc_o_2 <= 32'h104;
         end
         else if(ctrl.exception_flush) begin
@@ -113,18 +114,9 @@ module pc_reg
         end
     end
 
-    always_ff @(posedge clk) begin
-        if (rst) begin
-            uncache_en <= 1'b0;
-        end
-        // else if (pc.pc_o_1 < 32'h1c000100) begin
-        else if (pc.pc_o_1 < 32'h200) begin
-            uncache_en <= 1'b1;   
-        end        
-        else begin
-            uncache_en <= 1'b0;
-        end
-    end
+    // assign uncache_en = pc.pc_o_1 <= 32'h00000120? 1'b1: 1'b0;
+    // assign uncache_en = (pc.pc_o_1 <= 32'h1c000100) ? 1'b1: 1'b0;
+    assign uncache_en = 1'b0;
 
 
 endmodule

@@ -195,11 +195,16 @@ module bpu
     logic last_is_branch;
     logic last_taken_or_not;
     always_ff @( posedge clk ) begin
-        last_is_branch <= is_branch_1;
-        last_taken_or_not <= pre_taken_or_not;
+        if (rst) begin
+            last_is_branch <= 1'b0;
+            last_taken_or_not <= 1'b0;
+        end else if (!stall) begin
+            last_is_branch <= is_branch_1;
+            last_taken_or_not <= pre_taken_or_not;
+        end
     end
 
-    assign is_valid_in = ((last_is_branch & last_taken_or_not) || stall) ? 1'b0 : 1'b1;
+    assign is_valid_in = ((last_is_branch & last_taken_or_not)) ? 1'b0 : 1'b1;
 
     //分支预测采用时序逻辑（包括预测和更新历史）
 

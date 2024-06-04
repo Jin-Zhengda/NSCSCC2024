@@ -82,7 +82,7 @@ interface pc_icache;
                 stall_for_buffer, inst_for_buffer, icache_fetch_inst_1_en, icache_is_branch_i_1, icache_pre_taken_or_not, 
                 icache_pre_branch_addr,
         output pc, inst_en,front_is_valid,front_is_exception,front_exception_cause, front_fetch_inst_1_en, front_is_branch_i_1, 
-                front_pre_taken_or_not, front_pre_branch_addr, uncache_en   
+                front_pre_taken_or_not, front_pre_branch_addr, uncache_en
     );
 
     modport slave(
@@ -99,12 +99,12 @@ interface ex_tlb;
     // tlbwr, tlbfill
     logic tlbwr_en;
     logic tlbfill_en;
-    logic[4: 0] rand_index;
+    logic [4:0] rand_index;
     bus32_t tlbehi_in;
     bus32_t tlbelo0_in;
     bus32_t tlbelo1_in;
     bus32_t tlbidx_in;
-    logic[5: 0] ecode;
+    logic [5:0] ecode;
 
     // tlbsrch
     logic tlbsrch_en;
@@ -120,9 +120,9 @@ interface ex_tlb;
 
     // invtlb
     logic invtlb_en;
-    logic[9: 0] invtlb_asid;
-    logic[18: 0] invtlb_vpn;
-    logic[4: 0] invtlb_op;
+    logic [9:0] invtlb_asid;
+    logic [18:0] invtlb_vpn;
+    logic [4:0] invtlb_op;
 
     logic tlb_hit_valid;
 
@@ -138,63 +138,51 @@ interface ex_tlb;
                 tlbsrch_en, asid_in, tlbrd_en, invtlb_en, invtlb_asid, invtlb_vpn, invtlb_op
     );
 
-endinterface: ex_tlb
+endinterface : ex_tlb
 
 interface dispatch_regfile;
-    bus32_t reg1_read_data;
-    bus32_t reg2_read_data;
+    logic [READ_PORTS-1:0] reg_read_en;
+    logic [READ_PORTS-1:0][REG_ADDR_WIDTH-1:0] reg_read_addr;
+    logic [READ_PORTS-1:0][REG_WIDTH-1:0] reg_read_data;
 
-    logic reg1_read_en;
-    reg_addr_t reg1_read_addr;
-    logic reg2_read_en;
-    reg_addr_t reg2_read_addr;
+    modport master(input reg_read_data, output reg_read_en, reg_read_addr);
 
-    modport master(
-        input reg1_read_data,
-        input reg2_read_data,
-        output reg1_read_en,
-        output reg1_read_addr,
-        output reg2_read_en,
-        output reg2_read_addr
-    );
-
-    modport slave(
-        input reg1_read_en,
-        input reg1_read_addr,
-        input reg2_read_en,
-        input reg2_read_addr,
-        output reg1_read_data,
-        output reg2_read_data
-    );
+    modport slave(input reg_read_en, reg_read_addr, output reg_read_data);
 
 endinterface : dispatch_regfile
 
+interface dispatch_csr;
+    logic [ISSUE_WIDTH-1:0] csr_read_en;
+    logic [ISSUE_WIDTH-1:0][CSR_ADDR_WIDTH-1:0] csr_read_addr;
+    logic [ISSUE_WIDTH-1:0][REG_WIDTH-1:0] csr_read_data;
+
+    modport master(input csr_read_data, output csr_read_en, csr_read_addr);
+
+    modport slave(input csr_read_en, csr_read_addr, output csr_read_data);
+endinterface : dispatch_csr
+
 interface ex_div;
-    bus64_t div_result;
-    logic   div_done;
+    bus32_t dividend;
+    bus32_t divisor;
 
-    bus32_t div_data1;
-    bus32_t div_data2;
-    logic   div_signed;
-    logic   div_start;
+    logic [1:0] op;
+    logic start;
 
-    modport slave(
-        input div_data1,
-        input div_data2,
-        input div_signed,
-        input div_start,
-        output div_result,
-        output div_done
-    );
+    logic is_running;
+    bus32_t remainder_out;
+    bus32_t quotient_out;
+    logic done;
 
     modport master(
-        output div_data1,
-        output div_data2,
-        output div_signed,
-        output div_start,
-        input div_result,
-        input div_done
+        input is_running, remainder_out, quotient_out, done,
+        output dividend, divisor, op, start
     );
+
+    modport slave(
+        output is_running, remainder_out, quotient_out, done,
+        input dividend, divisor, op, start
+    );
+    
 endinterface : ex_div
 
 interface mem_csr;

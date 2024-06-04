@@ -1,16 +1,14 @@
-module div_unit #(
+module div_alu #(
     parameter DIV_WIDTH = 32
 ) (
     input logic clk,
     input logic rst,
 
-    input logic [1:0] op,
+    input logic op,
     input logic [DIV_WIDTH-1:0] dividend,
     input logic [DIV_WIDTH-1:0] divisor,
-    input logic [DIV_WIDTH-1:0] divisor_is_zero,
     input logic start,
 
-    output logic is_running,
     output logic [DIV_WIDTH-1:0] remainder_out,
     output logic [DIV_WIDTH-1:0] quotient_out,
     output logic done
@@ -47,7 +45,7 @@ module div_unit #(
     logic [$clog2(32)-1:0] dividend_CLZ;
     logic [$clog2(32)-1:0] divisor_CLZ;
 
-    assign signed_divop = ~op[0];
+    assign signed_divop = op;
 
     assign negate_dividend = signed_divop & dividend[31];
     assign negate_divisor = signed_divop & divisor[31];
@@ -121,8 +119,6 @@ module div_unit #(
         if (rst) running <= 0;
         else running <= (running & ~terminate) | (start & ~divisor_greater_than_dividend);
     end
-
-    assign is_running = running;
 
 
     // assign done = (running & terminate) | (start_delay & divisor_greater_than_dividend);

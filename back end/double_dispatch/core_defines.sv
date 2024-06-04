@@ -161,9 +161,10 @@
 `define ALU_SEL_NOP 3'b000
 `define ALU_SEL_LOGIC 3'b001
 `define ALU_SEL_SHIFT 3'b010
+`define ALU_SEL_DIV 3'b011
 `define ALU_SEL_ARITHMETIC 3'b100
-`define ALU_SEL_MOVE 3'b011
 `define ALU_SEL_JUMP_BRANCH 3'b101
 `define ALU_SEL_LOAD_STORE 3'b110
+`define ALU_SEL_CSR 3'b111
 
 `endif

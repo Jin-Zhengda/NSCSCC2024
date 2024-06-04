@@ -20,6 +20,8 @@ module dispatch
     assign dispatch_ex.pc = id_dispatch.pc;
     assign dispatch_ex.inst = id_dispatch.inst;
     assign dispatch_ex.inst_valid = id_dispatch.inst_valid;
+    assign dispatch_ex.is_privilege = id_dispatch.is_privilege;
+
     assign dispatch_ex.cacop_code = id_dispatch.cacop_code;
 
     assign dispatch_ex.is_exception = id_dispatch.is_exception;
@@ -119,7 +121,7 @@ module dispatch
                 is_branch_taken = 1'b1;
                 branch_target_addr = id_dispatch.pc + branch26_addr;
             end
-            `ALU_BL, `ALU_JIRL: begin
+            `ALU_BL: begin
                 is_branch = 1'b1;
                 is_branch_taken = 1'b1;
                 branch_target_addr = id_dispatch.pc + branch26_addr;
@@ -128,7 +130,7 @@ module dispatch
             `ALU_JIRL: begin
                 is_branch = 1'b1;
                 is_branch_taken = 1'b1;
-                branch_target_addr = dispatch_ex.reg1 + branch26_addr;
+                branch_target_addr = dispatch_ex.reg1 + branch16_addr;
                 dispatch_ex.reg_write_branch_data = id_dispatch.pc + 4'h4;
             end
             default: begin

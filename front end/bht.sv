@@ -36,7 +36,7 @@ module bht(
     );
 
     logic [7:0]bht [255: 0];
-    logic [1:0]pht [255:0][255:0];
+    (*ram_style = "distributed"*) logic [1:0]pht [255:0][255:0];
 
     logic [7:0]history;
     logic [7:0]pht_index;
