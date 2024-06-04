@@ -171,7 +171,7 @@ bus32_t pre_physical_addr,pre_virtual_addr;
 
 //记录地址
 always_ff @( posedge clk ) begin
-    if(reset || branch_flush)begin
+    if(reset)begin
         pre_inst_en<=1'b0;
         pre_physical_addr<=32'b0;
         pre_virtual_addr<=32'b0;
@@ -220,6 +220,7 @@ BRAM Bank7_way0 (.clk(clk),.ena(1'b1),.wea(wea_way0),.addra(addra_way0_index),.d
 
 
 logic [`DATA_SIZE-1:0]way1_cache[`BANK_NUM-1:0]; 
+logic [`INDEX_SIZE-1:0] addra_way1_index;
 assign addra_way1_index=|wea_way1?pre_physical_addr[`INDEX_LOC]:read_addr_index;
 BRAM Bank0_way1 (.clk(clk),.ena(1'b1),.wea(wea_way1),.addra(addra_way1_index),.dina(read_from_mem[0]),.douta(way1_cache[0]),.enb(1'b0));
 BRAM Bank1_way1 (.clk(clk),.ena(1'b1),.wea(wea_way1),.addra(addra_way1_index),.dina(read_from_mem[1]),.douta(way1_cache[1]),.enb(1'b0));
