@@ -10,10 +10,10 @@ module regfile
 
     dispatch_regfile slave,
 
-    output logic [31:0] regs_diff[31:0]
+    output logic [31:0] regs_diff[0: 31]
 );
 
-    logic [31:0] regs[31:0];
+    logic [31:0] regs[0: 31];
     assign regs_diff = regs;
 
     always_ff @(posedge clk) begin

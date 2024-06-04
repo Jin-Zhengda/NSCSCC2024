@@ -42,9 +42,6 @@ assign write_mask={{8{wea[3]}},{8{wea[2]}},{8{wea[1]}},{8{wea[0]}}};
 integer i;
 always @(posedge clka) begin
     if(reset)begin
-        // for(i=0;i<`SETSIZE;i=i+1)begin
-        //     ram[i]<=`INSTRUCTION_DATA_SIZE*'b0;
-        // end
         ram <= '{default: 0};
     end
     else if(ena)begin

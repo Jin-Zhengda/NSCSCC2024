@@ -77,6 +77,7 @@ module backend
     // id
     pc_id_t id_i;
     id_dispatch_t id_o;
+    csr_push_forward_t csr_push_forward;
 
     // dispatch
     id_dispatch_t dispatch_i;
@@ -115,9 +116,12 @@ module backend
         .is_exception(fb_slave.inst_and_pc_o.is_exception),
         .exception_cause(fb_slave.inst_and_pc_o.exception_cause),
 
+        .csr_push_forward(csr_push_forward),
+
         .pause_id(pause_request.pause_id),
         .id_dispatch(id_o)
     );
+
 
     id_dispatch u_id_dispatch (
         .clk,
@@ -217,7 +221,21 @@ module backend
 
         .pause_mem(pause_request.pause_mem),
         .mem_wb(mem_o),
-        .mem_ctrl(mem_ctrl)
+        .mem_ctrl(mem_ctrl),
+
+        .cnt_inst_diff,
+        .csr_rstat_en_diff,
+        .csr_data_diff,
+        .timer_64_diff,
+
+        .inst_st_en_diff,
+        .st_paddr_diff,
+        .st_vaddr_diff,
+        .st_data_diff,
+
+        .inst_ld_en_diff,
+        .ld_paddr_diff,
+        .ld_vaddr_diff
     );
 
     assign mem_push_forward.reg_write_en = mem_o.data_write.write_en;
@@ -235,21 +253,7 @@ module backend
         .ctrl(fb_slave.ctrl),
 
         .mem_i(mem_o),
-        .wb_o (wb),
-
-        .cnt_inst_diff,
-        .csr_rstat_en_diff,
-        .csr_data_diff,
-        .timer_64_diff,
-
-        .inst_st_en_diff,
-        .st_paddr_diff,
-        .st_vaddr_diff,
-        .st_data_diff,
-
-        .inst_ld_en_diff,
-        .ld_paddr_diff,
-        .ld_vaddr_diff
+        .wb_o (wb)
     );
 
     assign wb_push_forward.csr_write_en = wb.csr_write.csr_write_en;
@@ -294,7 +298,7 @@ module backend
         .is_ertn(mem_ctrl.is_ertn),
 
         .is_ipi(1'b0),
-        .is_hwi(0),
+        .is_hwi(8'b0),
 
         .ctrl_slave(ctrl_csr_io.slave),
         .LLbit(LLbit),

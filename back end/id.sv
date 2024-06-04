@@ -10,10 +10,9 @@ module id
     input logic pre_is_branch,
     input logic pre_is_branch_taken,
     input bus32_t pre_branch_addr,
-    input logic[5: 0] is_exception,
-    input logic[5: 0][6: 0] exception_cause,
+    input logic [5:0] is_exception,
+    input logic [5:0][6:0] exception_cause,
 
-    input logic [1:0] CRMD_PLV,
     input csr_push_forward_t csr_push_forward,
 
     output logic pause_id,
@@ -25,10 +24,6 @@ module id
     assign id_dispatch.pre_is_branch = pre_is_branch;
     assign id_dispatch.pre_is_branch_taken = pre_is_branch_taken;
     assign id_dispatch.pre_branch_addr = pre_branch_addr;
-
-    logic [1:0] CRMD_PLV_current;
-    assign CRMD_PLV_current = (csr_push_forward.csr_write_en && csr_push_forward.csr_write_addr == `CSR_CRMD) 
-                                ? csr_push_forward.csr_write_data : CRMD_PLV;
 
     // select inst feild
     logic [ 9:0] opcode1;
@@ -79,7 +74,7 @@ module id
 
     assign id_dispatch.is_exception = {
         is_exception[5:3],
-        {((inst_valid || inst == 32'b0) ? id_exception : 1'b1)},
+        {((inst_valid || inst == 32'b0) ? id_exception: 1'b1)},
         is_exception[1:0]
     };
     assign id_dispatch.exception_cause = {
@@ -104,8 +99,9 @@ module id
         id_dispatch.csr_write_en = 1'b0;
         id_dispatch.csr_addr = csr;
         id_exception = 1'b0;
-        id_exception_cause = `EXCEPTION_NOP;
+        id_exception_cause = `EXCEPTION_INE;
         id_dispatch.cacop_code = 5'b0;
+        id_dispatch.is_privilege = 1'b0;
 
         case (opcode1)
             `SLTI_OPCODE: begin
@@ -255,8 +251,7 @@ module id
                 inst_valid = 1'b1;
             end
             `CACOP_OPCODE: begin
-                id_exception = (CRMD_PLV_current == 2'b00) ? 1'b0 : 1'b1;
-                id_exception_cause = (CRMD_PLV_current == 2'b00) ? 7'b0 : `EXCEPTION_IPE;
+                id_dispatch.is_privilege = 1'b1;
                 id_dispatch.reg_write_en = 1'b0;
                 id_dispatch.aluop = `ALU_CACOP;
                 id_dispatch.alusel = `ALU_SEL_NOP;
@@ -484,13 +479,21 @@ module id
                 inst_valid = 1'b1;
             end
             `IDLE_OPCODE: begin
+                id_dispatch.is_privilege = 1'b1;
                 id_dispatch.reg_write_en = 1'b0;
                 id_dispatch.aluop = `ALU_IDLE;
                 id_dispatch.alusel = `ALU_SEL_NOP;
                 id_dispatch.reg1_read_en = 1'b0;
                 id_dispatch.reg2_read_en = 1'b0;
-                id_exception = (CRMD_PLV_current == 2'b00) ? 1'b0 : 1'b1;
-                id_exception_cause = (CRMD_PLV_current == 2'b00) ? 7'b0 : `EXCEPTION_IPE;
+                inst_valid = 1'b1;
+            end
+            `INVTLB_OPCODE: begin
+                id_dispatch.is_privilege = 1'b1;
+                id_dispatch.reg_write_en = 1'b0;
+                id_dispatch.aluop = `ALU_INVTLB;
+                id_dispatch.alusel = `ALU_SEL_NOP;
+                id_dispatch.reg1_read_en = 1'b0;
+                id_dispatch.reg2_read_en = 1'b0;
                 inst_valid = 1'b1;
             end
             default: begin
@@ -545,8 +548,7 @@ module id
                 inst_valid = 1'b1;
             end
             `CSR_OPCODE: begin
-                id_exception = (CRMD_PLV_current == 2'b00) ? 1'b0 : 1'b1;
-                id_exception_cause = (CRMD_PLV_current == 2'b00) ? 7'b0 : `EXCEPTION_IPE;
+                id_dispatch.is_privilege = 1'b1;
                 case (rj)
                     `CSRRD_OPCODE: begin
                         id_dispatch.reg_write_en = 1'b1;
@@ -684,19 +686,54 @@ module id
 
         case (opcode6)
             `ERTN_OPCODE: begin
+                id_dispatch.is_privilege = 1'b1;
                 id_dispatch.reg_write_en = 1'b0;
                 id_dispatch.aluop = `ALU_ERTN;
                 id_dispatch.alusel = `ALU_SEL_NOP;
                 id_dispatch.reg1_read_en = 1'b0;
                 id_dispatch.reg2_read_en = 1'b0;
                 inst_valid = 1'b1;
-                id_exception = (CRMD_PLV_current == 2'b00) ? 1'b0 : 1'b1;
-                id_exception_cause = (CRMD_PLV_current == 2'b00) ? 7'b0 : `EXCEPTION_IPE;
             end
             `RDCNTID_OPCDOE: begin
                 id_dispatch.reg_write_en = 1'b1;
                 id_dispatch.reg_write_addr = rj;
                 id_dispatch.aluop = `ALU_RDCNTID;
+                id_dispatch.alusel = `ALU_SEL_NOP;
+                id_dispatch.reg1_read_en = 1'b0;
+                id_dispatch.reg2_read_en = 1'b0;
+                inst_valid = 1'b1;
+            end
+            `TLBSRCH_OPCODE: begin
+                id_dispatch.is_privilege = 1'b1;
+                id_dispatch.reg_write_en = 1'b0;
+                id_dispatch.aluop = `ALU_TLBSRCH;
+                id_dispatch.alusel = `ALU_SEL_NOP;
+                id_dispatch.reg1_read_en = 1'b0;
+                id_dispatch.reg2_read_en = 1'b0;
+                inst_valid = 1'b1;
+            end
+            `TLBRD_OPCODE: begin
+                id_dispatch.is_privilege = 1'b1;
+                id_dispatch.reg_write_en = 1'b0;
+                id_dispatch.aluop = `ALU_TLBRD;
+                id_dispatch.alusel = `ALU_SEL_NOP;
+                id_dispatch.reg1_read_en = 1'b0;
+                id_dispatch.reg2_read_en = 1'b0;
+                inst_valid = 1'b1;
+            end
+            `TLBWR_OPCODE: begin
+                id_dispatch.is_privilege = 1'b1;
+                id_dispatch.reg_write_en = 1'b0;
+                id_dispatch.aluop = `ALU_TLBWR;
+                id_dispatch.alusel = `ALU_SEL_NOP;
+                id_dispatch.reg1_read_en = 1'b0;
+                id_dispatch.reg2_read_en = 1'b0;
+                inst_valid = 1'b1;
+            end
+            `TLBFILL_OPCODE: begin
+                id_dispatch.is_privilege = 1'b1;
+                id_dispatch.reg_write_en = 1'b0;
+                id_dispatch.aluop = `ALU_TLBFILL;
                 id_dispatch.alusel = `ALU_SEL_NOP;
                 id_dispatch.reg1_read_en = 1'b0;
                 id_dispatch.reg2_read_en = 1'b0;

@@ -3,21 +3,32 @@
 
 package pipeline_types;
 
+    parameter REG_WIDTH = 32;
+    parameter REG_ADDR_WIDTH = 5;
+    parameter CSR_ADDR_WIDTH = 12;
+    parameter ALU_OP_WIDTH = 8;
+    parameter ALU_SEL_WIDTH = 3;
+
+    parameter PAUSE_WIDTH = 8;
+    parameter EXC_CAUSE_WIDTH = 7;
+
     parameter DECODER_WIDTH = 2;
     parameter ISSUE_WIDTH = 2;
-    parameter READ_PORTS = 2;
-    parameter WRITE_PORTS = 4;
+
+    parameter READ_PORTS = DECODER_WIDTH * 2;
+    parameter WRITE_PORTS = DECODER_WIDTH;
+
     
-    typedef logic[31: 0] bus32_t;
-    typedef logic[63: 0] bus64_t;
-    typedef logic[255: 0] bus256_t;
+    typedef logic[REG_WIDTH - 1: 0] bus32_t;
+    typedef logic[REG_WIDTH * 2 - 1: 0] bus64_t;
+    typedef logic[REG_WIDTH * 8 - 1: 0] bus256_t;
 
-    typedef logic[7: 0] alu_op_t;
-    typedef logic[2: 0] alu_sel_t;
-    typedef logic[13: 0] csr_addr_t;
-    typedef logic[4: 0] reg_addr_t;
+    typedef logic[ALU_OP_WIDTH - 1: 0] alu_op_t;
+    typedef logic[ALU_SEL_WIDTH - 1: 0] alu_sel_t;
+    typedef logic[CSR_ADDR_WIDTH - 1: 0] csr_addr_t;
+    typedef logic[REG_ADDR_WIDTH - 1: 0] reg_addr_t;
 
-    typedef logic[6: 0] exception_cause_t;
+    typedef logic[EXC_CAUSE_WIDTH - 1: 0] exception_cause_t;
 
     typedef struct packed {
         logic pause_if;
@@ -29,8 +40,8 @@ package pipeline_types;
 
     // from ctrl
     typedef struct packed {
-        logic[7: 0] pause;
-        logic exception_flush;
+        logic[PAUSE_WIDTH - 1: 0] pause;
+        logic[ISSUE_WIDTH - 1: 0] exception_flush;
     } ctrl_t;
 
     typedef struct packed {
@@ -39,14 +50,14 @@ package pipeline_types;
         bus32_t pc_o_1;
         bus32_t pc_o_2;
         logic [5:0] is_exception;
-        logic [5:0][6:0] exception_cause;
+        logic [5:0][EXC_CAUSE_WIDTH - 1 :0] exception_cause;
     } inst_and_pc_t;
 
     typedef struct packed {
         bus32_t pc_o_1;
         bus32_t pc_o_2;
         logic [5:0] is_exception;
-        logic [5:0][6:0] exception_cause;
+        logic [5:0][EXC_CAUSE_WIDTH - 1 :0] exception_cause;
     } pc_out_t;
 
     typedef struct packed {
@@ -75,7 +86,7 @@ package pipeline_types;
         bus32_t inst;
 
         logic[5: 0] is_exception;
-        logic[5: 0][6: 0] exception_cause;
+        logic[5: 0][EXC_CAUSE_WIDTH - 1 : 0] exception_cause;
 
         logic pre_is_branch;
         logic pre_is_branch_taken;
@@ -88,7 +99,7 @@ package pipeline_types;
         bus32_t inst;
 
         logic[5: 0] is_exception;
-        logic[5: 0][6: 0] exception_cause;
+        logic[5: 0][EXC_CAUSE_WIDTH - 1: 0] exception_cause;
         logic inst_valid;
         logic is_privilege;
 
@@ -96,13 +107,8 @@ package pipeline_types;
         alu_sel_t alusel;
         bus32_t imm;
 
-        logic reg1_read_en;
-        reg_addr_t reg1_read_addr;
-        logic reg2_read_en;
-        reg_addr_t reg2_read_addr;
-
-        logic reg_write_en;
-        reg_addr_t reg_write_addr;
+        logic[1: 0] reg_read_en;
+        logic[1: 0][REG_ADDR_WIDTH - 1: 0] reg_read_addr;
 
         logic csr_read_en;
         logic csr_write_en;
@@ -136,7 +142,7 @@ package pipeline_types;
         bus32_t inst;
 
         logic[5: 0] is_exception;
-        logic[5: 0][6: 0] exception_cause;
+        logic[5: 0][EXC_CAUSE_WIDTH - 1: 0] exception_cause;
         logic inst_valid;
         logic is_privilege;
 
@@ -149,12 +155,11 @@ package pipeline_types;
         logic reg_write_en;
         reg_addr_t reg_write_addr;
 
-        logic csr_read_en;
+        bus32_t csr_read_data;
+
         logic csr_write_en;
         csr_addr_t csr_addr;
-
-        bus32_t reg_write_branch_data;
-
+        
         logic[4: 0] cacop_code;
     } dispatch_ex_t;
 
@@ -175,55 +180,23 @@ package pipeline_types;
 
         bus32_t mem_addr;
 
-        logic csr_read_en;
         logic csr_write_en;
         csr_addr_t csr_addr;
         bus32_t csr_write_data;
-        bus32_t csr_mask;
+
         logic is_llw_scw;
 
-        logic[7: 0] inst_st_en;
-        bus32_t st_paddr;
-        bus32_t st_vaddr;
-        bus32_t st_data;
-
-        logic[7: 0] inst_ld_en;
-        bus32_t ld_paddr;
-        bus32_t ld_vaddr;
     } ex_mem_t;
 
     typedef struct packed {
-        logic write_en;
-        reg_addr_t write_addr;
-        bus32_t write_data;
-    } data_write_t;
+        logic reg_write_en;
+        logic reg_write_addr;
+        logic reg_write_data;
 
-    typedef struct packed {
         logic is_llw_scw;
         logic csr_write_en;
         csr_addr_t csr_write_addr;
         bus32_t csr_write_data;
-    } csr_write_t;
-
-    typedef struct packed {
-        bus32_t pc;
-        bus32_t inst;
-        logic inst_valid;
-        data_write_t data_write;
-        csr_write_t csr_write;
-
-        logic cnt_inst_diff;
-        logic [63:0] timer_64_diff;
-        logic csr_rstat_en_diff;
-        logic [31:0] csr_data_diff;
-
-        logic [ 7:0] inst_st_en_diff;
-        logic [31:0] st_paddr_diff;
-        logic [31:0] st_vaddr_diff;
-        logic [31:0] st_data_diff;  
-        logic [ 7:0] inst_ld_en_diff;
-        logic [31:0] ld_paddr_diff;
-        logic [31:0] ld_vaddr_diff;
     } mem_wb_t;
 
     typedef struct packed {
@@ -233,12 +206,9 @@ package pipeline_types;
         bus32_t pc;
         bus32_t exception_addr;
 
+        logic is_privilege;
         logic is_ertn;
         logic is_idle;
-
-        logic pause_mem;
-
-        logic is_privilege;
     } mem_ctrl_t;
 
     typedef struct packed {
@@ -248,6 +218,18 @@ package pipeline_types;
         logic hint;
         bus32_t addr; 
     } cache_inst_t;
+
+
+    typedef struct packed {
+        logic[7: 0] inst_st_en;
+        bus32_t st_paddr;
+        bus32_t st_vaddr;
+        bus32_t st_data;
+
+        logic[7: 0] inst_ld_en;
+        bus32_t ld_paddr;
+        bus32_t ld_vaddr;
+    } diff_t;
     
 endpackage
 
