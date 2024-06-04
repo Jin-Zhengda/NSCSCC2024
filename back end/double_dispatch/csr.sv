@@ -7,18 +7,24 @@ module csr
     input logic clk,
     input logic rst,
 
-    mem_csr mem_slave,
+    // with disptch (raed ports)
+    dispatch_csr dispatch_slave,
 
-    input csr_write_t wb_i,
+    // from wb (write ports)
+    input logic is_llw_scw,
+    input logic csr_write_en,
+    input csr_addr_t csr_write_addr,
+    input bus32_t csr_write_data,
 
-    input logic is_ertn,
-    input logic is_tlbsrch,
-    input logic is_tlbrd,
+    // from inst
+    input logic ertn_en,
+    input logic tlbsrch_en,
+    input logic tlbrd_en,
     input logic is_tlbrd_valid,
-    input logic is_tlbwr,
-    input logic is_tlbfill,
+    input logic tlbwr_en,
+    input logic tlbfill_en,
     input logic tlbsrch_found,
-    input logic[4: 0] tlbsrch_index,
+    input logic [4:0] tlbsrch_index,
 
     input bus32_t tlb_line,
     input bus32_t tlblo0_line,
@@ -26,40 +32,43 @@ module csr
 
     input logic is_tlb_exception,
 
+    // from outer
     input logic is_ipi,
     input logic [7:0] is_hwi,
 
+    // with ctrl
     ctrl_csr ctrl_slave,
 
+    // to other modules
     output logic LLbit,
 
 
-    output logic [31:0] csr_crmd_diff,
-    output logic [31:0] csr_prmd_diff,
-    output logic [31:0] csr_ectl_diff,
-    output logic [31:0] csr_estat_diff,
-    output logic [31:0] csr_era_diff,
-    output logic [31:0] csr_badv_diff,
-    output logic [31:0] csr_eentry_diff,
-    output logic [31:0] csr_tlbidx_diff,
-    output logic [31:0] csr_tlbehi_diff,
-    output logic [31:0] csr_tlbelo0_diff,
-    output logic [31:0] csr_tlbelo1_diff,
-    output logic [31:0] csr_asid_diff,
-    output logic [31:0] csr_save0_diff,
-    output logic [31:0] csr_save1_diff,
-    output logic [31:0] csr_save2_diff,
-    output logic [31:0] csr_save3_diff,
-    output logic [31:0] csr_tid_diff,
-    output logic [31:0] csr_tcfg_diff,
-    output logic [31:0] csr_tval_diff,
-    output logic [31:0] csr_ticlr_diff,
-    output logic [31:0] csr_llbctl_diff,
-    output logic [31:0] csr_tlbrentry_diff,
-    output logic [31:0] csr_dmw0_diff,
-    output logic [31:0] csr_dmw1_diff,
-    output logic [31:0] csr_pgdl_diff,
-    output logic [31:0] csr_pgdh_diff
+    output bus32_t csr_crmd_diff,
+    output bus32_t csr_prmd_diff,
+    output bus32_t csr_ectl_diff,
+    output bus32_t csr_estat_diff,
+    output bus32_t csr_era_diff,
+    output bus32_t csr_badv_diff,
+    output bus32_t csr_eentry_diff,
+    output bus32_t csr_tlbidx_diff,
+    output bus32_t csr_tlbehi_diff,
+    output bus32_t csr_tlbelo0_diff,
+    output bus32_t csr_tlbelo1_diff,
+    output bus32_t csr_asid_diff,
+    output bus32_t csr_save0_diff,
+    output bus32_t csr_save1_diff,
+    output bus32_t csr_save2_diff,
+    output bus32_t csr_save3_diff,
+    output bus32_t csr_tid_diff,
+    output bus32_t csr_tcfg_diff,
+    output bus32_t csr_tval_diff,
+    output bus32_t csr_ticlr_diff,
+    output bus32_t csr_llbctl_diff,
+    output bus32_t csr_tlbrentry_diff,
+    output bus32_t csr_dmw0_diff,
+    output bus32_t csr_dmw1_diff,
+    output bus32_t csr_pgdl_diff,
+    output bus32_t csr_pgdh_diff
 );
 
     bus32_t crmd;
@@ -113,7 +122,7 @@ module csr
     assign csr_tcfg_diff      = tcfg;
     assign csr_tval_diff      = tval;
     assign csr_ticlr_diff     = ticlr;
-    assign csr_llbctl_diff    = llbctl[31:1];
+    assign csr_llbctl_diff    = llbctl;
     assign csr_tlbrentry_diff = tlbrentry;
     assign csr_dmw0_diff      = dmw0;
     assign csr_dmw1_diff      = dmw1;
@@ -138,14 +147,14 @@ module csr
             if (ctrl_slave.exception_cause == `EXCEPTION_TLBR) begin
                 crmd[3] <= 1'b1;  // DA
                 crmd[4] <= 1'b0;  // PG
-            end else if (is_ertn) begin
+            end else if (ertn_en) begin
                 crmd[1:0] <= prmd[1:0];  // PLV
                 crmd[2]   <= prmd[2];  // IE
                 crmd[3]   <= (estat[21:16] == 6'b111111) ? 1'b0 : crmd[3];  // DA
                 crmd[4]   <= (estat[21:16] == 6'b111111) ? 1'b1 : crmd[4];  // PG
             end
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_CRMD) begin
-            crmd[8:0] <= wb_i.csr_write_data[8:0];
+        end else if (csr_write_en && csr_write_addr == `CSR_CRMD) begin
+            crmd[8:0] <= csr_write_data[8:0];
         end else begin
             crmd <= crmd;
         end
@@ -158,8 +167,8 @@ module csr
         end else if (ctrl_slave.is_exception) begin
             prmd[1:0] <= crmd[1:0];  // PPLV
             prmd[2]   <= crmd[2];  // PIE
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_PRMD) begin
-            prmd[2:0] <= wb_i.csr_write_data[2:0];
+        end else if (csr_write_en && csr_write_addr == `CSR_PRMD) begin
+            prmd[2:0] <= csr_write_data[2:0];
         end else begin
             prmd <= prmd;
         end
@@ -169,8 +178,8 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             euem <= 32'b0;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_EUEN) begin
-            euem[0] <= wb_i.csr_write_data[0];
+        end else if (csr_write_en && csr_write_addr == `CSR_EUEN) begin
+            euem[0] <= csr_write_data[0];
         end else begin
             euem <= euem;
         end
@@ -180,9 +189,9 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             ecfg <= 32'b0;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_ECFG) begin
-            ecfg[9:0]   <= wb_i.csr_write_data[9:0];
-            ecfg[12:11] <= wb_i.csr_write_data[12:11];
+        end else if (csr_write_en && csr_write_addr == `CSR_ECFG) begin
+            ecfg[9:0]   <= csr_write_data[9:0];
+            ecfg[12:11] <= csr_write_data[12:11];
         end else begin
             ecfg <= ecfg;
         end
@@ -195,8 +204,8 @@ module csr
         end else if (ctrl_slave.is_exception) begin
             estat[21:16] <= ctrl_slave.ecode;
             estat[31:22] <= ctrl_slave.esubcode;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_ESTAT) begin
-            estat[1:0] <= wb_i.csr_write_data[1:0];
+        end else if (csr_write_en && csr_write_addr == `CSR_ESTAT) begin
+            estat[1:0] <= csr_write_data[1:0];
         end else begin
             estat[1:0] <= estat[1:0];
             estat[9:2] <= is_hwi;
@@ -213,8 +222,8 @@ module csr
             era <= 32'b0;
         end else if (ctrl_slave.is_exception) begin
             era <= ctrl_slave.exception_pc;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_ERA) begin
-            era <= wb_i.csr_write_data;
+        end else if (csr_write_en && csr_write_addr == `CSR_ERA) begin
+            era <= csr_write_data;
         end else begin
             era <= era;
         end
@@ -236,8 +245,8 @@ module csr
                 default: begin
                 end
             endcase
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_BADV) begin
-            badv <= wb_i.csr_write_data;
+        end else if (csr_write_en && csr_write_addr == `CSR_BADV) begin
+            badv <= csr_write_data;
         end else begin
             badv <= badv;
         end
@@ -247,8 +256,8 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             eentry <= 32'b0;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_EENTRY) begin
-            eentry[31:6] <= wb_i.csr_write_data[31:6];
+        end else if (csr_write_en && csr_write_addr == `CSR_EENTRY) begin
+            eentry[31:6] <= csr_write_data[31:6];
         end else begin
             eentry <= eentry;
         end
@@ -258,32 +267,26 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             tlbidx <= 32'b0;
-        end
-        else if (is_tlbsrch) begin
+        end else if (tlbsrch_en) begin
             if (tlbsrch_found) begin
-                tlbidx[4: 0] <= tlbsrch_index;
-                tlbidx[31] <= 1'b0;
-            end
-            else begin
+                tlbidx[4:0] <= tlbsrch_index;
+                tlbidx[31]  <= 1'b0;
+            end else begin
                 tlbidx[31] <= 1'b1;
             end
-        end
-        else if (is_tlbrd) begin
+        end else if (tlbrd_en) begin
             if (is_tlbrd_valid) begin
-                tlbidx[29: 24] <= tlb_line[17: 12];
+                tlbidx[29:24] <= tlb_line[17:12];
                 tlbidx[31] <= ~tlb_line[0];
-            end 
-            else begin
-                tlbidx[29: 24] <= 6'b0;
+            end else begin
+                tlbidx[29:24] <= 6'b0;
                 tlbidx[31] <= 1'b1;
             end
-        end
-        else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_TLBIDX) begin
-            tlbidx[4: 0] <= wb_i.csr_write_data[4: 0]; // index
-            tlbidx[29: 24] <= wb_i.csr_write_data[29: 24]; // ps
-            tlbidx[31] <= wb_i.csr_write_data[31]; // ne
-        end
-        else begin
+        end else if (csr_write_en && csr_write_addr == `CSR_TLBIDX) begin
+            tlbidx[4:0] <= csr_write_data[4:0];  // index
+            tlbidx[29:24] <= csr_write_data[29:24];  // ps
+            tlbidx[31] <= csr_write_data[31];  // ne
+        end else begin
             tlbidx <= tlbidx;
         end
     end
@@ -292,22 +295,17 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             tlbehi <= 32'b0;
-        end
-        else if (is_tlbrd) begin
+        end else if (tlbrd_en) begin
             if (is_tlbrd_valid) begin
-                tlbehi[31: 13] <=  tlb_line;
-            end 
-            else begin
-                tlbehi[31: 13] <=  19'b0;
+                tlbehi[31:13] <= tlb_line;
+            end else begin
+                tlbehi[31:13] <= 19'b0;
             end
-        end
-        else if (is_tlb_exception) begin
-            tlbehi[31: 13] <= ctrl_slave.exception_pc[31: 13];
-        end
-        else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_TLBEHI) begin
-            tlbehi[31: 13] <= wb_i.csr_write_data[31: 13]; // vppn
-        end
-        else begin
+        end else if (is_tlb_exception) begin
+            tlbehi[31:13] <= ctrl_slave.exception_pc[31:13];
+        end else if (csr_write_en && csr_write_addr == `CSR_TLBEHI) begin
+            tlbehi[31:13] <= csr_write_data[31:13];  // vppn
+        end else begin
             tlbehi <= tlbehi;
         end
     end
@@ -316,34 +314,30 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             tlbelo0 <= 32'b0;
-        end
-        else if (is_tlbrd) begin
+        end else if (tlbrd_en) begin
             if (is_tlbrd_valid) begin
                 tlbelo0[0] <= tlblo0_line[0];
                 tlbelo0[1] <= tlblo0_line[1];
-                tlbelo0[3: 2] <= tlblo0_line[3: 2];
-                tlbelo0[5: 4] <= tlblo0_line[5: 4];
+                tlbelo0[3:2] <= tlblo0_line[3:2];
+                tlbelo0[5:4] <= tlblo0_line[5:4];
                 tlbelo0[6] <= tlblo0_line[6];
-                tlbelo0[31: 8] <= tlblo0_line[31: 8];
-            end
-            else begin
+                tlbelo0[31:8] <= tlblo0_line[31:8];
+            end else begin
                 tlbelo0[0] <= 1'b0;
                 tlbelo0[1] <= 1'b0;
-                tlbelo0[3: 2] <= 2'b0;
-                tlbelo0[5: 4] <= 2'b0;
+                tlbelo0[3:2] <= 2'b0;
+                tlbelo0[5:4] <= 2'b0;
                 tlbelo0[6] <= 1'b0;
-                tlbelo0[31: 8] <= 24'b0;
+                tlbelo0[31:8] <= 24'b0;
             end
-        end
-        else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_TLBELO0) begin
-            tlbelo0[0] <= wb_i.csr_write_data[0]; // V
-            tlbelo0[1] <= wb_i.csr_write_data[1]; // D
-            tlbelo0[3: 2] <= wb_i.csr_write_data[3: 2]; // PLV
-            tlbelo0[5: 4] <= wb_i.csr_write_data[5: 4]; // MAT
-            tlbelo0[6] <= wb_i.csr_write_data[6]; // G
-            tlbelo0[31: 8] <= wb_i.csr_write_data[31: 8]; // PPN
-        end
-        else begin
+        end else if (csr_write_en && csr_write_addr == `CSR_TLBELO0) begin
+            tlbelo0[0] <= csr_write_data[0];  // V
+            tlbelo0[1] <= csr_write_data[1];  // D
+            tlbelo0[3:2] <= csr_write_data[3:2];  // PLV
+            tlbelo0[5:4] <= csr_write_data[5:4];  // MAT
+            tlbelo0[6] <= csr_write_data[6];  // G
+            tlbelo0[31:8] <= csr_write_data[31:8];  // PPN
+        end else begin
             tlbelo0 <= tlbelo0;
         end
     end
@@ -352,34 +346,30 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             tlbelo1 <= 32'b0;
-        end
-        else if (is_tlbrd) begin
+        end else if (tlbrd_en) begin
             if (is_tlbrd_valid) begin
                 tlbelo1[0] <= tlblo1_line[0];
                 tlbelo1[1] <= tlblo1_line[1];
-                tlbelo1[3: 2] <= tlblo1_line[3: 2];
-                tlbelo1[5: 4] <= tlblo1_line[5: 4];
+                tlbelo1[3:2] <= tlblo1_line[3:2];
+                tlbelo1[5:4] <= tlblo1_line[5:4];
                 tlbelo1[6] <= tlblo1_line[6];
-                tlbelo1[31: 8] <= tlblo1_line[31: 8];
-            end
-            else begin
+                tlbelo1[31:8] <= tlblo1_line[31:8];
+            end else begin
                 tlbelo1[0] <= 1'b0;
                 tlbelo1[1] <= 1'b0;
-                tlbelo1[3: 2] <= 2'b0;
-                tlbelo1[5: 4] <= 2'b0;
+                tlbelo1[3:2] <= 2'b0;
+                tlbelo1[5:4] <= 2'b0;
                 tlbelo1[6] <= 1'b0;
-                tlbelo1[31: 8] <= 24'b0;
+                tlbelo1[31:8] <= 24'b0;
             end
-        end
-        else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_TLBELO1) begin
-            tlbelo1[0] <= wb_i.csr_write_data[0]; // V
-            tlbelo1[1] <= wb_i.csr_write_data[1]; // D
-            tlbelo1[3: 2] <= wb_i.csr_write_data[3: 2]; // PLV
-            tlbelo1[5: 4] <= wb_i.csr_write_data[5: 4]; // MAT
-            tlbelo1[6] <= wb_i.csr_write_data[6]; // G
-            tlbelo1[31: 8] <= wb_i.csr_write_data[31: 8]; // PPN
-        end
-        else begin
+        end else if (csr_write_en && csr_write_addr == `CSR_TLBELO1) begin
+            tlbelo1[0] <= csr_write_data[0];  // V
+            tlbelo1[1] <= csr_write_data[1];  // D
+            tlbelo1[3:2] <= csr_write_data[3:2];  // PLV
+            tlbelo1[5:4] <= csr_write_data[5:4];  // MAT
+            tlbelo1[6] <= csr_write_data[6];  // G
+            tlbelo1[31:8] <= csr_write_data[31:8];  // PPN
+        end else begin
             tlbelo1 <= tlbelo1;
         end
     end
@@ -387,22 +377,18 @@ module csr
     // ASID write
     always_ff @(posedge clk) begin
         if (rst) begin
-            asid[15: 0] <= 16'b0;
-            asid[23: 16] <= 8'd10;
-            asid[31: 24] <= 7'b0; 
-        end
-        else if (is_tlbrd) begin
+            asid[15:0]  <= 16'b0;
+            asid[23:16] <= 8'd10;
+            asid[31:24] <= 7'b0;
+        end else if (tlbrd_en) begin
             if (is_tlbrd_valid) begin
-                asid[9: 0] <= tlb_line[9: 0];
+                asid[9:0] <= tlb_line[9:0];
+            end else begin
+                asid[9:0] <= 10'b0;
             end
-            else begin
-                asid[9: 0] <= 10'b0;
-            end
-        end
-        else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_ASID) begin
-            asid[9: 0] <= wb_i.csr_write_data[9: 0];
-        end
-        else begin
+        end else if (csr_write_en && csr_write_addr == `CSR_ASID) begin
+            asid[9:0] <= csr_write_data[9:0];
+        end else begin
             asid <= asid;
         end
     end
@@ -411,19 +397,19 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             pgdl <= 32'b0;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_PGDL) begin
-            pgdl[31: 12] <= wb_i.csr_write_data[31: 12]; // BASE
+        end else if (csr_write_en && csr_write_addr == `CSR_PGDL) begin
+            pgdl[31:12] <= csr_write_data[31:12];  // BASE
         end else begin
             pgdl <= pgdl;
         end
-    end 
+    end
 
     // PGDH write
     always_ff @(posedge clk) begin
         if (rst) begin
             pgdh <= 32'b0;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_PGDH) begin
-            pgdh[31: 12] <= wb_i.csr_write_data[31: 12]; // BASE
+        end else if (csr_write_en && csr_write_addr == `CSR_PGDH) begin
+            pgdh[31:12] <= csr_write_data[31:12];  // BASE
         end else begin
             pgdh <= pgdh;
         end
@@ -433,8 +419,7 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             pgd <= 32'b0;
-        end
-        else begin
+        end else begin
             pgd <= pgd;
         end
     end
@@ -443,11 +428,9 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             tlbrentry <= 32'b0;
-        end
-        else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_TLBRENTRY) begin
-            tlbrentry[31: 6] <= wb_i.csr_write_data[31: 6]; // PA
-        end
-        else begin
+        end else if (csr_write_en && csr_write_addr == `CSR_TLBRENTRY) begin
+            tlbrentry[31:6] <= csr_write_data[31:6];  // PA
+        end else begin
             tlbrentry <= tlbrentry;
         end
     end
@@ -456,12 +439,12 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             dmw0 <= 32'b0;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_DMW0) begin
-            dmw0[0] <= wb_i.csr_write_data[0]; // PLV0
-            dmw0[3] <= wb_i.csr_write_data[3]; // PLV3
-            dmw0[5: 4] <= wb_i.csr_write_data[5: 4]; // MAT
-            dmw0[27: 25] <= wb_i.csr_write_data[27: 25]; // PSEG
-            dmw0[31: 29] <= wb_i.csr_write_data[31: 29]; // VSEG
+        end else if (csr_write_en && csr_write_addr == `CSR_DMW0) begin
+            dmw0[0] <= csr_write_data[0];  // PLV0
+            dmw0[3] <= csr_write_data[3];  // PLV3
+            dmw0[5:4] <= csr_write_data[5:4];  // MAT
+            dmw0[27:25] <= csr_write_data[27:25];  // PSEG
+            dmw0[31:29] <= csr_write_data[31:29];  // VSEG
         end else begin
             dmw0 <= dmw0;
         end
@@ -471,12 +454,12 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             dmw1 <= 32'b0;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_DMW1) begin
-            dmw1[0] <= wb_i.csr_write_data[0]; // PLV0
-            dmw1[3] <= wb_i.csr_write_data[3]; // PLV3
-            dmw1[5: 4] <= wb_i.csr_write_data[5: 4]; // MAT
-            dmw1[27: 25] <= wb_i.csr_write_data[27: 25]; // PSEG
-            dmw1[31: 29] <= wb_i.csr_write_data[31: 29]; // VSEG
+        end else if (csr_write_en && csr_write_addr == `CSR_DMW1) begin
+            dmw1[0] <= csr_write_data[0];  // PLV0
+            dmw1[3] <= csr_write_data[3];  // PLV3
+            dmw1[5:4] <= csr_write_data[5:4];  // MAT
+            dmw1[27:25] <= csr_write_data[27:25];  // PSEG
+            dmw1[31:29] <= csr_write_data[31:29];  // VSEG
         end else begin
             dmw1 <= dmw1;
         end
@@ -495,8 +478,8 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             save0 <= 32'b0;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_SAVE0) begin
-            save0 <= wb_i.csr_write_data;
+        end else if (csr_write_en && csr_write_addr == `CSR_SAVE0) begin
+            save0 <= csr_write_data;
         end else begin
             save0 <= save0;
         end
@@ -506,8 +489,8 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             save1 <= 32'b0;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_SAVE1) begin
-            save1 <= wb_i.csr_write_data;
+        end else if (csr_write_en && csr_write_addr == `CSR_SAVE1) begin
+            save1 <= csr_write_data;
         end else begin
             save1 <= save1;
         end
@@ -517,8 +500,8 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             save2 <= 32'b0;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_SAVE2) begin
-            save2 <= wb_i.csr_write_data;
+        end else if (csr_write_en && csr_write_addr == `CSR_SAVE2) begin
+            save2 <= csr_write_data;
         end else begin
             save2 <= save2;
         end
@@ -528,8 +511,8 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             save3 <= 32'b0;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_SAVE3) begin
-            save3 <= wb_i.csr_write_data;
+        end else if (csr_write_en && csr_write_addr == `CSR_SAVE3) begin
+            save3 <= csr_write_data;
         end else begin
             save3 <= save3;
         end
@@ -539,18 +522,18 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             llbctl <= 32'b0;
-        end else if (is_ertn) begin
+        end else if (ertn_en) begin
             if (llbctl[2]) begin
                 llbctl[2] <= 1'b0;
             end else begin
                 llbctl[0] <= 1'b0;
             end
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_LLBCTL) begin
-            if (wb_i.is_llw_scw) begin
-                llbctl[0] <= wb_i.csr_write_data[0];
+        end else if (csr_write_en && csr_write_addr == `CSR_LLBCTL) begin
+            if (is_llw_scw) begin
+                llbctl[0] <= csr_write_data[0];
             end else begin
-                llbctl[2] <= wb_i.csr_write_data[2];
-                llbctl[0] <= wb_i.csr_write_data[1] ? 1'b0 : llbctl[0];
+                llbctl[2] <= csr_write_data[2];
+                llbctl[0] <= csr_write_data[1] ? 1'b0 : llbctl[0];
             end
         end else begin
             llbctl <= llbctl;
@@ -563,8 +546,8 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             tid <= cpuid;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_TID) begin
-            tid <= wb_i.csr_write_data;
+        end else if (csr_write_en && csr_write_addr == `CSR_TID) begin
+            tid <= csr_write_data;
         end else begin
             tid <= tid;
         end
@@ -574,8 +557,8 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             tcfg <= 32'b0;
-        end else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_TCFG) begin
-            tcfg <= wb_i.csr_write_data;
+        end else if (csr_write_en && csr_write_addr == `CSR_TCFG) begin
+            tcfg <= csr_write_data;
         end else begin
             tcfg <= tcfg;
         end
@@ -610,8 +593,8 @@ module csr
         if (rst) begin
             ticlr <= 32'b0;
         end
-        else if (wb_i.csr_write_en && wb_i.csr_write_addr == `CSR_TICLR && wb_i.csr_write_data[0] == 1'b1) begin
-            ticlr[0] <= wb_i.csr_write_data[0];
+        else if (csr_write_en && csr_write_addr == `CSR_TICLR && csr_write_data[0] == 1'b1) begin
+            ticlr[0] <= csr_write_data[0];
         end else begin
             ticlr <= 32'b0;
         end
@@ -620,69 +603,69 @@ module csr
     // read
     always_comb begin
         if (rst) begin
-            mem_slave.csr_read_data = 0;
-        end else if (mem_slave.csr_read_en) begin
-            case (mem_slave.csr_read_addr)
+            dispatch_slave.csr_read_data = 0;
+        end else if (dispatch_slave.csr_read_en) begin
+            case (dispatch_slave.csr_read_addr)
                 `CSR_CRMD: begin
-                    mem_slave.csr_read_data = crmd;
+                    dispatch_slave.csr_read_data = crmd;
                 end
                 `CSR_PRMD: begin
-                    mem_slave.csr_read_data = prmd;
+                    dispatch_slave.csr_read_data = prmd;
                 end
                 `CSR_EUEN: begin
-                    mem_slave.csr_read_data = euem;
+                    dispatch_slave.csr_read_data = euem;
                 end
                 `CSR_ECFG: begin
-                    mem_slave.csr_read_data = ecfg;
+                    dispatch_slave.csr_read_data = ecfg;
                 end
                 `CSR_ESTAT: begin
-                    mem_slave.csr_read_data = estat;
+                    dispatch_slave.csr_read_data = estat;
                 end
                 `CSR_ERA: begin
-                    mem_slave.csr_read_data = era;
+                    dispatch_slave.csr_read_data = era;
                 end
                 `CSR_BADV: begin
-                    mem_slave.csr_read_data = badv;
+                    dispatch_slave.csr_read_data = badv;
                 end
                 `CSR_EENTRY: begin
-                    mem_slave.csr_read_data = eentry;
+                    dispatch_slave.csr_read_data = eentry;
                 end
                 `CSR_CPUID: begin
-                    mem_slave.csr_read_data = cpuid;
+                    dispatch_slave.csr_read_data = cpuid;
                 end
                 `CSR_SAVE0: begin
-                    mem_slave.csr_read_data = save0;
+                    dispatch_slave.csr_read_data = save0;
                 end
                 `CSR_SAVE1: begin
-                    mem_slave.csr_read_data = save1;
+                    dispatch_slave.csr_read_data = save1;
                 end
                 `CSR_SAVE2: begin
-                    mem_slave.csr_read_data = save2;
+                    dispatch_slave.csr_read_data = save2;
                 end
                 `CSR_SAVE3: begin
-                    mem_slave.csr_read_data = save3;
+                    dispatch_slave.csr_read_data = save3;
                 end
                 `CSR_LLBCTL: begin
-                    mem_slave.csr_read_data = llbctl;
+                    dispatch_slave.csr_read_data = llbctl;
                 end
                 `CSR_TID: begin
-                    mem_slave.csr_read_data = tid;
+                    dispatch_slave.csr_read_data = tid;
                 end
                 `CSR_TCFG: begin
-                    mem_slave.csr_read_data = tcfg;
+                    dispatch_slave.csr_read_data = tcfg;
                 end
                 `CSR_TVAL: begin
-                    mem_slave.csr_read_data = tval;
+                    dispatch_slave.csr_read_data = tval;
                 end
                 `CSR_TICLR: begin
-                    mem_slave.csr_read_data = ticlr;
+                    dispatch_slave.csr_read_data = ticlr;
                 end
                 default: begin
-                    mem_slave.csr_read_data = 32'b0;
+                    dispatch_slave.csr_read_data = 32'b0;
                 end
             endcase
         end else begin
-            mem_slave.csr_read_data = 32'b0;
+            dispatch_slave.csr_read_data = 32'b0;
         end
     end
 

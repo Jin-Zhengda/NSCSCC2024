@@ -8,8 +8,8 @@ module dispatch
     input logic rst,
 
     // from ctrl
-    input ctrl_t ctrl,
-    input logic  branch_flush,
+    input logic pause,
+    input logic flush,
 
     // from decoder
     input id_dispatch_t dispatch_i[DECODER_WIDTH],
@@ -132,7 +132,7 @@ module dispatch
         end
     endgenerate
 
-    assign dqueue_en = (ctrl.pause[4] || ctrl.exception_flush) ? 2'b00: (branch_flush ? 2'b00: 2'b11);
+    assign dqueue_en = flush ? 2'b00: 2'b11;
     assign invalid_en = ctrl.pause[4] ? 2'b00 : issue_en;
 
     // dispatch arbitration
@@ -148,7 +148,7 @@ module dispatch
 
     assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst;
 
-    assign issue_en = (ctrl.exception_flush || branch_flush || (ctrl.pause[4] && !ctrl.pause[5])) ? 2'b00: (issue_double_en? 2'b11: 2'b01);
+    assign issue_en = flush ? 2'b00: (issue_double_en? 2'b11: 2'b01);
 
     generate
         for (genvar iss_idx = 0; iss_idx < ISSUE_WIDTH; iss_idx++) begin

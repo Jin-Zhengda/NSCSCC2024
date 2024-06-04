@@ -8,46 +8,29 @@ module wb
 
     // from mem
     input mem_wb_t wb_i[ISSUE_WIDTH],
+    input commit_ctrl_t commit_ctrl_i[ISSUE_WIDTH],
 
     // from ctrl
-    input ctrl_t ctrl,
+    input logic flush,
+    input logic pause,
 
-    // to regfile
-    output logic [ISSUE_WIDTH - 1:0] reg_write_en,
-    output logic [ISSUE_WIDTH - 1:0][REG_ADDR_WIDTH - 1:0] reg_write_addr,
-    output logic [ISSUE_WIDTH - 1:0][REG_WIDTH - 1:0] reg_write_data,
-
-    // to csr
-    output logic is_llw_scw,
-    output logic csr_write_en,
-    output csr_addr_t csr_write_addr,
-    output bus32_t csr_write_data
+    // to ctrl
+    output mem_wb_t wb_o[ISSUE_WIDTH],
+    output commit_ctrl_t commit_ctrl_o[ISSUE_WIDTH]
 );
-
-    mem_wb_t wb_o[ISSUE_WIDTH];
     
     always_ff @( posedge clk ) begin
-        if (rst || ctrl.exception_flush || (ctrl.pause[6] && !ctrl.pause[7])) begin
+        if (rst || flush) begin
             wb_o <= '{default:0};
-        end else if (!ctrl.pause[6]) begin
+            commit_ctrl_o <= '{default:0};
+        end else if (!pause) begin
             wb_o <= wb_i;
+            commit_ctrl_o <= commit_ctrl_i;
         end else begin
             wb_o <= wb_o;
+            commit_ctrl_o <= commit_ctrl_o;
         end
     end
+    
 
-    // to regfile
-    generate
-        for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign reg_write_en[i] = wb_o[i].reg_write_en;
-            assign reg_write_addr[i] = wb_o[i].reg_write_addr;
-            assign reg_write_data[i] = wb_o[i].reg_write_data;
-        end
-    endgenerate
-
-    // to csr
-    assign is_llw_scw = wb_o[0].is_llw_scw;
-    assign csr_write_en = wb_o[0].csr_write_en;
-    assign csr_write_addr = wb_o[0].csr_write__addr;
-    assign csr_write_data = wb_o[0].csr_write_data;
 endmodule

@@ -157,16 +157,16 @@ module ctrl
     // pause[0] PC, pause[1] icache, pause[2] instbuffer, pause[3] id
     // pause[4] dispatch, pause[5] ex, pause[6] mem, pause[7] wb
     always_comb begin : pause_ctrl
-        if (pause_request.pause_if) begin
-            ctrl_o.pause = 8'b00000001;
-        end else if (pause_request.pause_id) begin
-            ctrl_o.pause = 8'b00001111;
-        end else if (pause_request.pause_dispatch) begin
-            ctrl_o.pause = 8'b00011111;
+        if (pause_request.pause_mem || pause_idle) begin
+            ctrl_o.pause = 8'b01111111;
         end else if (pause_request.pause_ex) begin
             ctrl_o.pause = 8'b00111111;
-        end else if (pause_request.pause_mem || pause_idle) begin
-            ctrl_o.pause = 8'b01111111;
+        end else if (pause_request.pause_dispatch) begin
+            ctrl_o.pause = 8'b00011111;
+        end else if (pause_request.pause_id) begin
+            ctrl_o.pause = 8'b00001111;
+        end else if (pause_request.pause_if) begin
+            ctrl_o.pause = 8'b00000001;
         end else begin
             ctrl_o.pause = 8'b0;
         end

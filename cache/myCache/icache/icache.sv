@@ -111,7 +111,7 @@ assign uncache_stall=pre_uncache_en&&!real_iucache_rvalid_o;
 always_ff @( posedge clk ) begin
     if(reset)pre_uncache_en<=1'b0;
     else if(uncache_stall)pre_uncache_en<=pre_uncache_en;
-    else pre_uncache_en<=icache_uncache;
+    else pre_uncache_en<=icache_uncache&&pc2icache.icache_is_valid;
 end
 
 
@@ -171,7 +171,7 @@ bus32_t pre_physical_addr,pre_virtual_addr;
 
 //记录地址
 always_ff @( posedge clk ) begin
-    if(reset || branch_flush)begin
+    if(reset)begin
         pre_inst_en<=1'b0;
         pre_physical_addr<=32'b0;
         pre_virtual_addr<=32'b0;

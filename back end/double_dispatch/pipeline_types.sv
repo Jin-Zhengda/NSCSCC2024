@@ -9,7 +9,7 @@ package pipeline_types;
     parameter ALU_OP_WIDTH = 8;
     parameter ALU_SEL_WIDTH = 3;
 
-    parameter PAUSE_WIDTH = 8;
+    parameter PIPE_WIDTH = 8;
     parameter EXC_CAUSE_WIDTH = 7;
 
     parameter DECODER_WIDTH = 2;
@@ -32,17 +32,13 @@ package pipeline_types;
 
     typedef struct packed {
         logic pause_if;
+        logic pause_icache;
+        logic pause_buffer;
         logic pause_id;
         logic pause_dispatch;
         logic pause_ex;
         logic pause_mem;
     } pause_t;
-
-    // from ctrl
-    typedef struct packed {
-        logic[PAUSE_WIDTH - 1: 0] pause;
-        logic[ISSUE_WIDTH - 1: 0] exception_flush;
-    } ctrl_t;
 
     typedef struct packed {
         bus32_t inst_o_1;
@@ -73,12 +69,6 @@ package pipeline_types;
         bus32_t branch_actual_addr;
         bus32_t pc_dispatch;
     } branch_update;
-
-    // ctrl and pc
-    typedef struct packed {
-        bus32_t exception_new_pc;
-        logic is_interrupt;
-    } ctrl_pc_t;
 
     // pc and id
     typedef struct packed {
@@ -120,14 +110,6 @@ package pipeline_types;
         logic pre_is_branch_taken;
         bus32_t pre_branch_addr;
     } id_dispatch_t;
-
-    // csr push forward
-    typedef struct packed {
-        logic csr_write_en;
-        csr_addr_t csr_write_addr;
-        bus32_t csr_write_data;
-    } csr_push_forward_t;
-
 
     // pineline push forward
     typedef struct packed {
@@ -201,15 +183,15 @@ package pipeline_types;
 
     typedef struct packed {
         logic[5: 0] is_exception;
-        logic[5: 0][6: 0] exception_cause;
+        logic[5: 0][EXC_CAUSE_WIDTH - 1: 0] exception_cause;
 
         bus32_t pc;
-        bus32_t exception_addr;
+        bus32_t mem_addr;
+
+        alu_op_t aluop;
 
         logic is_privilege;
-        logic is_ertn;
-        logic is_idle;
-    } mem_ctrl_t;
+    } commit_ctrl_t;
 
     typedef struct packed {
         logic is_cacop;
@@ -218,7 +200,6 @@ package pipeline_types;
         logic hint;
         bus32_t addr; 
     } cache_inst_t;
-
 
     typedef struct packed {
         logic[7: 0] inst_st_en;
