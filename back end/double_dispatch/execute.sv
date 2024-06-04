@@ -9,8 +9,8 @@ module execute
     input logic rst,
 
     // from ctrl
-    input ctrl_t ctrl,
-    input logic  branch_flush,
+    input logic flush,
+    input logic pause,
 
     // from dispatch
     input dispatch_ex_t ex_i[ISSUE_WIDTH],
@@ -31,7 +31,8 @@ module execute
     output pipeline_push_forward_t ex_reg_pf [ISSUE_WIDTH],
 
     // to ctrl
-    logic pause_ex,
+    output logic pause_ex,
+    output logic branch_flush,
 
     // to mem
     output ex_mem_t mem_i[ISSUE_WIDTH]
@@ -78,9 +79,9 @@ module execute
 
     // to mem
     always_ff @(posedge clk) begin
-        if (rst || ctrl.exception_flush || ctrl.pause[5] && !ctrl.pause[6]) begin
+        if (rst || flush) begin
             mem_i <= '{default: 0};
-        end else if (!ctrl.pause[5]) begin
+        end else if (!pause) begin
             if (branch_flush_alu[0]) begin
                 mem_i[0] <= ex_i[0];
                 mem_i[1] <= 0;

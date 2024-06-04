@@ -20,6 +20,11 @@ module ex
     ex_div div_master
 );
 
+    bus32_t pc;
+    bus32_t inst;
+    assign pc = dispatch_ex.pc;
+    assign inst = dispatch_ex.inst;
+
     assign ex_mem.st_paddr = ex_mem.mem_addr;
     assign ex_mem.st_vaddr = ex_mem.mem_addr;
     assign ex_mem.st_data = dcache_master.wdata;
@@ -75,7 +80,7 @@ module ex
                         || dispatch_ex.aluop == `ALU_PRELD || dispatch_ex.aluop == `ALU_CACOP || dispatch_ex.aluop == `ALU_STB
                         || dispatch_ex.aluop == `ALU_STH || dispatch_ex.aluop == `ALU_STW || dispatch_ex.aluop == `ALU_SCW;
 
-    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.addr_ok && dcache_master.cache_miss;
+    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.addr_ok;
 
     always_comb begin
         case (dispatch_ex.aluop)

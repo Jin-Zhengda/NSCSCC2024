@@ -10,6 +10,7 @@ module csr
     mem_csr mem_slave,
 
     input csr_write_t wb_i,
+    
 
     input logic is_ertn,
     input logic is_tlbsrch,

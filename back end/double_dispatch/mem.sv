@@ -15,9 +15,9 @@ module mem
 
     // to ctrl
     output logic pause_mem,
-    output mem_ctrl_t mem_ctrl[ISSUE_WIDTH],
 
     // to wb
+    output commit_ctrl_t commit_ctrl[ISSUE_WIDTH],
     output mem_wb_t wb_i[ISSUE_WIDTH]
 );
     mem_wb_t mem_o[ISSUE_WIDTH];
@@ -50,22 +50,14 @@ module mem
     // ctrl signal assignment
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign mem_ctrl[i].is_exception = mem_i[i].is_exception;
-            assign mem_ctrl[i].exception_cause = mem_i[i].exception_cause;
-
-            assign mem_ctrl[i].pc = mem_i[i].pc;
-            assign mem_ctrl[i].exception_addr = mem_i[i].mem_addr;
+            assign commit_ctrl[i].is_exception = mem_i[i].is_exception;
+            assign commit_ctrl[i].exception_cause = mem_i[i].exception_cause;
+            assign commit_ctrl[i].pc = mem_i[i].pc;
+            assign commit_ctrl[i].mem_addr = mem_i[i].mem_addr;
+            assign commit_ctrl[i].aluop = mem_i[i].aluop;
+            assign commit_ctrl[i].is_privilege = mem_i[i].is_privilege;
         end
     endgenerate
-
-    assign mem_ctrl[0].is_privilege = mem_i[0].is_privilege;
-    assign mem_ctrl[1].is_privilege = 1'b0;
-
-    assign mem_ctrl[0].is_ertn = (mem_i[0].is_exception == 6'b0 && mem_i[0].aluop == `ALU_ERTN);
-    assign mem_ctrl[1].is_ertn = 1'b0;
-
-    assign mem_ctrl[0].is_idle = (mem_i[0].aluop == `ALU_IDLE);
-    assign mem_ctrl[1].is_idle = 1'b0;
 
     // mem 
     bus32_t cache_data;

@@ -197,10 +197,10 @@ interface mem_csr;
 endinterface : mem_csr
 
 interface ctrl_csr;
-    bus32_t EENTRY_VA;
-    bus32_t ERA_PC;
-    logic [11:0] ECFG_LIE;
-    logic [11:0] ESTAT_IS;
+    bus32_t eentry;
+    bus32_t era;
+    bus32_t ecfg;
+    bus32_t estat;
     bus32_t crmd;
 
     logic is_exception;
@@ -211,31 +211,13 @@ interface ctrl_csr;
     exception_cause_t exception_cause;
 
     modport master(
-        input EENTRY_VA,
-        input ERA_PC,
-        input ECFG_LIE,
-        input ESTAT_IS,
-        input crmd,
-        output is_exception,
-        output exception_pc,
-        output exception_addr,
-        output ecode,
-        output esubcode,
-        output exception_cause
+        input eentry, era, ecfg, estat, crmd,
+        output is_exception, exception_pc, exception_addr, ecode, esubcode, exception_cause
     );
 
     modport slave(
-        output EENTRY_VA,
-        output ERA_PC,
-        output ECFG_LIE,
-        output ESTAT_IS,
-        output crmd,
-        input is_exception,
-        input exception_pc,
-        input exception_addr,
-        input ecode,
-        input esubcode,
-        input exception_cause
+        output eentry, era, ecfg, estat, crmd,
+        input is_exception, exception_pc, exception_addr, ecode, esubcode, exception_cause
     );
 endinterface : ctrl_csr
 

@@ -156,6 +156,8 @@ module branch_alu
         end
     end
 
+    assign update_info.pc_dispatch = pc;
+
     assign branch_flush = update_info.branch_flush;
 
 endmodule
