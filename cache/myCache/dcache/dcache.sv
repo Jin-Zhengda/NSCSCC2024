@@ -360,6 +360,7 @@ assign rd_type=3'b100;
 
 
 
+
 //Dirty
     reg [`SET_SIZE*2-1:0] dirty;
 	wire write_dirty = dirty[{pre_physical_addr[`INDEX_LOC],LRU_pick}]; 
