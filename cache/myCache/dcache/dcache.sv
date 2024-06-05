@@ -230,7 +230,7 @@ logic [6:0] read_index_addr,write_index_addr;
 assign read_index_addr = stall? pre_physical_addr[`INDEX_LOC] : physical_addr[`INDEX_LOC];//When stall, maintain the addr of ram 
 assign write_index_addr=pre_preld&&read_success?pre_preld_addr[`INDEX_LOC]:pre_physical_addr[`INDEX_LOC];
 
-logic [6:0] way0_index_addr;
+logic [6:0] way0_index_addr,way1_index_addr;
 assign way0_index_addr=|wea_way0?write_index_addr:read_index_addr;
 assign way1_index_addr=|wea_way1?write_index_addr:read_index_addr;
 

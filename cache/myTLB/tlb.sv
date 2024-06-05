@@ -89,6 +89,31 @@ reg [ 1:0] tlb_mat1     [TLBNUM-1:0];
 reg        tlb_d1       [TLBNUM-1:0];
 reg        tlb_v1       [TLBNUM-1:0];
 
+//仿真测试
+initial begin
+    for(integer i=0;i<TLBNUM;i++)begin
+        tlb_vppn[i]=0;
+        tlb_e   [i]=0;
+        tlb_asid[i]=0;
+        tlb_g   [i]=0;
+        tlb_ps  [i]=0;
+        tlb_ppn0[i]=0;
+        tlb_plv0[i]=0;
+        tlb_mat0[i]=0;
+        tlb_d0  [i]=0;
+        tlb_v0  [i]=0;
+        tlb_ppn1[i]=0;
+        tlb_plv1[i]=0;
+        tlb_mat1[i]=0;
+        tlb_d1  [i]=0;
+        tlb_v1  [i]=0;
+    end
+end
+
+
+
+
+
 //创建reg变量记录输入请求
 reg		   s0_fetch_r   ;
 reg [18:0] s0_vppn_r    ;
@@ -125,6 +150,14 @@ always @(posedge clk) begin
         s1_odd_page_r  <= s1_odd_page;
         s1_asid_r      <= s1_asid;
 	end
+    else begin
+        s0_vppn_r      <= 19'b0;
+        s0_odd_page_r  <= 1'b0;
+        s0_asid_r      <= 10'b0;
+        s1_vppn_r      <= 19'b0;    
+        s1_odd_page_r  <= 1'b0;
+        s1_asid_r      <= 10'b0;
+    end
 end
 
 //为s0_odd_page_buffer，match0这种变量赋值
