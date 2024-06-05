@@ -12,7 +12,7 @@ typedef struct packed {
     interface mem_dcache;
         logic valid;                // 请求有效
         logic op;                   // 操作类型，读-0，写-1
-        logic[2:0] size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
+        logic[2:0] size;           // 数据大小，3'b000--字节，3'b001--半字，3'b010--字
         logic[31:0] virtual_addr;   // 虚拟地址
         logic tlb_excp_cancel_req;
         logic[3:0]  wstrb;          //写使能，1表示对应的8位数据需要写
@@ -230,7 +230,7 @@ logic [6:0] read_index_addr,write_index_addr;
 assign read_index_addr = stall? pre_physical_addr[`INDEX_LOC] : physical_addr[`INDEX_LOC];//When stall, maintain the addr of ram 
 assign write_index_addr=pre_preld&&read_success?pre_preld_addr[`INDEX_LOC]:pre_physical_addr[`INDEX_LOC];
 
-logic [6:0] way0_index_addr,way1_index_addr;
+logic [6:0] way0_index_addr;
 assign way0_index_addr=|wea_way0?write_index_addr:read_index_addr;
 assign way1_index_addr=|wea_way1?write_index_addr:read_index_addr;
 
@@ -336,19 +336,14 @@ assign hit_fail = ~(hit_success) & pre_valid;
 logic write_delay;
 always_ff @( posedge clk ) begin
     if(reset)write_delay<=1'b0;
+    else if(read_success)write_delay<=1'b0;
     else if(pre_valid&&pre_op==1'b1&&mem2dcache.valid&&mem2dcache.op==1'b0)write_delay<=1'b1;
     else write_delay<=1'b0;
 end
 
-logic wr_read_stall;
-always_ff @( posedge clk ) begin
-    if(reset)wr_read_stall<=1'b0;
-    else if(pre_physical_addr==physical_addr&&mem2dcache.op==0&&(wea_way0||wea_way1))wr_read_stall<=1'b1;
-    else wr_read_stall<=1'b0;
-end
 
-
-assign stall=(reset||pre_cacop_en||dcache_inst.is_cacop||dcache_inst.is_preld||preld_stall||uncache_stall)?1'b1:(pre_valid&&(hit_fail||read_success)?1'b1:(write_delay?1'b1:1'b0));
+assign stall=(reset||pre_cacop_en||dcache_inst.is_cacop||dcache_inst.is_preld||preld_stall||uncache_stall)?1'b1:
+            (pre_valid&&(hit_fail)?1'b1:(write_delay?1'b1:1'b0));
 assign mem2dcache.rdata=ducache_rvalid_o?ducache_rdata_o:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'hffffffff)));
 
 
