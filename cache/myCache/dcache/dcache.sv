@@ -223,7 +223,16 @@ reg [`DATA_SIZE-1:0]cache_wdata[`BANK_NUM-1:0];
 //BANK 0~7 WAY 0~1
 logic [3:0]wea_way0;
 logic [3:0]wea_way1;
-    
+
+logic [3:0]wea_way0_single[7:0];
+logic [3:0]wea_way1_single[7:0];
+
+for(genvar i=0;i<8;i=i+1)begin
+    assign wea_way0_single[i]=(pre_valid&&hit_way0&&pre_op==1'b1&&i!=pre_physical_addr[4:2])?4'b0000:wea_way0;
+    assign wea_way1_single[i]=(pre_valid&&hit_way1&&pre_op==1'b1&&i!=pre_physical_addr[4:2])?4'b0000:wea_way1;
+end
+
+
 //port a:write  port b:read
 logic [`DATA_SIZE-1:0]way0_cache[`BANK_NUM-1:0];
 logic [6:0] read_index_addr,write_index_addr;
@@ -231,29 +240,30 @@ assign read_index_addr = stall? pre_physical_addr[`INDEX_LOC] : physical_addr[`I
 assign write_index_addr=pre_preld&&read_success?pre_preld_addr[`INDEX_LOC]:pre_physical_addr[`INDEX_LOC];
 
 logic [6:0] way0_index_addr;
+logic [6:0] way1_index_addr;
 assign way0_index_addr=|wea_way0?write_index_addr:read_index_addr;
 assign way1_index_addr=|wea_way1?write_index_addr:read_index_addr;
 
-BRAM Bank0_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[0]),.addra(way0_index_addr),.douta(way0_cache[0]),.enb(1'b0));
-BRAM Bank1_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[1]),.addra(way0_index_addr),.douta(way0_cache[1]),.enb(1'b0));
-BRAM Bank2_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[2]),.addra(way0_index_addr),.douta(way0_cache[2]),.enb(1'b0));
-BRAM Bank3_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[3]),.addra(way0_index_addr),.douta(way0_cache[3]),.enb(1'b0));
-BRAM Bank4_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[4]),.addra(way0_index_addr),.douta(way0_cache[4]),.enb(1'b0));
-BRAM Bank5_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[5]),.addra(way0_index_addr),.douta(way0_cache[5]),.enb(1'b0));
-BRAM Bank6_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[6]),.addra(way0_index_addr),.douta(way0_cache[6]),.enb(1'b0));
-BRAM Bank7_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[7]),.addra(way0_index_addr),.douta(way0_cache[7]),.enb(1'b0));
+BRAM Bank0_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[0]),.dina(cache_wdata[0]),.addra(way0_index_addr),.douta(way0_cache[0]),.enb(1'b0));
+BRAM Bank1_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[1]),.dina(cache_wdata[1]),.addra(way0_index_addr),.douta(way0_cache[1]),.enb(1'b0));
+BRAM Bank2_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[2]),.dina(cache_wdata[2]),.addra(way0_index_addr),.douta(way0_cache[2]),.enb(1'b0));
+BRAM Bank3_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[3]),.dina(cache_wdata[3]),.addra(way0_index_addr),.douta(way0_cache[3]),.enb(1'b0));
+BRAM Bank4_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[4]),.dina(cache_wdata[4]),.addra(way0_index_addr),.douta(way0_cache[4]),.enb(1'b0));
+BRAM Bank5_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[5]),.dina(cache_wdata[5]),.addra(way0_index_addr),.douta(way0_cache[5]),.enb(1'b0));
+BRAM Bank6_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[6]),.dina(cache_wdata[6]),.addra(way0_index_addr),.douta(way0_cache[6]),.enb(1'b0));
+BRAM Bank7_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[7]),.dina(cache_wdata[7]),.addra(way0_index_addr),.douta(way0_cache[7]),.enb(1'b0));
 
  
 logic [`DATA_SIZE-1:0]way1_cache[`BANK_NUM-1:0];     
 
-BRAM Bank0_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[0]),.addra(way1_index_addr),.douta(way1_cache[0]),.enb(1'b0));
-BRAM Bank1_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[1]),.addra(way1_index_addr),.douta(way1_cache[1]),.enb(1'b0));
-BRAM Bank2_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[2]),.addra(way1_index_addr),.douta(way1_cache[2]),.enb(1'b0));
-BRAM Bank3_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[3]),.addra(way1_index_addr),.douta(way1_cache[3]),.enb(1'b0));
-BRAM Bank4_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[4]),.addra(way1_index_addr),.douta(way1_cache[4]),.enb(1'b0));
-BRAM Bank5_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[5]),.addra(way1_index_addr),.douta(way1_cache[5]),.enb(1'b0));
-BRAM Bank6_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[6]),.addra(way1_index_addr),.douta(way1_cache[6]),.enb(1'b0));
-BRAM Bank7_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[7]),.addra(way1_index_addr),.douta(way1_cache[7]),.enb(1'b0));
+BRAM Bank0_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[0]),.dina(cache_wdata[0]),.addra(way1_index_addr),.douta(way1_cache[0]),.enb(1'b0));
+BRAM Bank1_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[1]),.dina(cache_wdata[1]),.addra(way1_index_addr),.douta(way1_cache[1]),.enb(1'b0));
+BRAM Bank2_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[2]),.dina(cache_wdata[2]),.addra(way1_index_addr),.douta(way1_cache[2]),.enb(1'b0));
+BRAM Bank3_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[3]),.dina(cache_wdata[3]),.addra(way1_index_addr),.douta(way1_cache[3]),.enb(1'b0));
+BRAM Bank4_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[4]),.dina(cache_wdata[4]),.addra(way1_index_addr),.douta(way1_cache[4]),.enb(1'b0));
+BRAM Bank5_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[5]),.dina(cache_wdata[5]),.addra(way1_index_addr),.douta(way1_cache[5]),.enb(1'b0));
+BRAM Bank6_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[6]),.dina(cache_wdata[6]),.addra(way1_index_addr),.douta(way1_cache[6]),.enb(1'b0));
+BRAM Bank7_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[7]),.dina(cache_wdata[7]),.addra(way1_index_addr),.douta(way1_cache[7]),.enb(1'b0));
 
 
 //Tag1'b1
