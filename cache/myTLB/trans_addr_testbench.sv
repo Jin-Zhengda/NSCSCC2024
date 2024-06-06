@@ -130,7 +130,7 @@ always_ff @( posedge clk ) begin
         tlbehi_in    <={counter[18:0],13'b0}       ;
         tlbelo0_in   <={4'b0, {counter[18:0],1'b0}, 1'b0, 1'b0, 2'b11, 2'b0, 1'b0, 1'b1};
         tlbelo1_in   <={4'b0, {counter[18:0],1'b1}, 1'b0, 1'b0, 2'b11, 2'b0, 1'b0, 1'b1};
-        tlbidx_in    <={1'b0, 1'b0, counter[5:0], 24'b0};
+        tlbidx_in    <={1'b0, 1'b0, 6'd12, 19'b0,counter[4:0]};
         //tlbelo0_in   <={4'b0, r_ppn0, 1'b0, r_g, r_mat0, r_plv0, r_d0, r_v0};
         //tlbelo1_in   <={4'b0, r_ppn0, 1'b0, r_g, r_mat0, r_plv0, r_d0, r_v0};
         //tlbidx_in    <={!r_e, 1'b0, r_ps, 24'b0};
@@ -138,9 +138,31 @@ always_ff @( posedge clk ) begin
 
     //TLB_RD测试
     else if(counter>11&&counter<20)begin
-        tlbidx_in<={1'b0, 1'b0, counter[5:0], 19'b0,counter[4:0]-5'd10};
+        tlbwr_en<=1'b0;
+        tlbidx_in<={1'b0, 1'b0, counter[5:0]-5'd10, 19'b0,counter[4:0]-5'd10};
     end
+
+
+    //TLB_FILL测试
+    else if(counter>21&&counter<30)begin
+        tlbfill_en<=1'b1;
+        rand_index<=counter[4:0]-5'd6;
+        tlbehi_in    <={counter[18:0]-5'd6,13'b0}       ;
+        tlbelo0_in   <={4'b0, {counter[18:0]-19'd6,1'b0}, 1'b0, 1'b0, 2'b11, 2'b0, 1'b0, 1'b1};
+        tlbelo1_in   <={4'b0, {counter[18:0]-19'd6,1'b1}, 1'b0, 1'b0, 2'b11, 2'b0, 1'b0, 1'b1};
+        tlbidx_in    <={1'b0, 1'b0, 6'd12, 19'b0,counter[4:0]-5'd10};
+    end
+
+    //TLB_SRCH测试
+    else if(counter>31&&counter<40)begin
+        tlbsrch_en<=1'b1;
+        tlbsrch_ehi<={counter[18:0]-19'd16,13'b0};
+    end
+
+    //
 end
+
+
 
 
 

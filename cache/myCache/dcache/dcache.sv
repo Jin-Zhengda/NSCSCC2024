@@ -12,7 +12,7 @@ typedef struct packed {
     interface mem_dcache;
         logic valid;                // 请求有效
         logic op;                   // 操作类型，读-0，写-1
-        logic[2:0] size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
+        logic[2:0] size;           // 数据大小，3'b000--字节，3'b001--半字，3'b010--字
         logic[31:0] virtual_addr;   // 虚拟地址
         logic tlb_excp_cancel_req;
         logic[3:0]  wstrb;          //写使能，1表示对应的8位数据需要写
@@ -223,7 +223,16 @@ reg [`DATA_SIZE-1:0]cache_wdata[`BANK_NUM-1:0];
 //BANK 0~7 WAY 0~1
 logic [3:0]wea_way0;
 logic [3:0]wea_way1;
-    
+
+logic [3:0]wea_way0_single[7:0];
+logic [3:0]wea_way1_single[7:0];
+
+for(genvar i=0;i<8;i=i+1)begin
+    assign wea_way0_single[i]=(pre_valid&&hit_way0&&pre_op==1'b1&&i!=pre_physical_addr[4:2])?4'b0000:wea_way0;
+    assign wea_way1_single[i]=(pre_valid&&hit_way1&&pre_op==1'b1&&i!=pre_physical_addr[4:2])?4'b0000:wea_way1;
+end
+
+
 //port a:write  port b:read
 logic [`DATA_SIZE-1:0]way0_cache[`BANK_NUM-1:0];
 logic [6:0] read_index_addr,write_index_addr;
@@ -231,29 +240,30 @@ assign read_index_addr = stall? pre_physical_addr[`INDEX_LOC] : physical_addr[`I
 assign write_index_addr=pre_preld&&read_success?pre_preld_addr[`INDEX_LOC]:pre_physical_addr[`INDEX_LOC];
 
 logic [6:0] way0_index_addr;
+logic [6:0] way1_index_addr;
 assign way0_index_addr=|wea_way0?write_index_addr:read_index_addr;
 assign way1_index_addr=|wea_way1?write_index_addr:read_index_addr;
 
-BRAM Bank0_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[0]),.addra(way0_index_addr),.douta(way0_cache[0]),.enb(1'b0));
-BRAM Bank1_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[1]),.addra(way0_index_addr),.douta(way0_cache[1]),.enb(1'b0));
-BRAM Bank2_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[2]),.addra(way0_index_addr),.douta(way0_cache[2]),.enb(1'b0));
-BRAM Bank3_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[3]),.addra(way0_index_addr),.douta(way0_cache[3]),.enb(1'b0));
-BRAM Bank4_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[4]),.addra(way0_index_addr),.douta(way0_cache[4]),.enb(1'b0));
-BRAM Bank5_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[5]),.addra(way0_index_addr),.douta(way0_cache[5]),.enb(1'b0));
-BRAM Bank6_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[6]),.addra(way0_index_addr),.douta(way0_cache[6]),.enb(1'b0));
-BRAM Bank7_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(cache_wdata[7]),.addra(way0_index_addr),.douta(way0_cache[7]),.enb(1'b0));
+BRAM Bank0_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[0]),.dina(cache_wdata[0]),.addra(way0_index_addr),.douta(way0_cache[0]),.enb(1'b0));
+BRAM Bank1_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[1]),.dina(cache_wdata[1]),.addra(way0_index_addr),.douta(way0_cache[1]),.enb(1'b0));
+BRAM Bank2_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[2]),.dina(cache_wdata[2]),.addra(way0_index_addr),.douta(way0_cache[2]),.enb(1'b0));
+BRAM Bank3_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[3]),.dina(cache_wdata[3]),.addra(way0_index_addr),.douta(way0_cache[3]),.enb(1'b0));
+BRAM Bank4_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[4]),.dina(cache_wdata[4]),.addra(way0_index_addr),.douta(way0_cache[4]),.enb(1'b0));
+BRAM Bank5_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[5]),.dina(cache_wdata[5]),.addra(way0_index_addr),.douta(way0_cache[5]),.enb(1'b0));
+BRAM Bank6_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[6]),.dina(cache_wdata[6]),.addra(way0_index_addr),.douta(way0_cache[6]),.enb(1'b0));
+BRAM Bank7_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_single[7]),.dina(cache_wdata[7]),.addra(way0_index_addr),.douta(way0_cache[7]),.enb(1'b0));
 
  
 logic [`DATA_SIZE-1:0]way1_cache[`BANK_NUM-1:0];     
 
-BRAM Bank0_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[0]),.addra(way1_index_addr),.douta(way1_cache[0]),.enb(1'b0));
-BRAM Bank1_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[1]),.addra(way1_index_addr),.douta(way1_cache[1]),.enb(1'b0));
-BRAM Bank2_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[2]),.addra(way1_index_addr),.douta(way1_cache[2]),.enb(1'b0));
-BRAM Bank3_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[3]),.addra(way1_index_addr),.douta(way1_cache[3]),.enb(1'b0));
-BRAM Bank4_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[4]),.addra(way1_index_addr),.douta(way1_cache[4]),.enb(1'b0));
-BRAM Bank5_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[5]),.addra(way1_index_addr),.douta(way1_cache[5]),.enb(1'b0));
-BRAM Bank6_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[6]),.addra(way1_index_addr),.douta(way1_cache[6]),.enb(1'b0));
-BRAM Bank7_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[7]),.addra(way1_index_addr),.douta(way1_cache[7]),.enb(1'b0));
+BRAM Bank0_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[0]),.dina(cache_wdata[0]),.addra(way1_index_addr),.douta(way1_cache[0]),.enb(1'b0));
+BRAM Bank1_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[1]),.dina(cache_wdata[1]),.addra(way1_index_addr),.douta(way1_cache[1]),.enb(1'b0));
+BRAM Bank2_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[2]),.dina(cache_wdata[2]),.addra(way1_index_addr),.douta(way1_cache[2]),.enb(1'b0));
+BRAM Bank3_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[3]),.dina(cache_wdata[3]),.addra(way1_index_addr),.douta(way1_cache[3]),.enb(1'b0));
+BRAM Bank4_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[4]),.dina(cache_wdata[4]),.addra(way1_index_addr),.douta(way1_cache[4]),.enb(1'b0));
+BRAM Bank5_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[5]),.dina(cache_wdata[5]),.addra(way1_index_addr),.douta(way1_cache[5]),.enb(1'b0));
+BRAM Bank6_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[6]),.dina(cache_wdata[6]),.addra(way1_index_addr),.douta(way1_cache[6]),.enb(1'b0));
+BRAM Bank7_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_single[7]),.dina(cache_wdata[7]),.addra(way1_index_addr),.douta(way1_cache[7]),.enb(1'b0));
 
 
 //Tag1'b1
@@ -336,19 +346,14 @@ assign hit_fail = ~(hit_success) & pre_valid;
 logic write_delay;
 always_ff @( posedge clk ) begin
     if(reset)write_delay<=1'b0;
+    else if(read_success)write_delay<=1'b0;
     else if(pre_valid&&pre_op==1'b1&&mem2dcache.valid&&mem2dcache.op==1'b0)write_delay<=1'b1;
     else write_delay<=1'b0;
 end
 
-logic wr_read_stall;
-always_ff @( posedge clk ) begin
-    if(reset)wr_read_stall<=1'b0;
-    else if(pre_physical_addr==physical_addr&&mem2dcache.op==0&&(wea_way0||wea_way1))wr_read_stall<=1'b1;
-    else wr_read_stall<=1'b0;
-end
 
-
-assign stall=(reset||pre_cacop_en||dcache_inst.is_cacop||dcache_inst.is_preld||preld_stall||uncache_stall)?1'b1:(pre_valid&&(hit_fail||read_success)?1'b1:(write_delay?1'b1:1'b0));
+assign stall=(reset||pre_cacop_en||dcache_inst.is_cacop||dcache_inst.is_preld||preld_stall||uncache_stall)?1'b1:
+            (pre_valid&&(hit_fail)?1'b1:(write_delay?1'b1:1'b0));
 assign mem2dcache.rdata=ducache_rvalid_o?ducache_rdata_o:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'hffffffff)));
 
 
@@ -360,6 +365,7 @@ assign rd_req=(!dcache_inst.is_cacop&&!read_success&&hit_fail&&!ret_valid)||(pre
 assign rd_addr=pre_preld?pre_preld_addr:pre_physical_addr;
 
 assign rd_type=3'b100;
+
 
 
 
@@ -419,7 +425,6 @@ assign ducache_araddr_i=ducache_ren_i?pre_physical_addr:32'b0;
 assign ducache_awaddr_i=ducache_wen_i?pre_physical_addr:32'b0;
 assign ducache_wdata_i=ducache_wen_i?pre_wdata:32'b0;
 assign ducache_strb=ducache_wen_i?pre_wstrb:4'b0;
-
 
 
 endmodule

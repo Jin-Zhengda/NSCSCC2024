@@ -204,6 +204,9 @@ wire [31:0] data_paddr;//数据地址转换结果的物理地址
 wire        pg_mode;
 wire        da_mode;
 
+wire my_data_fetch;
+assign my_data_fetch=data_fetch||tlbsrch_en;
+
 
 tlb u_tlb(
     .clk            (clk            ),
@@ -221,7 +224,7 @@ tlb u_tlb(
     .s0_mat         (inst_tlb_mat   ),
     .s0_plv         (inst_tlb_plv   ),
     // search port 1
-    .s1_fetch       (data_fetch     ),
+    .s1_fetch       (my_data_fetch     ),
     .s1_vppn        (s1_vppn        ),
     .s1_odd_page    (s1_odd_page    ),
     .s1_asid        (asid           ),
