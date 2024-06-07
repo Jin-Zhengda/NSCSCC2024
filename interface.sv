@@ -58,8 +58,6 @@ interface pc_icache;
     logic stall_for_buffer;
     bus32_t pc_for_bpu;
     bus32_t pc_for_buffer;
-    logic front_is_valid;
-    logic icache_is_valid;
     logic [5:0] front_is_exception;
     logic [5:0][6:0] front_exception_cause;
     logic [5:0] icache_is_exception;
@@ -78,18 +76,18 @@ interface pc_icache;
     logic uncache_en;
 
     modport master(
-        input inst, stall, icache_is_valid,icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
+        input inst, stall, icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
                 stall_for_buffer, inst_for_buffer, icache_fetch_inst_1_en, icache_is_branch_i_1, icache_pre_taken_or_not, 
                 icache_pre_branch_addr,
-        output pc, inst_en,front_is_valid,front_is_exception,front_exception_cause, front_fetch_inst_1_en, front_is_branch_i_1, 
+        output pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_1_en, front_is_branch_i_1, 
                 front_pre_taken_or_not, front_pre_branch_addr, uncache_en   
     );
 
     modport slave(
-        output inst, stall,icache_is_valid,icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
+        output inst, stall,icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
                 stall_for_buffer, inst_for_buffer, icache_fetch_inst_1_en, icache_is_branch_i_1, icache_pre_taken_or_not, 
                 icache_pre_branch_addr,
-        input pc, inst_en,front_is_valid,front_is_exception,front_exception_cause, front_fetch_inst_1_en, front_is_branch_i_1, 
+        input pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_1_en, front_is_branch_i_1, 
                 front_pre_taken_or_not, front_pre_branch_addr, uncache_en
     );
 endinterface : pc_icache

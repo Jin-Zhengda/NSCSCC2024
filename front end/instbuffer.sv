@@ -1,27 +1,11 @@
 `timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 2024/04/22 21:15:41
-// Design Name: 
-// Module Name: instbuffer
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
+`include "pipeline_types.sv"
+
+
 `define InstBus 31:0
-`define InstBufferSize 32
-`define InstBufferAddrSize 5
-`define ZeroInstBufferAddr 5'd0
+`define InstBufferSize 128
+`define InstBufferAddrSize 7
+`define ZeroInstBufferAddr 7'd0
 
 module instbuffer
 import pipeline_types::*;
@@ -35,7 +19,6 @@ import pipeline_types::*;
     //icache传来的信号
     input logic [31:0] inst,
     input logic [31:0] pc,
-    input logic is_valid_out,
     input logic[5: 0] is_exception,
     input logic[5: 0][6: 0] exception_cause,
 
@@ -77,35 +60,41 @@ import pipeline_types::*;
         inst_and_pc_o.exception_cause <= exception_cause;
     end
 
+    logic[7: 0] pause_temp1;
+    logic[7: 0] pause_temp2;
+    logic[7: 0] pause_temp3;
     logic[7: 0] pause;
-    always_ff @( posedge clk ) begin
-        pause <= ctrl.pause;
+    always_ff @( posedge clk) begin
+        pause_temp1 <= ctrl.pause;
+        pause_temp2 <= pause_temp1;
+        pause_temp3 <= pause_temp2;
     end
+    assign pause = pause_temp2 & pause_temp3;
 
     logic fetch_inst_1_en;
     assign fetch_inst_1_en = stall ? 1'b0: icache_fetch_inst_1_en;
 
-    // logic last_is_branch;
-    // logic last_taken_or_not;
+    logic last_is_branch;
+    logic last_taken_or_not;
 
-    // always_ff @( posedge clk ) begin
-    //     last_is_branch <= is_branch_1;
-    //     last_taken_or_not <= pre_taken_or_not;
-    // end
+    always_ff @( posedge clk ) begin
+        last_is_branch <= is_branch_1;
+        last_taken_or_not <= pre_taken_or_not;
+    end
 
-    // logic is_valid_out;
-    // assign is_valid_out = ((last_is_branch & last_taken_or_not) || stall || branch_flush) ? 1'b0 : 1'b1;
+    logic is_valid_out;
+    assign is_valid_out = ((last_is_branch & last_taken_or_not) || stall || branch_flush) ? 1'b0 : 1'b1;
         
 
     always_ff @(posedge clk) begin
         if(rst|branch_flush|ctrl.exception_flush) begin
-            head <= 5'b11111;
+            head <= 7'b1111111;
             tail <= `ZeroInstBufferAddr;
             FIFO_valid <= `InstBufferSize'd0;
             // FIFO_inst <= '{32'b0};
         end
         else if(pause[2]&&!pause[3])begin
-            head <= 5'b11111;
+            head <= 7'b1111111;
             tail <= `ZeroInstBufferAddr;
             FIFO_valid <= `InstBufferSize'd0;
         end

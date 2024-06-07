@@ -89,7 +89,7 @@ module icache
     input bus256_t ret_data,
 
     input  logic             icacop_op_en   ,//使能信号
-    input  logic[ 1:0]       icacop_op_mode  ,//缓存操作的模�?
+    input  logic[ 1:0]       icacop_op_mode  ,//缓存操作的模式
     input bus32_t icacop_addr,
 
     output logic iucache_ren_i,
@@ -111,7 +111,7 @@ assign uncache_stall=pre_uncache_en&&!real_iucache_rvalid_o;
 always_ff @( posedge clk ) begin
     if(reset)pre_uncache_en<=1'b0;
     else if(uncache_stall)pre_uncache_en<=pre_uncache_en;
-    else pre_uncache_en<=icache_uncache&&pc2icache.icache_is_valid;
+    else pre_uncache_en<=icache_uncache;
 end
 
 
@@ -155,14 +155,14 @@ end
 
 always_ff @( posedge clk ) begin
     if(reset)ignore_one_ret<=1'b0;
-    else if(flush_delay&&(hit_fail||pre_uncache_en))ignore_one_ret<=1'b1;//flush_delay与hit_fail同拍
+    else if(flush&&(hit_fail||pre_uncache_en))ignore_one_ret<=1'b1;//flush_delay与hit_fail同拍
     else if(ret_valid||iucache_rvalid_o)ignore_one_ret<=1'b0;
     else ignore_one_ret<=ignore_one_ret;
 end
 logic real_ret_valid;
 assign real_ret_valid=ignore_one_ret?1'b0:ret_valid;
 
-//TLB转换(未实�?)
+//TLB转换(未实现?)
 bus32_t physical_addr;
 assign physical_addr=branch_flush? 32'b0:pc2icache.pc;
 
@@ -176,7 +176,7 @@ always_ff @( posedge clk ) begin
         pre_physical_addr<=32'b0;
         pre_virtual_addr<=32'b0;
     end
-    else if(pc2icache.stall || ctrl.pause[0])begin
+    else if(pc2icache.stall)begin
         pre_physical_addr<=pre_physical_addr;
         pre_inst_en<=pre_inst_en;
         pre_virtual_addr<=pre_virtual_addr;
@@ -251,7 +251,6 @@ BRAM TagV0(.clk(clk),.ena(1'b1),.wea(wea_way0),.addra(tagv0_addr),.dina(tagv_dat
 BRAM TagV1(.clk(clk),.ena(1'b1),.wea(wea_way1),.addra(tagv1_addr),.dina(tagv_data_tagv),.douta(tagv_cache_w1),.enb(1'b0));
 
 
-
 logic read_success;
 always_ff @( posedge clk ) begin
     if(real_ret_valid)read_success<=1'b1;
@@ -278,16 +277,16 @@ assign hit_success = (hit_way0 | hit_way1) & pre_inst_en;
 assign hit_fail = ~(hit_success) & pre_inst_en;
 
 
-assign pc2icache.stall=reset?1'b1:(flush?1'b0:((icacop_op_en||pre_cacop_en||uncache_stall)?1'b1:((hit_fail||read_success)&&pc2icache.icache_is_valid?1'b1:1'b0)));
+assign pc2icache.stall=reset?1'b1:(flush?1'b0:((icacop_op_en||pre_cacop_en||uncache_stall)?1'b1:((hit_fail||read_success)?1'b1:1'b0)));
 //assign inst=branch_flush_delay? 32'b0:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&real_ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0)));
 //这个inst该我代码了不知道我现在写的对不对！！！！！！！！！！！！！！！！！！！！！！！
-assign pc2icache.inst=branch_flush_delay? 32'b0:((pre_uncache_en&&iucache_rvalid_o)?iucache_rdata_o:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&real_ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0))));
+assign pc2icache.inst=branch_flush? 32'b0:((pre_uncache_en&&iucache_rvalid_o)?iucache_rdata_o:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&real_ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0))));
 
 assign wea_way0=(cacop_op_0||cacop_op_1||cacop_op_2)?4'b1111:(pre_inst_en&&real_ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
 assign wea_way1=(cacop_op_0||cacop_op_1||cacop_op_2)?4'b1111:(pre_inst_en&&real_ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
 
 
-assign rd_req=!flush&&!icacop_op_en&&!read_success&&hit_fail&&!real_ret_valid&&pc2icache.icache_is_valid;
+assign rd_req=!flush&&!icacop_op_en&&!read_success&&hit_fail&&!real_ret_valid;
 assign rd_addr=pre_physical_addr;
 
 
@@ -297,9 +296,8 @@ assign iucache_addr_i=iucache_ren_i?pre_physical_addr:32'b0;
 assign pc2icache.pc_for_bpu = flush? 32'b0:pre_physical_addr;
 
 always_ff @( posedge clk ) begin
-    if (reset | ctrl.exception_flush | (ctrl.pause[1] && !ctrl.pause[2])) begin
+    if (reset || flush) begin
         pc2icache.pc_for_buffer <= 32'b0;
-        pc2icache.icache_is_valid <= 1'b0;
         pc2icache.icache_is_exception <= 6'b0;
         pc2icache.icache_exception_cause <= 42'b0;
         pc2icache.inst_for_buffer <= 32'b0;
@@ -310,21 +308,8 @@ always_ff @( posedge clk ) begin
         pc2icache.icache_pre_taken_or_not <= 1'b0;
         pc2icache.icache_pre_branch_addr <= 32'b0;
     end
-    else if (branch_flush) begin
-        pc2icache.pc_for_buffer <= 32'b0;
-        pc2icache.icache_is_valid <= 1'b0;
-        pc2icache.icache_is_exception <= 6'b0;
-        pc2icache.icache_exception_cause <= 42'b0;
-        pc2icache.inst_for_buffer <= 32'b0;
-        pc2icache.stall_for_buffer <= 1'b1;
-        pc2icache.icache_fetch_inst_1_en <= 1'b0;
-        pc2icache.icache_is_branch_i_1 <= 1'b0;
-        pc2icache.icache_pre_taken_or_not <= 1'b0;
-        pc2icache.icache_pre_branch_addr <= 32'b0;
-    end
     else begin
         pc2icache.pc_for_buffer <= pre_physical_addr;
-        pc2icache.icache_is_valid <= pc2icache.front_is_valid;
         pc2icache.icache_is_exception <= pc2icache.front_is_exception;
         pc2icache.icache_exception_cause <= pc2icache.front_exception_cause;
         pc2icache.inst_for_buffer <= pc2icache.inst;
