@@ -195,6 +195,7 @@ assign read_index_addr = stall? pre_physical_addr[`INDEX_LOC] : physical_addr[`I
 assign write_index_addr=pre_preld&&read_success?pre_preld_addr[`INDEX_LOC]:pre_physical_addr[`INDEX_LOC];
 
 logic [6:0] way0_index_addr;
+logic [6:0] way1_index_addr;
 assign way0_index_addr=|wea_way0?write_index_addr:read_index_addr;
 assign way1_index_addr=|wea_way1?write_index_addr:read_index_addr;
 
@@ -300,19 +301,14 @@ assign hit_fail = ~(hit_success) & pre_valid;
 logic write_delay;
 always_ff @( posedge clk ) begin
     if(reset)write_delay<=1'b0;
-    else if(pre_valid&&pre_op==1'b1&&mem2dcache.valid&&mem2dcache.op==1'b0&&pre_physical_addr == mem2dcache.virtual_addr)write_delay<=1'b1;
+    else if(read_success)write_delay<=1'b0;
+    else if(pre_valid&&pre_op==1'b1&&mem2dcache.valid&&mem2dcache.op==1'b0)write_delay<=1'b1;
     else write_delay<=1'b0;
 end
 
-logic wr_read_stall;
-always_ff @( posedge clk ) begin
-    if(reset)wr_read_stall<=1'b0;
-    else if(pre_physical_addr==physical_addr&&mem2dcache.op==0&&(wea_way0||wea_way1))wr_read_stall<=1'b1;
-    else wr_read_stall<=1'b0;
-end
 
-
-assign stall=(reset||pre_cacop_en||dcache_inst.is_cacop||dcache_inst.is_preld||preld_stall||uncache_stall)?1'b1:(pre_valid&&(hit_fail||read_success)?1'b1:(write_delay?1'b1:1'b0));
+assign stall=(reset||pre_cacop_en||dcache_inst.is_cacop||dcache_inst.is_preld||preld_stall||uncache_stall)?1'b1:
+            (pre_valid&&(hit_fail)?1'b1:(write_delay?1'b1:1'b0));
 assign mem2dcache.rdata=ducache_rvalid_o?ducache_rdata_o:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'hffffffff)));
 
 
@@ -324,6 +320,7 @@ assign rd_req=(!dcache_inst.is_cacop&&!read_success&&hit_fail&&!ret_valid)||(pre
 assign rd_addr=pre_preld?pre_preld_addr:pre_physical_addr;
 
 assign rd_type=3'b100;
+
 
 
 
@@ -383,7 +380,6 @@ assign ducache_araddr_i=ducache_ren_i?pre_physical_addr:32'b0;
 assign ducache_awaddr_i=ducache_wen_i?pre_physical_addr:32'b0;
 assign ducache_wdata_i=ducache_wen_i?pre_wdata:32'b0;
 assign ducache_strb=ducache_wen_i?pre_wstrb:4'b0;
-
 
 
 endmodule

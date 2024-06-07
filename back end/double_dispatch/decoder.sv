@@ -7,7 +7,6 @@ module decoder
     input logic rst,
 
     // from ctrl
-    input logic branch_flush,
     input logic flush,
     input logic pause,
 
