@@ -17,7 +17,7 @@ module mem
     output logic pause_mem,
 
     // to wb
-    output commit_ctrl_t commit_ctrl[ISSUE_WIDTH],
+    output commit_ctrl_t commit_ctrl_i[ISSUE_WIDTH],
     output mem_wb_t wb_i[ISSUE_WIDTH]
 );
     mem_wb_t mem_o[ISSUE_WIDTH];
@@ -50,12 +50,12 @@ module mem
     // ctrl signal assignment
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign commit_ctrl[i].is_exception = mem_i[i].is_exception;
-            assign commit_ctrl[i].exception_cause = mem_i[i].exception_cause;
-            assign commit_ctrl[i].pc = mem_i[i].pc;
-            assign commit_ctrl[i].mem_addr = mem_i[i].mem_addr;
-            assign commit_ctrl[i].aluop = mem_i[i].aluop;
-            assign commit_ctrl[i].is_privilege = mem_i[i].is_privilege;
+            assign commit_ctrl_i[i].is_exception = mem_i[i].is_exception;
+            assign commit_ctrl_i[i].exception_cause = mem_i[i].exception_cause;
+            assign commit_ctrl_i[i].pc = mem_i[i].pc;
+            assign commit_ctrl_i[i].mem_addr = mem_i[i].mem_addr;
+            assign commit_ctrl_i[i].aluop = mem_i[i].aluop;
+            assign commit_ctrl_i[i].is_privilege = mem_i[i].is_privilege;
         end
     endgenerate
 

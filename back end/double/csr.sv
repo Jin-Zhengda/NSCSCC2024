@@ -39,10 +39,6 @@ module csr
     // with ctrl
     ctrl_csr ctrl_slave,
 
-    // to other modules
-    output logic LLbit,
-
-
     output bus32_t csr_crmd_diff,
     output bus32_t csr_prmd_diff,
     output bus32_t csr_ectl_diff,
@@ -539,8 +535,6 @@ module csr
             llbctl <= llbctl;
         end
     end
-
-    assign LLbit = llbctl[0];
 
     // TID write
     always_ff @(posedge clk) begin

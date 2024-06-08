@@ -534,6 +534,8 @@ module id
                 id_o.alusel = `ALU_SEL_LOAD_STORE;
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b0;
+                id_o.csr_read_en = 1'b1;
+                id_o.csr_addr = `CSR_LLBCTL;
                 id_o.imm = {{16{si14[13]}}, si14, 2'b00};
                 inst_valid = 1'b1;
             end
@@ -545,6 +547,8 @@ module id
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.reg_read_addr[1] = rd;
+                id_o.csr_read_en = 1'b1;
+                id_o.csr_addr = `CSR_LLBCTL;
                 inst_valid = 1'b1;
             end
             `CSR_OPCODE: begin

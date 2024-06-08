@@ -15,6 +15,7 @@ module deputy_ex
     // to ctrl
     output logic pause_alu,
     output logic branch_flush,
+    output bus32_t branch_target_alu,
 
     // to mem
     output ex_mem_t ex_o
@@ -120,6 +121,7 @@ module deputy_ex
         .branch_flush(branch_flush),
         .branch_alu_res(branch_alu_res)
     );
+    assign branch_target_alu = update_info.branch_actual_addr;
 
     // reg data 
     assign ex_o.reg_write_en = ex_i.reg_write_en;

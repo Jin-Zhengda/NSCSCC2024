@@ -15,8 +15,7 @@ module execute
     // from dispatch
     input dispatch_ex_t ex_i[ISSUE_WIDTH],
 
-    // from csr
-    input logic   LLbit,
+    // from counter
     input bus64_t cnt,
 
     // with dcache
@@ -33,6 +32,7 @@ module execute
     // to ctrl
     output logic pause_ex,
     output logic branch_flush,
+    output bus32_t branch_target,
 
     // to mem
     output ex_mem_t mem_i[ISSUE_WIDTH]
@@ -40,19 +40,20 @@ module execute
 
     logic [1:0] pause_alu;
     logic [1:0] branch_flush_alu;
+    bus32_t branch_target_alu[ISSUE_WIDTH];
 
     ex_mem_t ex_o[ISSUE_WIDTH];
 
     main_ex u_main_ex (
         .ex_i(ex_i[0]),
-        .LLbit(LLbit),
-        .cnt(cnt),
-        .dcache_master(dcache_master),
+        .cnt,
+        .dcache_master,
         .update_info(update_info[0]),
         .pause_alu(pause_alu[0]),
         .branch_flush(branch_flush_alu[0]),
-        .pre_ex_aluop(pre_ex_aluop),
-        .cache_inst(cache_inst),
+        .branch_target_alu(branch_target_alu[0]),
+        .pre_ex_aluop,
+        .cache_inst,
         .ex_o(ex_o[0])
     );
 
@@ -61,6 +62,7 @@ module execute
         .update_info(update_info[1]),
         .pause_alu(pause_alu[1]),
         .branch_flush(branch_flush_alu[1]),
+        .branch_target_alu(branch_target_alu[1]),
         .ex_o(ex_o[1])
     );
 
@@ -76,6 +78,7 @@ module execute
     // to ctrl
     assign pause_ex = |pause_alu;
     assign branch_flush = |branch_flush_alu;
+    assign branch_target = branch_flush_alu[0] ? branch_target_alu[0] : branch_target_alu[1];
 
     // to mem
     always_ff @(posedge clk) begin
@@ -83,7 +86,7 @@ module execute
             mem_i <= '{default: 0};
         end else if (!pause) begin
             if (branch_flush_alu[0]) begin
-                mem_i[0] <= ex_i[0];
+                mem_i[0] <= ex_o[0];
                 mem_i[1] <= 0;
             end else begin
                 mem_i <= ex_o;

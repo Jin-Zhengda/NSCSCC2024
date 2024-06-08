@@ -6,7 +6,7 @@ module regfile
     input logic clk,
     input logic rst,
 
-    // from wb
+    // from ctrl
     input logic [ISSUE_WIDTH - 1:0] reg_write_en,
     input logic [ISSUE_WIDTH - 1:0][REG_ADDR_WIDTH - 1:0] reg_write_addr,
     input logic [ISSUE_WIDTH - 1:0][REG_WIDTH - 1:0] reg_write_data,
