@@ -7,22 +7,22 @@ module ctrl
     import pipeline_types::*;
 (
     // from pipeline
-    input pause_t pause_request[ISSUE_WIDTH],
+    input pause_t pause_request,
     input logic   branch_flush,
-    bus32_t branch_target,
+    input bus32_t branch_target,
 
     // from wb
     input mem_wb_t wb_o[ISSUE_WIDTH],
-    input commit_ctrl_t commit_ctrl[ISSUE_WIDTH],
+    input commit_ctrl_t commit_ctrl_o[ISSUE_WIDTH],
 
     // with csr
     ctrl_csr csr_master,
 
     // to pipeline
     output logic [PIPE_WIDTH - 1:0] flush,
+    output logic [PIPE_WIDTH - 1:0] pause,
     output bus32_t new_pc,
     output logic is_interrupt,
-    output logic [PIPE_WIDTH - 1:0] pause,
 
     // to regfile
     output logic [ISSUE_WIDTH - 1:0] reg_write_en,
@@ -42,7 +42,7 @@ module ctrl
 
     // ertn inst
     logic is_ertn;
-    assign is_ertn = commit_ctrl[0].is_exception == 6'b0 && commit_ctrl[0].aluop == `ALU_ERTN;
+    assign is_ertn = commit_ctrl_o[0].is_exception == 6'b0 && commit_ctrl_o[0].aluop == `ALU_ERTN;
 
     // new target
     assign new_pc = branch_flush ? branch_target: (is_ertn ? csr_master.era : csr_master.eentry);
@@ -51,64 +51,66 @@ module ctrl
     logic [1: 0] is_exception;
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign is_exception[i] = commit_ctrl[i].pc != 32'hfc && commit_ctrl[i].pc != 32'b0 && commit_ctrl[i].is_exception != 6'b0;
+            assign is_exception[i] = commit_ctrl_o[i].pc != 32'hfc && commit_ctrl_o[i].pc != 32'b0 && commit_ctrl_o[i].is_exception != 6'b0;
         end
     endgenerate
     assign csr_master.is_exception = |is_exception;
 
     // flush
+    // flush[0] PC, flush[1] icache, flush[2] instbuffer, flush[3] id
+    // flush[4] dispatch, flush[5] ex, flush[6] mem, flush[7] wb
     assign flush = {
-        |is_exception || is_ertn || branch_flush,
-        |is_exception || is_ertn || branch_flush,
-        |is_exception || is_ertn || branch_flush,
-        |is_exception || is_ertn || branch_flush,
-        |is_exception || is_ertn || branch_flush,
+        1'b0,
         |is_exception || is_ertn,
         |is_exception || is_ertn,
-        1'b0
+        |is_exception || is_ertn || branch_flush,
+        |is_exception || is_ertn || branch_flush,
+        |is_exception || is_ertn || branch_flush,
+        |is_exception || is_ertn || branch_flush,
+        |is_exception || is_ertn || branch_flush
     };
 
     // commit
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign reg_write_addr[i] = commit_ctrl[i].reg_write_addr;
-            assign reg_write_data[i] = commit_ctrl[i].reg_write_data;
+            assign reg_write_addr[i] = commit_ctrl_o[i].reg_write_addr;
+            assign reg_write_data[i] = commit_ctrl_o[i].reg_write_data;
         end
     endgenerate
 
-    assign reg_write_en[0] = is_exception[0] || pause[0] ? 1'b0 : commit_ctrl[0].reg_write_en;
-    assign reg_write_en[1] = |is_exception || pause[0] ? 1'b0 : commit_ctrl[1].reg_write_en;
+    assign reg_write_en[0] = is_exception[0] || pause[0] ? 1'b0 : commit_ctrl_o[0].reg_write_en;
+    assign reg_write_en[1] = |is_exception || pause[0] ? 1'b0 : commit_ctrl_o[1].reg_write_en;
 
-    assign is_llw_scw = is_exception[0] || pause[0] ? 1'b0 : commit_ctrl[0].is_llw_scw;
-    assign csr_write_en = is_exception[0] || pause[0] ? 1'b0 : commit_ctrl[0].csr_write_en;
-    assign csr_write_addr = commit_ctrl[0].csr_addr;
-    assign csr_write_data = commit_ctrl[0].csr_write_data;
+    assign is_llw_scw = is_exception[0] || pause[0] ? 1'b0 : commit_ctrl_o[0].is_llw_scw;
+    assign csr_write_en = is_exception[0] || pause[0] ? 1'b0 : commit_ctrl_o[0].csr_write_en;
+    assign csr_write_addr = commit_ctrl_o[0].csr_addr;
+    assign csr_write_data = commit_ctrl_o[0].csr_write_data;
 
     // exception addr
-    assign csr_master.exception_pc = is_exception[0] ? commit_ctrl[0].pc : commit_ctrl[1].pc;
-    assign csr_master.exception_addr = commit_ctrl[0].mem_addr;
+    assign csr_master.exception_pc = is_exception[0] ? commit_ctrl_o[0].pc : commit_ctrl_o[1].pc;
+    assign csr_master.exception_addr = commit_ctrl_o[0].mem_addr;
 
     // exception cause
     exception_cause_t exception_cause[ISSUE_WIDTH];
     always_comb begin
         for (integer i = 0; i < ISSUE_WIDTH; i++) begin
             if (is_exception[i]) begin
-                if (commit_ctrl[i].is_exception[5]) begin
-                    exception_cause[i] = commit_ctrl[i].exception_cause[5];
-                end else if (commit_ctrl[i].is_exception[4]) begin
-                    exception_cause[i] = commit_ctrl[i].exception_cause[4];
-                end else if (commit_ctrl[i].is_exception[3]) begin
-                    exception_cause[i] = commit_ctrl[i].exception_cause[3];
-                end else if (commit_ctrl[i].is_exception[2]) begin
-                    if (commit_ctrl[i].is_privilege && csr_master.crmd[1: 0] != 2'b00) begin
+                if (commit_ctrl_o[i].is_exception[5]) begin
+                    exception_cause[i] = commit_ctrl_o[i].exception_cause[5];
+                end else if (commit_ctrl_o[i].is_exception[4]) begin
+                    exception_cause[i] = commit_ctrl_o[i].exception_cause[4];
+                end else if (commit_ctrl_o[i].is_exception[3]) begin
+                    exception_cause[i] = commit_ctrl_o[i].exception_cause[3];
+                end else if (commit_ctrl_o[i].is_exception[2]) begin
+                    if (commit_ctrl_o[i].is_privilege && csr_master.crmd[1: 0] != 2'b00) begin
                         exception_cause[i] = `EXCEPTION_IPE;
                     end else begin
-                        exception_cause[i] = commit_ctrl[i].exception_cause[2];
+                        exception_cause[i] = commit_ctrl_o[i].exception_cause[2];
                     end
-                end else if (commit_ctrl[i].is_exception[1]) begin
-                    exception_cause[i] = commit_ctrl[i].exception_cause[1];
-                end else if (commit_ctrl[i].is_exception[0]) begin
-                    exception_cause[i] = commit_ctrl[i].exception_cause[0];
+                end else if (commit_ctrl_o[i].is_exception[1]) begin
+                    exception_cause[i] = commit_ctrl_o[i].exception_cause[1];
+                end else if (commit_ctrl_o[i].is_exception[0]) begin
+                    exception_cause[i] = commit_ctrl_o[i].exception_cause[0];
                 end else begin
                     exception_cause[i] = `EXCEPTION_NOP;
                 end
@@ -198,38 +200,25 @@ module ctrl
 
     // pause assign
     logic pause_idle;
-    assign pause_idle = (commit_ctrl[0].aluop == `ALU_IDLE) && (int_vec == 12'b0);
+    assign pause_idle = (commit_ctrl_o[0].aluop == `ALU_IDLE) && (int_vec == 12'b0);
 
-    logic[7: 0] pause_comb;
-    assign pause_comb = {
-        1'b0,
-        pause_request[0].pause_mem || pause_request[1].pause_mem || pause_idle,
-        pause_request[0].pause_ex || pause_request[1].pause_ex,
-        pause_request[0].pause_dispatch || pause_request[1].pause_dispatch,
-        pause_request[0].pause_id || pause_request[1].pause_id,
-        pause_request[0].pause_buffer || pause_request[1].pause_buffer,
-        pause_request[0].pause_icache || pause_request[1].pause_icache,
-        pause_request[0].pause_if || pause_request[1].pause_if
-    };
     // pause[0] PC, pause[1] icache, pause[2] instbuffer, pause[3] id
     // pause[4] dispatch, pause[5] ex, pause[6] mem, pause[7] wb
     always_comb begin : pause_ctrl
-        if (pause_comb[0]) begin
+        if (pause_request.pause_if) begin
             pause = 8'b11111111;
-        end else if (pause_comb[1]) begin
+        end else if (pause_request.pause_icache) begin
             pause = 8'b01111111;
-        end else if (pause_comb[2]) begin
+        end else if (pause_request.pause_buffer) begin
             pause = 8'b00111111;
-        end else if (pause_comb[3]) begin
+        end else if (pause_request.pause_decoder) begin
             pause = 8'b00011111;
-        end else if (pause_comb[4]) begin
+        end else if (pause_request.pause_dispatch) begin
             pause = 8'b00001111;
-        end else if (pause_comb[5]) begin
+        end else if (pause_request.pause_execute) begin
             pause = 8'b00000111;
-        end else if (pause_comb[6]) begin
+        end else if (pause_request.pause_mem || pause_idle) begin
             pause = 8'b00000011;
-        end else if (pause_comb[7]) begin
-            pause = 8'b00000001;
         end else begin
             pause = 8'b00000000;
         end

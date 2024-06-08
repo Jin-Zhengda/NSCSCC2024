@@ -34,9 +34,9 @@ package pipeline_types;
         logic pause_if;
         logic pause_icache;
         logic pause_buffer;
-        logic pause_id;
+        logic pause_decoder;
         logic pause_dispatch;
-        logic pause_ex;
+        logic pause_execute;
         logic pause_mem;
     } pause_t;
 

@@ -7,12 +7,7 @@ module main_ex
 (
     input dispatch_ex_t ex_i,
 
-    // push forward
-    input csr_push_forward_t mem_csr_pf,
-    input csr_push_forward_t wb_csr_pf,
-
-    // from csr
-    input logic LLbit,
+    // from counter
     input bus64_t cnt,
 
     // with dcache
@@ -24,6 +19,7 @@ module main_ex
     // to ctrl
     output logic pause_alu,
     output logic branch_flush,
+    output bus32_t branch_target_alu,
 
     // to dispatch
     output alu_op_t pre_ex_aluop,
@@ -132,8 +128,12 @@ module main_ex
         .branch_flush(branch_flush),
         .branch_alu_res(branch_alu_res)
     );
+    assign branch_target_alu = update_info.branch_actual_addr;
 
     // load store alu
+    logic LLbit;
+    assign LLbit = ex_i.csr_read_data[0];
+
     bus32_t load_store_alu_res;
     assign load_store_alu_res = (ex_i.aluop == `ALU_SCW)? {31'b0, LLbit}: 32'b0;
 
