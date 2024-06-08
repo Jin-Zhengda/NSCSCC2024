@@ -32,62 +32,64 @@ interface mem_dcache;
 endinterface : mem_dcache
 
 interface frontend_backend;
-    ctrl_t ctrl;
-    ctrl_pc_t ctrl_pc;
-    logic send_inst_en;
-    branch_info_t branch_info;
+    logic flush;
+    logic pause;
+    logic is_interrupt;
+    logic [31:0] new_pc;
+    logic [1:0] send_inst_en;
+    branch_info_t [1:0] branch_info;
     inst_and_pc_t inst_and_pc_o;
     branch_update update_info;
 
     modport master(
-        input ctrl, ctrl_pc, send_inst_en, update_info,
+        input flush, pause, is_interrupt, new_pc, send_inst_en, update_info,
         output branch_info, inst_and_pc_o
     );
 
     modport slave(
-        output ctrl, ctrl_pc, send_inst_en, update_info,
+        output flush, pause, is_interrupt, new_pc, send_inst_en, update_info,
         input branch_info, inst_and_pc_o
     );
 endinterface : frontend_backend
 
 interface pc_icache;
     bus32_t pc;  // 读 icache 的地址
-    logic inst_en;  // 读 icache 使能
-    bus32_t inst;
-    bus32_t inst_for_buffer;  // 读 icache 的结果，即给出的指令
+    logic [1:0] inst_en;  // 读 icache 使能
+    bus32_t [1:0] inst;
+    bus32_t [1:0] inst_for_buffer;  // 读 icache 的结果，即给出的指令
     logic stall_for_buffer;
-    bus32_t pc_for_bpu;
-    bus32_t pc_for_buffer;
+    bus32_t [1:0] pc_for_bpu;
+    bus32_t [1:0] pc_for_buffer;
     logic [5:0] front_is_exception;
     logic [5:0][6:0] front_exception_cause;
     logic [5:0] icache_is_exception;
     logic [5:0][6:0] icache_exception_cause;
     logic stall;
 
-    logic front_fetch_inst_1_en;
-    logic icache_fetch_inst_1_en;
-    logic front_is_branch_i_1;
-    logic front_pre_taken_or_not;
+    logic [1:0] front_fetch_inst_en;
+    logic [1:0] icache_fetch_inst_en;
+    logic [1:0] front_is_branch;
+    logic [1:0] front_pre_taken_or_not;
     bus32_t front_pre_branch_addr;
-    logic icache_is_branch_i_1;
-    logic icache_pre_taken_or_not;
+    logic [1:0] icache_is_branch;
+    logic [1:0] icache_pre_taken_or_not;
     bus32_t icache_pre_branch_addr;
 
     logic uncache_en;
 
     modport master(
         input inst, stall, icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
-                stall_for_buffer, inst_for_buffer, icache_fetch_inst_1_en, icache_is_branch_i_1, icache_pre_taken_or_not, 
+                stall_for_buffer, inst_for_buffer, icache_fetch_inst_en, icache_is_branch, icache_pre_taken_or_not, 
                 icache_pre_branch_addr,
-        output pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_1_en, front_is_branch_i_1, 
+        output pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_en, front_is_branch, 
                 front_pre_taken_or_not, front_pre_branch_addr, uncache_en   
     );
 
     modport slave(
         output inst, stall,icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
-                stall_for_buffer, inst_for_buffer, icache_fetch_inst_1_en, icache_is_branch_i_1, icache_pre_taken_or_not, 
+                stall_for_buffer, inst_for_buffer, icache_fetch_inst_en, icache_is_branch, icache_pre_taken_or_not, 
                 icache_pre_branch_addr,
-        input pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_1_en, front_is_branch_i_1, 
+        input pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_en, front_is_branch, 
                 front_pre_taken_or_not, front_pre_branch_addr, uncache_en
     );
 endinterface : pc_icache
