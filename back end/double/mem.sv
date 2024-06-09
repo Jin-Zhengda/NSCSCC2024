@@ -1,5 +1,6 @@
 `timescale 1ns / 1ps
 `include "core_defines.sv"
+`include "csr_defines.sv"
 
 module mem
     import pipeline_types::*;
@@ -18,7 +19,10 @@ module mem
 
     // to wb
     output commit_ctrl_t commit_ctrl_i[ISSUE_WIDTH],
-    output mem_wb_t wb_i[ISSUE_WIDTH]
+    output mem_wb_t wb_i[ISSUE_WIDTH],
+
+    // diff
+    output diff_t diff_o[ISSUE_WIDTH]
 );
     mem_wb_t mem_o[ISSUE_WIDTH];
     assign wb_i = mem_o;
@@ -181,4 +185,34 @@ module mem
 
     // pause
     assign pause_mem = pause_uncache;
+
+    // diff_o
+    generate
+        for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
+            assign diff_o[i].debug_wb_pc = mem_i[i].pc; 
+            assign diff_o[i].debug_wb_inst = mem_i[i].inst;
+            assign diff_o[i].debug_wb_rf_wen = 1'b0;
+            assign diff_o[i].debug_wb_rf_wnum = 5'b0;
+            assign diff_o[i].debug_wb_rf_wdata = 32'b0;
+            assign diff_o[i].inst_valid = mem_i[i].inst_valid;
+            assign diff_o[i].cnt_inst = mem_i[i].aluop == `ALU_RDCNTID || mem_i[i].aluop == `ALU_RDCNTVLW || mem_i[i].aluop == `ALU_RDCNTVHW;
+            // estat 不进行比对
+            assign diff_o[i].csr_rstat_en = 1'b0;
+            assign diff_o[i].csr_data = 32'b0;
+
+            assign diff_o[i].excp_flush = 1'b0;
+            assign diff_o[i].ertn_flush = 1'b0;
+            assign diff_o[i].ecode = 6'b0;
+
+            assign diff_o[i].inst_st_en = {4'b0, (mem_i[i].is_llw_scw && (mem_i[i].aluop == `ALU_SCW)),mem_i[i].aluop == `ALU_STW, 
+                            mem_i[i].aluop == `ALU_STH, mem_i[i].aluop == `ALU_STB};
+            assign diff_o[i].st_paddr = mem_i[i].mem_addr;
+            assign diff_o[i].st_vaddr = mem_i[i].mem_addr;
+
+            assign diff_o[i].inst_ld_en = {2'b0, mem_i[i].aluop == `ALU_LLW, mem_i[i].aluop == `ALU_LDW, mem_i[i].aluop == `ALU_LDHU,
+                            mem_i[i].aluop == `ALU_LDH, mem_i[i].aluop == `ALU_LDBU, mem_i[i].aluop == `ALU_LDB};
+            assign diff_o[i].ld_paddr = mem_i[i].mem_addr;
+            assign diff_o[i].ld_vaddr = mem_i[i].mem_addr;
+        end
+    endgenerate
 endmodule
