@@ -16,19 +16,26 @@ module wb
 
     // to ctrl
     output mem_wb_t wb_o[ISSUE_WIDTH],
-    output commit_ctrl_t commit_ctrl_o[ISSUE_WIDTH]
+    output commit_ctrl_t commit_ctrl_o[ISSUE_WIDTH],
+
+    // diff
+    input diff_t wb_diff_i[ISSUE_WIDTH],
+    output diff_t wb_diff_o[ISSUE_WIDTH]
 );
     
     always_ff @( posedge clk ) begin
         if (rst || flush) begin
             wb_o <= '{default:0};
             commit_ctrl_o <= '{default:0};
+            wb_diff_o <= '{default:0};
         end else if (!pause) begin
             wb_o <= wb_i;
             commit_ctrl_o <= commit_ctrl_i;
+            wb_diff_o <= wb_diff_i;
         end else begin
             wb_o <= wb_o;
             commit_ctrl_o <= commit_ctrl_o;
+            wb_diff_o <= wb_diff_o;
         end
     end
     

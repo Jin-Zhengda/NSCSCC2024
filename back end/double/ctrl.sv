@@ -33,7 +33,11 @@ module ctrl
     output logic is_llw_scw,
     output logic csr_write_en,
     output csr_addr_t csr_write_addr,
-    output bus32_t csr_write_data
+    output bus32_t csr_write_data,
+
+    // diff
+    input diff_t ctrl_diff_i[ISSUE_WIDTH],
+    output diff_t ctrl_diff_o[ISSUE_WIDTH]
 );
     // interrupt
     logic [11:0] int_vec;
@@ -223,4 +227,33 @@ module ctrl
             pause = 8'b00000000;
         end
     end
+
+
+    // diff 
+    generate
+        for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
+            assign ctrl_diff_o[i].debug_wb_pc = ctrl_diff_i[i].debug_wb_pc;  
+            assign ctrl_diff_o[i].debug_wb_inst = ctrl_diff_i[i].debug_wb_inst;
+            assign ctrl_diff_o[i].debug_wb_rf_wen = reg_write_en[i];
+            assign ctrl_diff_o[i].debug_wb_rf_wnum = reg_write_addr[i];      
+            assign ctrl_diff_o[i].debug_wb_rf_wdata = reg_write_data[i];
+
+            assign ctrl_diff_o[i].inst_valid = |is_exception ? 1'b0: ctrl_diff_i[i].inst_valid;    
+            assign ctrl_diff_o[i].cnt_inst = ctrl_diff_i[i].cnt_inst;
+            assign ctrl_diff_o[i].csr_rstat_en = ctr_diff_i[i].csr_rstat_en;
+            assign ctrl_diff_o[i].csr_data = ctrl_diff_i[i].csr_data;
+
+            assign ctrl_diff_o[i].excp_flush = is_exception[i];
+            assign ctrl_diff_o[i].ertn_flush = (i == 0) ? is_ertn: 1'b0;
+            assign ctrl_diff_o[i].ecode = (i == 0) ? csr_master.ecode: 6'b0;
+
+            assign ctrl_diff_o[i].inst_st_en = ctrl_diff_i[i].inst_st_en;
+            assign ctrl_diff_o[i].st_paddr = ctrl_diff_i[i].st_paddr;
+            assign ctrl_diff_o[i].st_vaddr = ctrl_diff_i[i].st_vaddr;
+
+            assign ctrl_diff_o[i].inst_ld_en = ctrl_diff_i[i].inst_ld_en;
+            assign ctrl_diff_o[i].ld_paddr = ctrl_diff_i[i].ld_paddr;
+            assign ctrl_diff_o[i].ld_vaddr = ctrl_diff_i[i].ld_vaddr;
+        end
+    endgenerate
 endmodule

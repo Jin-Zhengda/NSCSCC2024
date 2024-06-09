@@ -39,6 +39,7 @@ module csr
     // with ctrl
     ctrl_csr ctrl_slave,
 
+    // diff
     output bus32_t csr_crmd_diff,
     output bus32_t csr_prmd_diff,
     output bus32_t csr_ectl_diff,
