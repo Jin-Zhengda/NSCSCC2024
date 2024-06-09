@@ -12,8 +12,17 @@ module pc
     input logic   is_interrupt,
     input bus32_t new_pc,
 
-    output bus32_t pc[DECODER_WIDTH]
+    output bus32_t pc[DECODER_WIDTH],
+    output logic inst_en
 );
+
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            inst_en <= 1'b0;
+        end else begin
+            inst_en <= 1'b1;
+        end
+    end
 
     always_ff @(posedge clk) begin
         if (rst) begin

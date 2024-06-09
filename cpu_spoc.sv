@@ -48,11 +48,6 @@ module cpu_spoc
         .branch_flush(branch_flush)
     );
 
-    logic icache_cacop;
-    logic dcache_cacop;
-    assign icache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2: 0] == 3'b0);
-    assign dcache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2: 0] == 3'b1);
-
     logic iucache_ren_i;
     bus32_t iucache_addr_i;
     logic iucache_rvalid_o;

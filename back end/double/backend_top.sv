@@ -27,6 +27,10 @@ module backend_top
     mem_dcache dcache_master,
     output cache_inst_t cache_inst,
 
+    // ctrl
+    output logic [PIPE_WIDTH - 1:0] flush,
+    output logic [PIPE_WIDTH - 1:0] pause,
+
     // debug
     output logic [31:0] debug_wb_pc[2],
     output logic [31:0] debug_wb_inst[2],
@@ -98,9 +102,8 @@ module backend_top
     bus32_t csr_write_data;
 
     // ctrl
-    pause_request_t pause_request;
-    logic [PIPE_WIDTH - 1:0] flush;
-    logic [PIPE_WIDTH - 1:0] pause;
+    pause_t pause_request;
+    
     logic branch_flush;
     bus32_t branch_target;
 
@@ -110,6 +113,7 @@ module backend_top
     // dispatch
     pipeline_push_forward_t ex_reg_pf[ISSUE_WIDTH];
     pipeline_push_forward_t mem_reg_pf[ISSUE_WIDTH];
+    pipeline_push_forward_t wb_reg_pf[ISSUE_WIDTH];
     alu_op_t pre_ex_aluop;
     dispatch_ex_t ex_i[ISSUE_WIDTH];
 
@@ -163,6 +167,7 @@ module backend_top
 
         .ex_reg_pf,
         .mem_reg_pf,
+        .wb_reg_pf,
 
         .pre_ex_aluop,
 
@@ -219,16 +224,18 @@ module backend_top
         .rst,
 
         .wb_i,
-        .commit_ctrl,
+        .commit_ctrl_i,
 
         .flush(flush[6]),
         .pause(pause[6]),
 
+        .wb_reg_pf,
+
         .wb_o,
         .commit_ctrl_o,
 
-        .diff_i(wb_diff_i),
-        .diff_o(wb_diff_o)
+        .wb_diff_i,
+        .wb_diff_o
     );
 
     // ctrl
@@ -256,8 +263,8 @@ module backend_top
         .csr_write_addr,
         .csr_write_data,
 
-        .ctr_diff_i(wb_diff_i),
-        .ctr_diff_o(diff)
+        .ctrl_diff_i(wb_diff_i),
+        .ctrl_diff_o(diff)
     );
 
     // regfile
@@ -275,7 +282,7 @@ module backend_top
     );
 
     //csr
-    crs u_csr (
+    csr u_csr (
         .clk,
         .rst,
 

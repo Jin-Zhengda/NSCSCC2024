@@ -32,9 +32,6 @@ module decoder
     generate
         for (genvar i = 0; i < DECODER_WIDTH; i++) begin
             id u_id (
-                .clk,
-                .rst,
-
                 .pc(pc[i]),
                 .inst(inst[i]),
                 .pre_is_branch(pre_is_branch[i]),

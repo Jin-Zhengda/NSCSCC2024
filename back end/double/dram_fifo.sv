@@ -20,7 +20,7 @@ module dram_fifo
     output logic full
 );
 
-    (* ram_style="distributed" *) dispatch_ex_t ram[DEPTH];
+    (* ram_style="distributed" *) logic[DATA_WIDTH - 1: 0] ram[DEPTH];
     logic[DEPTH - 1: 0] valid;
     logic[$clog2(DEPTH) - 1: 0] head;
     logic[$clog2(DEPTH) - 1: 0] tail;

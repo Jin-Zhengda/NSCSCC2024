@@ -129,10 +129,10 @@ module csr
     logic is_ti;
 
     assign ctrl_slave.crmd = crmd;
-    assign ctrl_slave.EENTRY_VA = {eentry[31:6], 6'b0};
-    assign ctrl_slave.ERA_PC = era;
-    assign ctrl_slave.ECFG_LIE = {ecfg[12:11], ecfg[9:0]};
-    assign ctrl_slave.ESTAT_IS = {estat[12:11], estat[9:0]};
+    assign ctrl_slave.eentry = eentry;
+    assign ctrl_slave.era = era;
+    assign ctrl_slave.ecfg = ecfg;
+    assign ctrl_slave.estat = estat;
 
     // CRMD write
     always_ff @(posedge clk) begin

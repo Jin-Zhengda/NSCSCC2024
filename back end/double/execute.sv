@@ -45,6 +45,8 @@ module execute
     ex_mem_t ex_o[ISSUE_WIDTH];
 
     main_ex u_main_ex (
+        .clk,
+        .rst,
         .ex_i(ex_i[0]),
         .cnt,
         .dcache_master,
@@ -57,7 +59,9 @@ module execute
         .ex_o(ex_o[0])
     );
 
-    deputy_alu u_deputy_alu (
+    deputy_ex u_deputy_ex (
+        .clk,
+        .rst,
         .ex_i(ex_i[1]),
         .update_info(update_info[1]),
         .pause_alu(pause_alu[1]),

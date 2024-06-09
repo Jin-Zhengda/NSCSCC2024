@@ -102,7 +102,7 @@ module branch_alu
             `ALU_JIRL: begin
                 is_branch = 1'b1;
                 is_branch_taken = 1'b1;
-                branch_target_addr = dispatch_ex.reg1 + branch16_addr;
+                branch_target_addr = reg1 + branch16_addr;
                 branch_alu_res = pc + 32'h4;
             end
             default: begin
