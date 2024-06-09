@@ -14,6 +14,9 @@ module wb
     input logic flush,
     input logic pause,
 
+    // to dispatch
+    output pipeline_push_forward_t wb_reg_pf[ISSUE_WIDTH],
+
     // to ctrl
     output mem_wb_t wb_o[ISSUE_WIDTH],
     output commit_ctrl_t commit_ctrl_o[ISSUE_WIDTH],
@@ -38,6 +41,14 @@ module wb
             wb_diff_o <= wb_diff_o;
         end
     end
+
+    generate
+        for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
+            assign wb_reg_pf[i].reg_write_en = wb_o[i].reg_write_en;
+            assign wb_reg_pf[i].reg_write_addr = wb_o[i].reg_write_addr;
+            assign wb_reg_pf[i].reg_write_data = wb_o[i].reg_write_data;
+        end
+    endgenerate 
     
 
 endmodule

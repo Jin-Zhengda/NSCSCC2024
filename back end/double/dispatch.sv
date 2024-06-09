@@ -15,8 +15,9 @@ module dispatch
     input id_dispatch_t dispatch_i[DECODER_WIDTH],
 
     // from ex and mem
-    input pipeline_push_forward_t ex_reg_pf [ISSUE_WIDTH],
+    input pipeline_push_forward_t ex_reg_pf [ISSUE_WIDTH],      
     input pipeline_push_forward_t mem_reg_pf[ISSUE_WIDTH],
+    input pipeline_push_forward_t wb_reg_pf [ISSUE_WIDTH],
 
     // from ex
     input alu_op_t pre_ex_aluop,
@@ -53,6 +54,9 @@ module dispatch
             assign dispatch_o[id_idx].reg_write_addr = dispatch_i[id_idx].reg_write_addr;
             assign dispatch_o[id_idx].csr_write_en = dispatch_i[id_idx].csr_write_en;
             assign dispatch_o[id_idx].csr_addr = dispatch_i[id_idx].csr_addr;
+            assign dispatch_o[id_idx].pre_is_branch = dispatch_i[id_idx].pre_is_branch;
+            assign dispatch_o[id_idx].pre_is_branch_taken = dispatch_i[id_idx].pre_is_branch_taken;
+            assign dispatch_o[id_idx].pre_branch_addr = dispatch_i[id_idx].pre_branch_addr;
         end
     endgenerate
 
@@ -66,21 +70,23 @@ module dispatch
         end
     endgenerate
 
-    generate
-        for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
-            for (genvar reg_idx = id_idx << 1; reg_idx < id_idx + 2; reg_idx++) begin
-                for (genvar fw_idx = 0; fw_idx < ISSUE_WIDTH; fw_idx++) begin
-                    assign dispatch_o[id_idx].reg_read_data[reg_idx] = (ex_reg_pf[fw_idx].reg_write_en && (ex_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[reg_idx])) 
-                                                                        ? ex_reg_pf[fw_idx].reg_write_data: 
-                                                                        ((mem_reg_pf[fw_idx].reg_write_en && (mem_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[reg_idx]))
-                                                                        ? mem_reg_pf[fw_idx].reg_write_data: 
-                                                                        ((dispatch_i[id_idx].reg_read_en[reg_idx])
-                                                                        ? regfile_master.reg_read_data[reg_idx]: dispatch_i[id_idx].imm));
-                end
+    // generate
+    //     for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
+    //         for (genvar reg_idx = id_idx << 1; reg_idx < id_idx + 2; reg_idx++) begin
+    //             for (genvar fw_idx = 0; fw_idx < ISSUE_WIDTH; fw_idx++) begin
+    //                 assign dispatch_o[id_idx].reg_read_data[reg_idx] =  (wb_reg_pf[fw_idx].reg_write_en && (wb_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[reg_idx]))
+    //                                                                     ? wb_reg_pf[fw_idx].reg_write_data:  
+    //                                                                     (ex_reg_pf[fw_idx].reg_write_en && (ex_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[reg_idx])) 
+    //                                                                     ? ex_reg_pf[fw_idx].reg_write_data: 
+    //                                                                     ((mem_reg_pf[fw_idx].reg_write_en && (mem_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[reg_idx]))
+    //                                                                     ? mem_reg_pf[fw_idx].reg_write_data: 
+    //                                                                     ((dispatch_i[id_idx].reg_read_en[reg_idx])
+    //                                                                     ? regfile_master.reg_read_data[reg_idx]: dispatch_i[id_idx].imm));
+    //             end
 
-            end
-        end
-    endgenerate
+    //         end
+    //     end
+    // endgenerate
 
     // with csr
     generate
@@ -95,7 +101,7 @@ module dispatch
             assign dispatch_o[id_idx].csr_read_data = csr_master.csr_read_data[id_idx];
         end
     endgenerate
-
+ 
     // handle load-use hazard
     logic load_pre;
     logic [DECODER_WIDTH - 1:0] reg1_load_relate;
@@ -144,8 +150,8 @@ module dispatch
 
     assign privilege_inst = dqueue_data[0].is_privilege || dqueue_data[1].is_privilege;
     assign mem_inst = dqueue_data[0].alusel == `ALU_SEL_LOAD_STORE || dqueue_data[1].alusel == `ALU_SEL_LOAD_STORE;
-    assign data_relate_inst = dqueue_data[0].reg_write_en && (dqueue_data[0].reg_write_addr == dqueue_data[1].reg_read_addr[0] || dqueue_data[0].reg_write_addr == dqueue_data[1].reg_read_addr[1]);
-
+    // assign data_relate_inst = dqueue_data[0].reg_write_en && (dqueue_data[0].reg_write_addr == dqueue_data[1].reg_read_addr[0] || dqueue_data[0].reg_write_addr == dqueue_data[1].reg_read_addr[1]);
+    assign data_relate_inst = 1'b0;
     assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst;
 
     assign issue_en = flush ? 2'b00: (issue_double_en? 2'b11: 2'b01);

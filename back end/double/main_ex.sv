@@ -5,6 +5,9 @@
 module main_ex
     import pipeline_types::*;
 (
+    input logic clk,
+    input logic rst,
+
     input dispatch_ex_t ex_i,
 
     // from counter
@@ -46,12 +49,13 @@ module main_ex
 
     // regular alu
     bus32_t regular_alu_res;
+    bus32_t reg1 = ex_i.aluop == `ALU_PCADDU12I ? ex_i.pc : ex_i.reg1;
 
     regular_alu u_regular_alu(
         .aluop(ex_i.aluop),
         .alusel(ex_i.alusel),
 
-        .reg1(ex_i.reg1),
+        .reg1(reg1),
         .reg2(ex_i.reg2),
 
         .result(regular_alu_res)

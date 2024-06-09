@@ -74,7 +74,7 @@ module mem
             `ALU_LDB: begin
                 if (!dcache_master.cache_miss && dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
-                    case (ex_mem.mem_addr[1:0])
+                    case (mem_i[0].mem_addr[1:0])
                         2'b00: begin
                             mem_o[0].reg_write_data = {{24{cache_data[7]}}, cache_data[7:0]};
                         end
@@ -100,7 +100,7 @@ module mem
             `ALU_LDBU: begin
                 if (!dcache_master.cache_miss && dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
-                    case (ex_mem.mem_addr[1:0])
+                    case (mem_i[0].mem_addr[1:0])
                         2'b00: begin
                             mem_o[0].reg_write_data = {{24{1'b0}}, cache_data[7:0]};
                         end
@@ -125,7 +125,7 @@ module mem
             `ALU_LDH: begin
                 if (!dcache_master.cache_miss && dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
-                    case (ex_mem.mem_addr[1:0])
+                    case (mem_i[0].mem_addr[1:0])
                         2'b00: begin
                             mem_o[0].reg_write_data = {{16{cache_data[15]}}, cache_data[15:0]};
                         end
@@ -145,7 +145,7 @@ module mem
             `ALU_LDHU: begin
                 if (!dcache_master.cache_miss && dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
-                    case (ex_mem.mem_addr[1:0])
+                    case (mem_i[0].mem_addr[1:0])
                         2'b00: begin
                             mem_o[0].reg_write_data = {{16{1'b0}}, cache_data[15:0]};
                         end

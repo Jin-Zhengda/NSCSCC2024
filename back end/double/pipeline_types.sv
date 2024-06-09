@@ -100,6 +100,9 @@ package pipeline_types;
         logic [1:0] reg_read_en;
         logic [1:0][REG_ADDR_WIDTH - 1:0] reg_read_addr;
 
+        logic [1:0] reg_write_en;
+        logic [1:0][REG_ADDR_WIDTH - 1:0] reg_write_addr;
+
         logic csr_read_en;
         logic csr_write_en;
         csr_addr_t csr_addr;
@@ -143,6 +146,10 @@ package pipeline_types;
         csr_addr_t csr_addr;
 
         logic [4:0] cacop_code;
+
+        logic   pre_is_branch;
+        logic   pre_is_branch_taken;
+        bus32_t pre_branch_addr;
     } dispatch_ex_t;
 
     typedef struct packed {

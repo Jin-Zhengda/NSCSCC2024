@@ -41,7 +41,7 @@ module ctrl
 );
     // interrupt
     logic [11:0] int_vec;
-    assign int_vec = csr_master.crmd[2] ? csr_master.ecfg_lie & csr_master.estat_is : 12'b0;
+    assign int_vec = csr_master.crmd[2] ? csr_master.ecfg[12:11] & csr_master.estat[1:0] : 12'b0;
     assign is_interrupt = (int_vec != 12'b0);
 
     // ertn inst
@@ -77,18 +77,18 @@ module ctrl
     // commit
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign reg_write_addr[i] = commit_ctrl_o[i].reg_write_addr;
-            assign reg_write_data[i] = commit_ctrl_o[i].reg_write_data;
+            assign reg_write_addr[i] = wb_o[i].reg_write_addr;
+            assign reg_write_data[i] = wb_o[i].reg_write_data;
         end
     endgenerate
 
-    assign reg_write_en[0] = is_exception[0] || pause[0] ? 1'b0 : commit_ctrl_o[0].reg_write_en;
-    assign reg_write_en[1] = |is_exception || pause[0] ? 1'b0 : commit_ctrl_o[1].reg_write_en;
+    assign reg_write_en[0] = is_exception[0] || pause[0] ? 1'b0 : wb_o[0].reg_write_en;
+    assign reg_write_en[1] = |is_exception || pause[0] ? 1'b0 : wb_o[1].reg_write_en;
 
-    assign is_llw_scw = is_exception[0] || pause[0] ? 1'b0 : commit_ctrl_o[0].is_llw_scw;
-    assign csr_write_en = is_exception[0] || pause[0] ? 1'b0 : commit_ctrl_o[0].csr_write_en;
-    assign csr_write_addr = commit_ctrl_o[0].csr_addr;
-    assign csr_write_data = commit_ctrl_o[0].csr_write_data;
+    assign is_llw_scw = is_exception[0] || pause[0] ? 1'b0 : wb_o[0].is_llw_scw;
+    assign csr_write_en = is_exception[0] || pause[0] ? 1'b0 : wb_o[0].csr_write_en;
+    assign csr_write_addr = wb_o[0].csr_write_addr;
+    assign csr_write_data = wb_o[0].csr_write_data;
 
     // exception addr
     assign csr_master.exception_pc = is_exception[0] ? commit_ctrl_o[0].pc : commit_ctrl_o[1].pc;
@@ -240,7 +240,7 @@ module ctrl
 
             assign ctrl_diff_o[i].inst_valid = |is_exception ? 1'b0: ctrl_diff_i[i].inst_valid;    
             assign ctrl_diff_o[i].cnt_inst = ctrl_diff_i[i].cnt_inst;
-            assign ctrl_diff_o[i].csr_rstat_en = ctr_diff_i[i].csr_rstat_en;
+            assign ctrl_diff_o[i].csr_rstat_en = ctrl_diff_i[i].csr_rstat_en;
             assign ctrl_diff_o[i].csr_data = ctrl_diff_i[i].csr_data;
 
             assign ctrl_diff_o[i].excp_flush = is_exception[i];
