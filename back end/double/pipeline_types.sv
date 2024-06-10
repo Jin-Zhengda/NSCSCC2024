@@ -134,8 +134,7 @@ package pipeline_types;
         alu_op_t  aluop;
         alu_sel_t alusel;
 
-        bus32_t reg1;
-        bus32_t reg2;
+        logic [1:0][REG_WIDTH - 1:0] reg_data;
 
         logic reg_write_en;
         reg_addr_t reg_write_addr;

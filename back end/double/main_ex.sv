@@ -49,14 +49,14 @@ module main_ex
 
     // regular alu
     bus32_t regular_alu_res;
-    bus32_t reg1 = ex_i.aluop == `ALU_PCADDU12I ? ex_i.pc : ex_i.reg1;
+    bus32_t reg1 = ex_i.aluop == `ALU_PCADDU12I ? ex_i.pc : ex_i.reg_data[0];
 
     regular_alu u_regular_alu(
         .aluop(ex_i.aluop),
         .alusel(ex_i.alusel),
 
         .reg1(reg1),
-        .reg2(ex_i.reg2),
+        .reg2(ex_i.reg_data[1]),
 
         .result(regular_alu_res)
     );
@@ -81,8 +81,8 @@ module main_ex
         .rst,
 
         .op,
-        .dividend(ex_i.reg1),
-        .divisor(ex_i.reg2),
+        .dividend(ex_i.reg_data[0]),
+        .divisor(ex_i.reg_data[1]),
         .start(start_div),
 
         .quotient_out(quotient),
@@ -122,8 +122,8 @@ module main_ex
         .inst(ex_i.inst),
         .aluop(ex_i.aluop),
 
-        .reg1(ex_i.reg1),
-        .reg2(ex_i.reg2),
+        .reg1(ex_i.reg_data[0]),
+        .reg2(ex_i.reg_data[1]),
 
         .pre_is_branch_taken(ex_i.pre_is_branch_taken),
         .pre_branch_addr(ex_i.pre_branch_addr),
@@ -158,13 +158,13 @@ module main_ex
     always_comb begin
         case (ex_i.aluop)
             `ALU_LDB, `ALU_LDBU, `ALU_LDH, `ALU_LDHU, `ALU_LDW, `ALU_LLW, `ALU_PRELD, `ALU_CACOP: begin
-                ex_o.mem_addr = ex_i.reg1 + ex_i.reg2;
+                ex_o.mem_addr = ex_i.reg_data[0] + ex_i.reg_data[1];
             end
             `ALU_STB, `ALU_STH, `ALU_STW: begin
-                ex_o.mem_addr = ex_i.reg1 + {{20{si12[11]}}, si12};
+                ex_o.mem_addr = ex_i.reg_data[0] + {{20{si12[11]}}, si12};
             end
             `ALU_SCW: begin
-                ex_o.mem_addr = ex_i.reg1 + {{16{si14[13]}}, si14, 2'b00};
+                ex_o.mem_addr = ex_i.reg_data[0] + {{16{si14[13]}}, si14, 2'b00};
             end
             default: begin
                 ex_o.mem_addr = 32'b0;        
@@ -223,7 +223,7 @@ module main_ex
                 ex_is_exception = 1'b0;
                 ex_exception_cause = 7'b0;
                 dcache_master.op = 1'b1;
-                dcache_master.wdata = {4{ex_i.reg2[7: 0]}};
+                dcache_master.wdata = {4{ex_i.reg_data[1][7: 0]}};
                 mem_is_valid = 1'b1;
                 case (ex_o.mem_addr[1: 0])
                     2'b00: begin
@@ -245,7 +245,7 @@ module main_ex
             end
             `ALU_STH: begin
                 dcache_master.op = 1'b1;
-                dcache_master.wdata = {2{ex_i.reg2[15: 0]}};
+                dcache_master.wdata = {2{ex_i.reg_data[1][15: 0]}};
                 mem_is_valid = 1'b1;
                 case (ex_o.mem_addr[1: 0])
                     2'b00: begin
@@ -274,7 +274,7 @@ module main_ex
                 ex_is_exception = (ex_o.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
                 ex_exception_cause = (ex_o.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
                 dcache_master.op = 1'b1;
-                dcache_master.wdata = ex_i.reg2;
+                dcache_master.wdata = ex_i.reg_data[1];
                 mem_is_valid = 1'b1;
                 dcache_master.wstrb = 4'b1111;
             end
@@ -283,7 +283,7 @@ module main_ex
                 ex_exception_cause = (ex_o.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
                 if (LLbit) begin
                     dcache_master.op = 1'b1;
-                    dcache_master.wdata = ex_i.reg2;
+                    dcache_master.wdata = ex_i.reg_data[1];
                     mem_is_valid = 1'b1;
                     dcache_master.wstrb = 4'b1111;
                 end
@@ -348,8 +348,8 @@ module main_ex
         else begin
             ex_o.csr_write_en = ex_i.csr_write_en;
             ex_o.csr_addr = ex_i.csr_addr;
-            ex_o.csr_write_data = (ex_i.aluop == `ALU_CSRXCHG)?((ex_i.csr_read_data & ~ex_i.reg2) | (ex_i.reg1 & ex_i.reg2)): ex_i.reg1;
-            ex_o.csr_write_data = ex_i.reg1;
+            ex_o.csr_write_data = (ex_i.aluop == `ALU_CSRXCHG)?((ex_i.csr_read_data & ~ex_i.reg_data[1]) | (ex_i.reg_data[0] & ex_i.reg_data[1])): ex_i.reg_data[0];
+            ex_o.csr_write_data = ex_i.reg_data[0];
             ex_o.is_llw_scw = 1'b0;
         end
     end

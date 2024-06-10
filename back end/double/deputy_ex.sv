@@ -39,14 +39,14 @@ module deputy_ex
 
     // regular alu
     bus32_t regular_alu_res;
-    bus32_t reg1 = ex_i.aluop == `ALU_PCADDU12I ? ex_i.pc : ex_i.reg1;
+    bus32_t reg1 = ex_i.aluop == `ALU_PCADDU12I ? ex_i.pc : ex_i.reg_data[0];
 
     regular_alu u_regular_alu(
         .aluop(ex_i.aluop),
         .alusel(ex_i.alusel),
 
         .reg1(reg1),
-        .reg2(ex_i.reg2),
+        .reg2(ex_i.reg_data[1]),
 
         .result(regular_alu_res)
     );
@@ -71,8 +71,8 @@ module deputy_ex
         .rst,
 
         .op,
-        .dividend(ex_i.reg1),
-        .divisor(ex_i.reg2),
+        .dividend(ex_i.reg_data[0]),
+        .divisor(ex_i.reg_data[1]),
         .start(start_div),
 
         .quotient_out(quotient),
@@ -112,8 +112,8 @@ module deputy_ex
         .inst(ex_i.inst),
         .aluop(ex_i.aluop),
 
-        .reg1(ex_i.reg1),
-        .reg2(ex_i.reg2),
+        .reg1(ex_i.reg_data[0]),
+        .reg2(ex_i.reg_data[1]),
 
         .pre_is_branch_taken(ex_i.pre_is_branch_taken),
         .pre_branch_addr(ex_i.pre_branch_addr),

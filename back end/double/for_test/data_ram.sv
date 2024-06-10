@@ -8,7 +8,7 @@ module data_ram
     input bus32_t read_addr,
     input bus32_t write_addr,
     input logic[3: 0] select,
-    input bus32_t data_i,
+    input bus256_t data_i,
     input logic read_en,
 
     output logic[7: 0][31: 0] data_o,
