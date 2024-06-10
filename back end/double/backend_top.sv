@@ -116,6 +116,7 @@ module backend_top
     pipeline_push_forward_t wb_reg_pf[ISSUE_WIDTH];
     alu_op_t pre_ex_aluop;
     dispatch_ex_t ex_i[ISSUE_WIDTH];
+    logic [DECODER_WIDTH - 1:0] invalid_en;
 
     // execute
     ex_mem_t mem_i[ISSUE_WIDTH];
@@ -151,6 +152,8 @@ module backend_top
         .is_exception,
         .exception_cause,
 
+        .invalid_en,
+
         .pause_decoder(pause_request.pause_decoder),
         .dispatch_i
     );
@@ -175,6 +178,7 @@ module backend_top
         .csr_master(dispatch_csr_io.master),
 
         .pause_dispatch(pause_request.pause_dispatch),
+        .invalid_en,
         .ex_i
     );
 
@@ -285,6 +289,24 @@ module backend_top
     csr u_csr (
         .clk,
         .rst,
+
+        .ertn_en(1'b0),
+        .tlbsrch_en(1'b0),
+        .tlbrd_en(1'b0),
+        .is_tlbrd_valid(1'b0),
+        .tlbwr_en(1'b0),
+        .tlbfill_en(1'b0),
+        .tlbsrch_found(1'b0),
+        .tlbsrch_index(5'b0),
+
+        .tlb_line(32'b0),
+        .tlblo0_line(32'b0),
+        .tlblo1_line(32'b0),
+
+        .is_tlb_exception(1'b0),
+
+        .is_ipi(1'b0),
+        .is_hwi(8'b0),
 
         .dispatch_slave(dispatch_csr_io.slave),
 

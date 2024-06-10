@@ -224,6 +224,9 @@ BRAM Bank7_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(cache_wdata[7]),.addra
 //Tag1'b1
 logic [`TAGV_SIZE-1:0]tagv_cache_w0;
 logic [`TAGV_SIZE-1:0]tagv_cache_w1;
+bus32_t tagv_cache_w0_addr,tagv_cache_w1_addr;
+assign tagv_cache_w0 = tagv_cache_w0_addr[20: 0];
+assign tagv_cache_w1 = tagv_cache_w1_addr[20: 0];
 
 logic[`INDEX_SIZE-1:0] tagv_addr_write;
 assign tagv_addr_write=(cacop_op_0||cacop_op_1||cacop_op_2)?cacop_op_addr_index:(pre_preld&&read_success?pre_preld_addr[`INDEX_LOC]:pre_physical_addr[`INDEX_LOC]);
@@ -234,8 +237,8 @@ logic[`INDEX_SIZE-1:0]tagv0_addr,tagv1_addr;
 assign tagv0_addr=|wea_way0?tagv_addr_write:read_index_addr;
 assign tagv1_addr=|wea_way1?tagv_addr_write:read_index_addr;
 
-BRAM TagV0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(tagv_data_tagv),.addra(tagv0_addr),.douta(tagv_cache_w0),.enb(1'b0));
-BRAM TagV1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(tagv_data_tagv),.addra(tagv1_addr),.douta(tagv_cache_w1),.enb(1'b0));
+BRAM TagV0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina({11'b0, tagv_data_tagv}),.addra(tagv0_addr),.douta(tagv_cache_w0_addr),.enb(1'b0));
+BRAM TagV1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina({11'b0, tagv_data_tagv}),.addra(tagv1_addr),.douta(tagv_cache_w1_addr),.enb(1'b0));
 
 logic[31:0] write_mask;
 assign write_mask={{8{pre_wstrb[3]}},{8{pre_wstrb[2]}},{8{pre_wstrb[1]}},{8{pre_wstrb[0]}}};

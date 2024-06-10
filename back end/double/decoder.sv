@@ -19,6 +19,9 @@ module decoder
     input logic [5:0] is_exception[DECODER_WIDTH],
     input logic [5:0][6:0] exception_cause[DECODER_WIDTH],
 
+    // from dispatch
+    input logic [DECODER_WIDTH - 1:0] invalid_en,
+
     // to ctrl
     output logic pause_decoder,
 
@@ -46,16 +49,26 @@ module decoder
         end
     endgenerate
 
-    assign pause_decoder = |pause_id;
+    // issue queue
+    logic [DECODER_WIDTH - 1:0] enqueue_en;
+    id_dispatch_t [DECODER_WIDTH - 1:0] enqueue_data;
 
-    always_ff @(posedge clk) begin : id_dispatch
-        if (rst || flush) begin
-            dispatch_i <= '{default: 0};
-        end else if (!pause) begin
-            dispatch_i <= id_o;
-        end else begin
-            dispatch_i <= dispatch_i;
+    logic [ISSUE_WIDTH - 1:0] dqueue_en;
+    id_dispatch_t [ISSUE_WIDTH - 1:0] dqueue_data;
+    logic full;
+
+    dram_fifo #(.DATA_WIDTH($size(id_dispatch_t))) u_issue_queue (.*);
+
+    generate
+        for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
+            assign enqueue_data[id_idx] = id_o[id_idx];
         end
-    end
+    endgenerate
+
+    assign enqueue_en = full ? 2'b00 : 2'b11;
+    assign dqueue_en = flush ? 2'b00: 2'b11;
+
+    // pasue request
+    assign pause_decoder = |pause_id || full;
 
 endmodule

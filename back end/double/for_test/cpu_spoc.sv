@@ -28,7 +28,7 @@ module cpu_spoc
     bus32_t read_addr;
     bus32_t write_addr;
     logic[3: 0] select;
-    bus32_t data_i;
+    bus256_t data_i;
     logic[255: 0] data_o;
     logic data_valid;
     logic ducache_ren_i;
