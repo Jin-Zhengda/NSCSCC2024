@@ -10,10 +10,10 @@ module dram_fifo
     input logic rst,
 
     input logic[WRITE_PORTS - 1: 0] enqueue_en,
-    logic [WRITE_PORTS-1: 0][DATA_WIDTH - 1: 0] enqueue_data,
+    output logic [WRITE_PORTS-1: 0][DATA_WIDTH - 1: 0] enqueue_data,
 
     input logic[READ_PORTS - 1: 0] dqueue_en,
-    logic [READ_PORTS - 1: 0][DATA_WIDTH - 1: 0] dqueue_data,
+    output logic [READ_PORTS - 1: 0][DATA_WIDTH - 1: 0] dqueue_data,
 
     input logic[READ_PORTS - 1: 0] invalid_en,
 
@@ -30,20 +30,36 @@ module dram_fifo
             tail <= 0;
             ram <= '{default:{DATA_WIDTH{1'b0}}};
         end else begin
-            for (int i = 0; i < WRITE_PORTS; i++) begin
-                if (enqueue_en[i] && !full) begin
-                    ram[tail] <= enqueue_data[i];
-                    tail <= tail + 1;
-                end
+            if (|enqueue_en) begin
+                ram[tail] <= enqueue_data[0];
+                ram[tail + 1] <= enqueue_data[1];
+                valid[tail] <= 1'b1;
+                valid[tail + 1] <= 1'b1;
+                tail <= tail + 2;
             end
         end       
     end
 
-    generate
-        for (genvar i = 0; i < READ_PORTS; i++) begin
-            assign dqueue_data[i] = dqueue_en[i]? ram[head + i]: {DATA_WIDTH{1'b0}};
-        end
-    endgenerate
+    logic [2: 0] head_plus;
+    assign head_plus = head + 1;
+    assign dqueue_data[0] = dqueue_en[0]? ram[head]: '0;
+    assign dqueue_data[1] = dqueue_en[1]? ram[head_plus]: '0;
+    // always_comb begin: read
+    //     case (dqueue_en)
+    //         2'b11: begin
+    //             dqueue_data[0] = ram[head];
+    //             dqueue_data[1] = ram[head + 1];
+    //         end
+    //         2'b00: begin
+    //             dqueue_data[0] = '0;
+    //             dqueue_data[1] = '0;
+    //         end 
+    //         default: begin
+    //             dqueue_data[0] = '0;
+    //             dqueue_data[1] = '0;
+    //         end
+    //     endcase
+    // end
 
     always_ff @(posedge clk) begin : valid_set
         if (rst) begin
@@ -51,12 +67,17 @@ module dram_fifo
             head <= 0;
         end
         else begin
-            for (int i = 0; i < READ_PORTS; i++) begin
-                if (invalid_en[i]) begin
+            case (invalid_en)
+                2'b11: begin
+                    valid[head] <= 1'b0;
+                    valid[head + 1] <= 1'b0;
+                    head <= head + 2;
+                end 
+                2'b01: begin
                     valid[head] <= 1'b0;
                     head <= head + 1;
-                end 
-            end
+                end
+            endcase
         end
     end
 

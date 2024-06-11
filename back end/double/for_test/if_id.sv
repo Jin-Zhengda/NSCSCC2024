@@ -9,11 +9,11 @@ module if_id
     input logic flush,
     input logic pause,
 
-    input bus32_t pc_i  [DECODER_WIDTH],
-    input bus32_t inst_i[DECODER_WIDTH],
+    input bus32_t [DECODER_WIDTH-1:0] pc_i,
+    input bus32_t [DECODER_WIDTH-1:0] inst_i,
 
-    output bus32_t pc_o  [DECODER_WIDTH],
-    output bus32_t inst_o[DECODER_WIDTH]
+    output bus32_t [DECODER_WIDTH-1:0] pc_o,
+    output bus32_t [DECODER_WIDTH-1:0] inst_o
 );
 
     always_ff @(posedge clk) begin

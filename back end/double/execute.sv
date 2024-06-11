@@ -13,7 +13,7 @@ module execute
     input logic pause,
 
     // from dispatch
-    input dispatch_ex_t ex_i[ISSUE_WIDTH],
+    input dispatch_ex_t [ISSUE_WIDTH - 1:0] ex_i,
 
     // from counter
     input bus64_t cnt,
@@ -23,26 +23,26 @@ module execute
     output cache_inst_t cache_inst,
 
     // to bpu
-    output branch_update update_info[ISSUE_WIDTH],
+    output branch_update [ISSUE_WIDTH - 1:0] update_info,
 
     // to dispatch
     output alu_op_t pre_ex_aluop,
-    output pipeline_push_forward_t ex_reg_pf [ISSUE_WIDTH],
+    output pipeline_push_forward_t [ISSUE_WIDTH - 1: 0] ex_reg_pf,
 
     // to ctrl
-    output logic pause_ex,
-    output logic branch_flush,
+    output logic   pause_ex,
+    output logic   branch_flush,
     output bus32_t branch_target,
 
     // to mem
-    output ex_mem_t mem_i[ISSUE_WIDTH]
+    output ex_mem_t [ISSUE_WIDTH - 1: 0] mem_i
 );
 
     logic [1:0] pause_alu;
     logic [1:0] branch_flush_alu;
-    bus32_t branch_target_alu[ISSUE_WIDTH];
+    bus32_t [ISSUE_WIDTH - 1: 0] branch_target_alu;
 
-    ex_mem_t ex_o[ISSUE_WIDTH];
+    ex_mem_t [ISSUE_WIDTH - 1: 0] ex_o;
 
     main_ex u_main_ex (
         .clk,
@@ -73,7 +73,7 @@ module execute
     // ex push forward
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign ex_reg_pf[i].reg_write_en = ex_o[i].reg_write_en;
+            assign ex_reg_pf[i].reg_write_en   = ex_o[i].reg_write_en;
             assign ex_reg_pf[i].reg_write_addr = ex_o[i].reg_write_addr;
             assign ex_reg_pf[i].reg_write_data = ex_o[i].reg_write_data;
         end

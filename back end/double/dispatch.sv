@@ -12,12 +12,12 @@ module dispatch
     input logic flush,
 
     // from decoder
-    input id_dispatch_t dispatch_i[DECODER_WIDTH],
+    input id_dispatch_t [DECODER_WIDTH - 1:0] dispatch_i,
 
     // from ex and mem
-    input pipeline_push_forward_t ex_reg_pf [ISSUE_WIDTH],      
-    input pipeline_push_forward_t mem_reg_pf[ISSUE_WIDTH],
-    input pipeline_push_forward_t wb_reg_pf [ISSUE_WIDTH],
+    input pipeline_push_forward_t [ISSUE_WIDTH - 1: 0] ex_reg_pf,
+    input pipeline_push_forward_t [ISSUE_WIDTH - 1: 0] mem_reg_pf,
+    input pipeline_push_forward_t [ISSUE_WIDTH - 1: 0] wb_reg_pf,
 
     // from ex
     input alu_op_t pre_ex_aluop,
@@ -32,17 +32,22 @@ module dispatch
     output logic pause_dispatch,
 
     // to id
+    output logic [  ISSUE_WIDTH - 1:0] dqueue_en,
     output logic [DECODER_WIDTH - 1:0] invalid_en,
 
     // to ex
-    output dispatch_ex_t ex_i[ISSUE_WIDTH]
+    output dispatch_ex_t [DECODER_WIDTH - 1:0] ex_i
 );
-    dispatch_ex_t dispatch_o[ISSUE_WIDTH];
+    dispatch_ex_t [DECODER_WIDTH - 1:0] dispatch_o;
     logic [ISSUE_WIDTH - 1:0] issue_en;
 
     // dispatch arbitration
-    assign invalid_en = pause ? 2'b00 : issue_en;
-    
+    assign dqueue_en  = (rst || flush) ? 2'b00 : 2'b11;
+    assign invalid_en = (rst || pause) ? 2'b00 : issue_en;
+
+    logic [1:0] inst_valid;
+    assign inst_valid = {dispatch_i[1].inst_valid, dispatch_i[0].inst_valid};
+
     logic issue_double_en;
 
     logic privilege_inst;
@@ -51,10 +56,11 @@ module dispatch
 
     assign privilege_inst = dispatch_i[0].is_privilege || dispatch_i[1].is_privilege;
     assign mem_inst = dispatch_i[0].alusel == `ALU_SEL_LOAD_STORE || dispatch_i[1].alusel == `ALU_SEL_LOAD_STORE;
-    assign data_relate_inst = dispatch_i[0].reg_write_en && (dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[0] || dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[1]);
-    assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst;
+    assign data_relate_inst = (dispatch_i[0].reg_write_en && dispatch_i[0].reg_write_addr != 5'b0) && ((dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[0] && dispatch_i[1].reg_read_en[0]) 
+                                || (dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[1] && dispatch_i[1].reg_read_en[1]));
+    assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst && (|inst_valid);
 
-    assign issue_en = flush ? 2'b00: (issue_double_en? 2'b11: 2'b01);
+    assign issue_en = (flush || rst || !(|inst_valid)) ? 2'b00 : (issue_double_en ? 2'b11 : 2'b01);
 
     // signal assignment
     generate
@@ -77,11 +83,11 @@ module dispatch
             assign dispatch_o[id_idx].pre_branch_addr = dispatch_i[id_idx].pre_branch_addr;
         end
     endgenerate
-           
+
     // with regfile
     generate
         for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
-            for (genvar reg_idx = id_idx; reg_idx < 2; reg_idx++) begin
+            for (genvar reg_idx = 0; reg_idx < 2; reg_idx++) begin
                 assign regfile_master.reg_read_en[id_idx][reg_idx] = dispatch_i[id_idx].reg_read_en[reg_idx];
                 assign regfile_master.reg_read_addr[id_idx][reg_idx] = dispatch_i[id_idx].reg_read_addr[reg_idx];
             end
@@ -119,7 +125,7 @@ module dispatch
             assign dispatch_o[id_idx].csr_read_data = csr_master.csr_read_data[id_idx];
         end
     endgenerate
- 
+
     // handle load-use hazard
     logic load_pre;
     logic [DECODER_WIDTH - 1:0] reg1_load_relate;
@@ -140,12 +146,13 @@ module dispatch
     assign pause_dispatch = |(reg1_load_relate | reg2_load_relate);
 
 
-    always_ff @( posedge clk ) begin
+    // to ex
+    always_ff @(posedge clk) begin
         if (rst || flush) begin
             ex_i <= '{default: 0};
         end else if (!pause) begin
-            ex_i[0] <= issue_en[0] ? dispatch_o[0]: 0;
-            ex_i[1] <= issue_en[1] ? dispatch_o[1]: 0;
+            ex_i[0] <= issue_en[0] ? dispatch_o[0] : 0;
+            ex_i[1] <= issue_en[1] ? dispatch_o[1] : 0;
         end else begin
             ex_i <= ex_i;
         end

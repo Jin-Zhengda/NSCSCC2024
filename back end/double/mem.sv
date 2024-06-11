@@ -6,25 +6,25 @@ module mem
     import pipeline_types::*;
 (
     // from ex
-    input ex_mem_t mem_i[ISSUE_WIDTH],
+    input ex_mem_t [ISSUE_WIDTH - 1: 0] mem_i,
 
     // with dcache
     mem_dcache dcache_master,
 
     // to dispatch
-    output pipeline_push_forward_t mem_reg_pf[ISSUE_WIDTH],
+    output pipeline_push_forward_t [ISSUE_WIDTH - 1: 0] mem_reg_pf,
 
     // to ctrl
     output logic pause_mem,
 
     // to wb
-    output commit_ctrl_t commit_ctrl_i[ISSUE_WIDTH],
-    output mem_wb_t wb_i[ISSUE_WIDTH],
+    output commit_ctrl_t [ISSUE_WIDTH - 1: 0] commit_ctrl_i,
+    output mem_wb_t [ISSUE_WIDTH - 1: 0] wb_i,
 
     // diff
-    output diff_t diff_o[ISSUE_WIDTH]
+    output diff_t [ISSUE_WIDTH - 1: 0] diff_o
 );
-    mem_wb_t mem_o[ISSUE_WIDTH];
+    mem_wb_t [ISSUE_WIDTH - 1: 0] mem_o;
     assign wb_i = mem_o;
 
     // mem push forward
