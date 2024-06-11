@@ -56,12 +56,6 @@ module dispatch
 
     assign issue_en = flush ? 2'b00: (issue_double_en? 2'b11: 2'b01);
 
-    generate
-        for (genvar iss_idx = 0; iss_idx < ISSUE_WIDTH; iss_idx++) begin
-            assign ex_i[iss_idx] = issue_en[iss_idx] ? dispatch_i[iss_idx] : '{default: 0};
-        end
-    endgenerate
-
     // signal assignment
     generate
         for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
@@ -150,8 +144,8 @@ module dispatch
         if (rst || flush) begin
             ex_i <= '{default: 0};
         end else if (!pause) begin
-            ex_i[0] <= issue_en[0] ? dispatch_o[0]: '{default: 0};
-            ex_i[1] <= issue_en[1] ? dispatch_o[1]: '{default: 0};
+            ex_i[0] <= issue_en[0] ? dispatch_o[0]: 0;
+            ex_i[1] <= issue_en[1] ? dispatch_o[1]: 0;
         end else begin
             ex_i <= ex_i;
         end

@@ -35,18 +35,17 @@ module regfile
     end
 
     always_comb begin : ram_read
-        for (int i = 0; i < READ_PORTS; i++) begin
-
-            slave.reg_read_data[i] = ram[slave.reg_read_addr[i]];
-
-            for (int j = 0; j < WRITE_PORTS; j++) begin
-                if (slave.reg_read_addr[i] == reg_write_addr[j] && reg_write_en[j]) begin
-                    slave.reg_read_data[i] = reg_write_data[j];
+        for (int i = 0; i < 2; i++) begin
+            for (int j = 0; j < 2; j++) begin
+                slave.reg_read_data[i][j] = ram[slave.reg_read_addr[i][j]];
+                for (int k = 0; k < WRITE_PORTS; k++) begin
+                    if (slave.reg_read_addr[i][j] == reg_write_addr[k] && reg_write_en[k]) begin
+                        slave.reg_read_data[i][j] = reg_write_data[k];
+                    end
                 end
-            end
-
-            if (rst || slave.reg_read_addr[i] == 5'b0 || !slave.reg_read_en[i]) begin
-                slave.reg_read_data[i] = 32'b0;
+                if (rst || slave.reg_read_addr[i][j] == 5'b0 || !slave.reg_read_en[i][j]) begin
+                    slave.reg_read_data[i][j] = 32'b0;
+                end
             end
         end
     end

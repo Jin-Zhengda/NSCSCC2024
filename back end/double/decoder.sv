@@ -68,7 +68,14 @@ module decoder
     assign enqueue_en = full ? 2'b00 : 2'b11;
     assign dqueue_en = flush ? 2'b00: 2'b11;
 
+    generate
+        for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
+            assign dispatch_i[id_idx] = dqueue_data[id_idx];
+        end
+    endgenerate
+
     // pasue request
     assign pause_decoder = |pause_id || full;
+
 
 endmodule
