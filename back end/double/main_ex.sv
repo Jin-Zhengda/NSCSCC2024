@@ -49,7 +49,8 @@ module main_ex
 
     // regular alu
     bus32_t regular_alu_res;
-    bus32_t reg1 = ex_i.aluop == `ALU_PCADDU12I ? ex_i.pc : ex_i.reg_data[0];
+    bus32_t reg1;
+    assign reg1 = (ex_i.aluop == `ALU_PCADDU12I) ? ex_i.pc : ex_i.reg_data[0];
 
     regular_alu u_regular_alu(
         .aluop(ex_i.aluop),

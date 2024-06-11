@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 `include "../pipeline_types.sv"
 
-module cpu_spoc 
+module cpu_spoc
     import pipeline_types::*;
 (
     input logic clk,
@@ -14,31 +14,32 @@ module cpu_spoc
     bus32_t new_pc;
 
     logic inst_en;
+    bus32_t [DECODER_WIDTH-1:0] pc;
 
-    bus32_t pc_i[DECODER_WIDTH];
-    bus32_t inst_i[DECODER_WIDTH];
+    bus32_t [DECODER_WIDTH-1:0] pc_i;
+    bus32_t [DECODER_WIDTH-1:0] inst_i;
 
-    bus32_t pc_o[DECODER_WIDTH];
-    bus32_t inst_o[DECODER_WIDTH];
+    bus32_t [DECODER_WIDTH-1:0] pc_o;
+    bus32_t [DECODER_WIDTH-1:0] inst_o;
 
-    mem_dcache mem_dcache_io();
+    mem_dcache mem_dcache_io ();
     cache_inst_t cache_inst;
     logic write_en;
     logic read_en;
     bus32_t read_addr;
     bus32_t write_addr;
-    logic[3: 0] select;
+    logic [3:0] select;
     bus256_t data_i;
-    logic[255: 0] data_o;
+    logic [255:0] data_o;
     logic data_valid;
     logic ducache_ren_i;
     bus32_t ducache_araddr_i;
     logic ducache_rvalid_o;
-    bus32_t ducache_rdata_o;  
+    bus32_t ducache_rdata_o;
     logic ducache_wen_i;
     bus32_t ducache_wdata_i;
     bus32_t ducache_awaddr_i;
-    logic[3: 0] ducache_strb;
+    logic [3:0] ducache_strb;
     logic ducache_bvalid_o;
 
     inst_rom u_inst_rom (
@@ -48,9 +49,10 @@ module cpu_spoc
         .inst_en,
         .addr(pc_i),
 
+        .pc,
         .inst(inst_i)
     );
-        
+
 
     pc u_pc (
         .clk,
@@ -58,6 +60,7 @@ module cpu_spoc
         .flush(flush[0]),
         .pause(pause[0]),
         .is_interrupt,
+        .inst_en,
         .new_pc,
         .pc(pc_i)
     );
@@ -68,7 +71,7 @@ module cpu_spoc
         .flush(flush[1]),
         .pause(pause[1]),
 
-        .pc_i,
+        .pc_i(pc),
         .inst_i,
 
         .pc_o,
@@ -81,11 +84,11 @@ module cpu_spoc
 
         .pc(pc_o),
         .inst(inst_o),
-        .pre_is_branch('{default: 0}),
-        .pre_is_branch_taken('{default: 0}),
-        .pre_branch_addr('{default: 0}),
-        .is_exception('{default: 0}),
-        .exception_cause('{default: 0}),
+        .pre_is_branch('0),
+        .pre_is_branch_taken('0),
+        .pre_branch_addr('0),
+        .is_exception('0),
+        .exception_cause('0),
 
         .is_interrupt,
         .new_pc,
@@ -154,5 +157,5 @@ module cpu_spoc
     );
 
 
-    
+
 endmodule

@@ -8,20 +8,20 @@ module backend_top
     input logic rst,
 
     // from instbuffer
-    input bus32_t pc[DECODER_WIDTH],
-    input bus32_t inst[DECODER_WIDTH],
-    input logic pre_is_branch[DECODER_WIDTH],
-    input logic pre_is_branch_taken[DECODER_WIDTH],
-    input bus32_t pre_branch_addr[DECODER_WIDTH],
-    input logic [5:0] is_exception[DECODER_WIDTH],
-    input logic [5:0][6:0] exception_cause[DECODER_WIDTH],
+    input bus32_t [DECODER_WIDTH - 1:0] pc,
+    input bus32_t [DECODER_WIDTH - 1:0] inst,
+    input logic [DECODER_WIDTH - 1:0] pre_is_branch,
+    input logic [DECODER_WIDTH - 1:0] pre_is_branch_taken,
+    input bus32_t [DECODER_WIDTH - 1:0] pre_branch_addr,
+    input logic [DECODER_WIDTH - 1:0][5:0] is_exception,
+    input logic [DECODER_WIDTH - 1:0][5:0][6:0] exception_cause,
 
     // to pc
     output logic   is_interrupt,
     output bus32_t new_pc,
 
     // to bpu
-    output branch_update update_info[ISSUE_WIDTH],
+    output branch_update [ISSUE_WIDTH - 1:0] update_info,
 
     // with cache
     mem_dcache dcache_master,
@@ -34,10 +34,10 @@ module backend_top
     // debug
     output logic [31:0] debug_wb_pc[2],
     output logic [31:0] debug_wb_inst[2],
-    output logic [ 3:0] debug_wb_rf_wen[2],
-    output logic [ 4:0] debug_wb_rf_wnum[2],
+    output logic [3:0] debug_wb_rf_wen[2],
+    output logic [4:0] debug_wb_rf_wnum[2],
     output logic [31:0] debug_wb_rf_wdata[2],
-    
+
     output logic inst_valid_diff[2],
     output logic cnt_inst_diff[2],
     output logic csr_rstat_en_diff[2],
@@ -48,14 +48,14 @@ module backend_top
     output logic ertn_flush[2],
     output logic [5:0] ecode[2],
 
-    output logic [ 7:0] inst_st_en_diff[2],
+    output logic [7:0] inst_st_en_diff[2],
     output logic [31:0] st_paddr_diff[2],
     output logic [31:0] st_vaddr_diff[2],
     output logic [31:0] st_data_diff[2],
 
     output logic [ 7:0] inst_ld_en_diff[2],
-    output logic [31:0] ld_paddr_diff[2],
-    output logic [31:0] ld_vaddr_diff[2],
+    output logic [31:0] ld_paddr_diff  [2],
+    output logic [31:0] ld_vaddr_diff  [2],
 
     output logic [31:0] regs_diff[31:0],
 
@@ -103,39 +103,40 @@ module backend_top
 
     // ctrl
     pause_t pause_request;
-    
+
     logic branch_flush;
     bus32_t branch_target;
 
     // decoder
-    id_dispatch_t dispatch_i[DECODER_WIDTH];
+    id_dispatch_t [DECODER_WIDTH - 1 :0] dispatch_i;
 
     // dispatch
-    pipeline_push_forward_t ex_reg_pf[ISSUE_WIDTH];
-    pipeline_push_forward_t mem_reg_pf[ISSUE_WIDTH];
-    pipeline_push_forward_t wb_reg_pf[ISSUE_WIDTH];
+    pipeline_push_forward_t [ISSUE_WIDTH - 1:0] ex_reg_pf;
+    pipeline_push_forward_t [ISSUE_WIDTH - 1:0] mem_reg_pf;
+    pipeline_push_forward_t [ISSUE_WIDTH - 1:0] wb_reg_pf;
     alu_op_t pre_ex_aluop;
-    dispatch_ex_t ex_i[ISSUE_WIDTH];
+    dispatch_ex_t [ISSUE_WIDTH - 1:0] ex_i;
+    logic [ISSUE_WIDTH - 1:0] dqueue_en;
     logic [DECODER_WIDTH - 1:0] invalid_en;
 
     // execute
-    ex_mem_t mem_i[ISSUE_WIDTH];
+    ex_mem_t [ISSUE_WIDTH - 1:0] mem_i;
 
     // mem
-    commit_ctrl_t commit_ctrl_i[ISSUE_WIDTH];
-    mem_wb_t wb_i[ISSUE_WIDTH];
+    commit_ctrl_t [ISSUE_WIDTH - 1:0] commit_ctrl_i;
+    mem_wb_t [ISSUE_WIDTH - 1:0] wb_i;
 
     // wb
-    commit_ctrl_t commit_ctrl_o[ISSUE_WIDTH];
-    mem_wb_t wb_o[ISSUE_WIDTH];
+    commit_ctrl_t [ISSUE_WIDTH - 1:0] commit_ctrl_o;
+    mem_wb_t [ISSUE_WIDTH - 1:0] wb_o;
 
     // counter
     bus64_t cnt;
 
     // diff
-    diff_t wb_diff_i[ISSUE_WIDTH];
-    diff_t wb_diff_o[ISSUE_WIDTH];
-    diff_t diff[ISSUE_WIDTH];
+    diff_t [ISSUE_WIDTH - 1:0] wb_diff_i;
+    diff_t [ISSUE_WIDTH - 1:0] wb_diff_o;
+    diff_t [ISSUE_WIDTH - 1:0] diff;
 
     decoder u_decoder (
         .clk,
@@ -152,6 +153,7 @@ module backend_top
         .is_exception,
         .exception_cause,
 
+        .dqueue_en,
         .invalid_en,
 
         .pause_decoder(pause_request.pause_decoder),
@@ -178,6 +180,8 @@ module backend_top
         .csr_master(dispatch_csr_io.master),
 
         .pause_dispatch(pause_request.pause_dispatch),
+
+        .dqueue_en,
         .invalid_en,
         .ex_i
     );
@@ -351,7 +355,7 @@ module backend_top
         .rst,
 
         .cnt
-    );  
+    );
 
     // diff
     generate
@@ -375,7 +379,7 @@ module backend_top
             assign inst_st_en_diff[i] = diff[i].inst_st_en;
             assign st_paddr_diff[i] = diff[i].st_paddr;
             assign st_vaddr_diff[i] = diff[i].st_vaddr;
-            assign st_data_diff[i] = (i == 0)? dcache_master.wdata: 32'b0;
+            assign st_data_diff[i] = (i == 0) ? dcache_master.wdata : 32'b0;
 
             assign inst_ld_en_diff[i] = diff[i].inst_ld_en;
             assign ld_paddr_diff[i] = diff[i].ld_paddr;

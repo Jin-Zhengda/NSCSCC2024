@@ -100,8 +100,8 @@ package pipeline_types;
         logic [1:0] reg_read_en;
         logic [1:0][REG_ADDR_WIDTH - 1:0] reg_read_addr;
 
-        logic [1:0] reg_write_en;
-        logic [1:0][REG_ADDR_WIDTH - 1:0] reg_write_addr;
+        logic reg_write_en;
+        logic [REG_ADDR_WIDTH - 1:0] reg_write_addr;
 
         logic csr_read_en;
         logic csr_write_en;
@@ -178,8 +178,8 @@ package pipeline_types;
 
     typedef struct packed {
         logic reg_write_en;
-        logic reg_write_addr;
-        logic reg_write_data;
+        reg_addr_t reg_write_addr;
+        bus32_t reg_write_data;
 
         logic is_llw_scw;
         logic csr_write_en;

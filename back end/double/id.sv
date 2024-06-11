@@ -91,6 +91,7 @@ module id
         id_o.reg_write_addr = 5'b0;
         id_o.reg_write_en = 1'b0;
         inst_valid = 1'b0;
+        id_o.is_privilege = 1'b0;
         id_o.reg_read_en[0] = 1'b0;
         id_o.reg_read_en[1] = 1'b0;
         id_o.reg_read_addr[0] = rj;

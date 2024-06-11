@@ -11,29 +11,30 @@ module decoder
     input logic pause,
 
     // from front
-    input bus32_t pc[DECODER_WIDTH],
-    input bus32_t inst[DECODER_WIDTH],
-    input logic pre_is_branch[DECODER_WIDTH],
-    input logic pre_is_branch_taken[DECODER_WIDTH],
-    input bus32_t pre_branch_addr[DECODER_WIDTH],
-    input logic [5:0] is_exception[DECODER_WIDTH],
-    input logic [5:0][6:0] exception_cause[DECODER_WIDTH],
+    input bus32_t [DECODER_WIDTH - 1:0] pc,
+    input bus32_t [DECODER_WIDTH - 1:0] inst,
+    input logic [DECODER_WIDTH - 1:0] pre_is_branch,
+    input logic [DECODER_WIDTH - 1:0] pre_is_branch_taken,
+    input bus32_t [DECODER_WIDTH - 1:0] pre_branch_addr,
+    input logic [DECODER_WIDTH - 1:0][5:0] is_exception,
+    input logic [DECODER_WIDTH - 1:0][5:0][6:0] exception_cause,
 
     // from dispatch
+    input logic [  ISSUE_WIDTH - 1:0] dqueue_en,
     input logic [DECODER_WIDTH - 1:0] invalid_en,
 
     // to ctrl
     output logic pause_decoder,
 
     // to dispatch
-    output id_dispatch_t dispatch_i[DECODER_WIDTH]
+    output id_dispatch_t [DECODER_WIDTH - 1:0] dispatch_i
 );
 
     logic [DECODER_WIDTH - 1:0] pause_id;
-    id_dispatch_t id_o[DECODER_WIDTH];
+    id_dispatch_t [DECODER_WIDTH - 1:0] id_o;
 
     generate
-        for (genvar i = 0; i < DECODER_WIDTH; i++) begin
+        for (genvar i = 0; i < DECODER_WIDTH; i++) begin : id
             id u_id (
                 .pc(pc[i]),
                 .inst(inst[i]),
@@ -53,7 +54,6 @@ module decoder
     logic [DECODER_WIDTH - 1:0] enqueue_en;
     id_dispatch_t [DECODER_WIDTH - 1:0] enqueue_data;
 
-    logic [ISSUE_WIDTH - 1:0] dqueue_en;
     id_dispatch_t [ISSUE_WIDTH - 1:0] dqueue_data;
     logic full;
 
@@ -65,8 +65,7 @@ module decoder
         end
     endgenerate
 
-    assign enqueue_en = full ? 2'b00 : 2'b11;
-    assign dqueue_en = flush ? 2'b00: 2'b11;
+    assign enqueue_en = (rst || full || !id_o[0].inst_valid || !id_o[1].inst_valid) ? 2'b00 : 2'b11;
 
     generate
         for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin

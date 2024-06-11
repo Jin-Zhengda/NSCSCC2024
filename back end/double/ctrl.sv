@@ -12,8 +12,8 @@ module ctrl
     input bus32_t branch_target,
 
     // from wb
-    input mem_wb_t wb_o[ISSUE_WIDTH],
-    input commit_ctrl_t commit_ctrl_o[ISSUE_WIDTH],
+    input mem_wb_t [ISSUE_WIDTH - 1:0] wb_o,
+    input commit_ctrl_t [ISSUE_WIDTH - 1:0] commit_ctrl_o,
 
     // with csr
     ctrl_csr csr_master,
@@ -36,8 +36,8 @@ module ctrl
     output bus32_t csr_write_data,
 
     // diff
-    input diff_t ctrl_diff_i[ISSUE_WIDTH],
-    output diff_t ctrl_diff_o[ISSUE_WIDTH]
+    input  diff_t [ISSUE_WIDTH - 1: 0] ctrl_diff_i,
+    output diff_t [ISSUE_WIDTH - 1: 0] ctrl_diff_o
 );
     // interrupt
     logic [11:0] int_vec;
@@ -49,10 +49,10 @@ module ctrl
     assign is_ertn = commit_ctrl_o[0].is_exception == 6'b0 && commit_ctrl_o[0].aluop == `ALU_ERTN;
 
     // new target
-    assign new_pc = branch_flush ? branch_target: (is_ertn ? csr_master.era : csr_master.eentry);
+    assign new_pc  = branch_flush ? branch_target : (is_ertn ? csr_master.era : csr_master.eentry);
 
     // exception enable
-    logic [1: 0] is_exception;
+    logic [1:0] is_exception;
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
             assign is_exception[i] = commit_ctrl_o[i].pc != 32'hfc && commit_ctrl_o[i].pc != 32'b0 && commit_ctrl_o[i].is_exception != 6'b0;
@@ -95,7 +95,7 @@ module ctrl
     assign csr_master.exception_addr = commit_ctrl_o[0].mem_addr;
 
     // exception cause
-    exception_cause_t exception_cause[ISSUE_WIDTH];
+    exception_cause_t [ISSUE_WIDTH - 1: 0] exception_cause;
     always_comb begin
         for (integer i = 0; i < ISSUE_WIDTH; i++) begin
             if (is_exception[i]) begin
@@ -106,7 +106,7 @@ module ctrl
                 end else if (commit_ctrl_o[i].is_exception[3]) begin
                     exception_cause[i] = commit_ctrl_o[i].exception_cause[3];
                 end else if (commit_ctrl_o[i].is_exception[2]) begin
-                    if (commit_ctrl_o[i].is_privilege && csr_master.crmd[1: 0] != 2'b00) begin
+                    if (commit_ctrl_o[i].is_privilege && csr_master.crmd[1:0] != 2'b00) begin
                         exception_cause[i] = `EXCEPTION_IPE;
                     end else begin
                         exception_cause[i] = commit_ctrl_o[i].exception_cause[2];
@@ -118,8 +118,7 @@ module ctrl
                 end else begin
                     exception_cause[i] = `EXCEPTION_NOP;
                 end
-            end
-            else begin
+            end else begin
                 exception_cause[i] = `EXCEPTION_NOP;
             end
         end
@@ -232,20 +231,20 @@ module ctrl
     // diff 
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign ctrl_diff_o[i].debug_wb_pc = ctrl_diff_i[i].debug_wb_pc;  
+            assign ctrl_diff_o[i].debug_wb_pc = ctrl_diff_i[i].debug_wb_pc;
             assign ctrl_diff_o[i].debug_wb_inst = ctrl_diff_i[i].debug_wb_inst;
             assign ctrl_diff_o[i].debug_wb_rf_wen = reg_write_en[i];
-            assign ctrl_diff_o[i].debug_wb_rf_wnum = reg_write_addr[i];      
+            assign ctrl_diff_o[i].debug_wb_rf_wnum = reg_write_addr[i];
             assign ctrl_diff_o[i].debug_wb_rf_wdata = reg_write_data[i];
 
-            assign ctrl_diff_o[i].inst_valid = |is_exception ? 1'b0: ctrl_diff_i[i].inst_valid;    
+            assign ctrl_diff_o[i].inst_valid = |is_exception ? 1'b0 : ctrl_diff_i[i].inst_valid;
             assign ctrl_diff_o[i].cnt_inst = ctrl_diff_i[i].cnt_inst;
             assign ctrl_diff_o[i].csr_rstat_en = ctrl_diff_i[i].csr_rstat_en;
             assign ctrl_diff_o[i].csr_data = ctrl_diff_i[i].csr_data;
 
             assign ctrl_diff_o[i].excp_flush = is_exception[i];
-            assign ctrl_diff_o[i].ertn_flush = (i == 0) ? is_ertn: 1'b0;
-            assign ctrl_diff_o[i].ecode = (i == 0) ? csr_master.ecode: 6'b0;
+            assign ctrl_diff_o[i].ertn_flush = (i == 0) ? is_ertn : 1'b0;
+            assign ctrl_diff_o[i].ecode = (i == 0) ? csr_master.ecode : 6'b0;
 
             assign ctrl_diff_o[i].inst_st_en = ctrl_diff_i[i].inst_st_en;
             assign ctrl_diff_o[i].st_paddr = ctrl_diff_i[i].st_paddr;
