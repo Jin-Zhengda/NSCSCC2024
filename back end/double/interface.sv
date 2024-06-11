@@ -141,9 +141,9 @@ interface ex_tlb;
 endinterface : ex_tlb
 
 interface dispatch_regfile;
-    logic [1: 0][1: 0] reg_read_en;
-    logic [1: 0][1: 0][REG_ADDR_WIDTH-1:0] reg_read_addr;
-    logic [1: 0][1: 0][REG_WIDTH-1:0] reg_read_data;
+    logic [1: 0] reg_read_en[2];
+    logic [1: 0][REG_ADDR_WIDTH-1:0] reg_read_addr[2];
+    logic [1: 0][REG_WIDTH-1:0] reg_read_data[2];
 
     modport master(input reg_read_data, output reg_read_en, reg_read_addr);
 
