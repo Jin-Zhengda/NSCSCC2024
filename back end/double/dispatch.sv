@@ -94,21 +94,54 @@ module dispatch
         end
     endgenerate
 
-    generate
-        for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
-            for (genvar fw_idx = 0; fw_idx < ISSUE_WIDTH; fw_idx++) begin
-                for (genvar reg_idx = 0; reg_idx < 2; reg_idx++) begin
-                    assign dispatch_o[id_idx].reg_data[reg_idx] =  (wb_reg_pf[fw_idx].reg_write_en && (wb_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[reg_idx]))
-                                                                        ? wb_reg_pf[fw_idx].reg_write_data:  
-                                                                        (ex_reg_pf[fw_idx].reg_write_en && (ex_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[reg_idx])) 
-                                                                        ? ex_reg_pf[fw_idx].reg_write_data: 
-                                                                        ((mem_reg_pf[fw_idx].reg_write_en && (mem_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[reg_idx]))
-                                                                        ? mem_reg_pf[fw_idx].reg_write_data: 
-                                                                        ((dispatch_i[id_idx].reg_read_en[reg_idx])
-                                                                        ? regfile_master.reg_read_data[id_idx][reg_idx]: dispatch_i[id_idx].imm));
-                end
+    // generate
+    //     for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
+    //         for (genvar reg_idx = 0; reg_idx < 2; reg_idx++) begin
+    //             for (genvar fw_idx = 0; fw_idx < ISSUE_WIDTH; fw_idx++) begin
+    //                 assign dispatch_o[id_idx].reg_data[reg_idx] =  (ex_reg_pf[fw_idx].reg_write_en && (ex_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[id_idx][reg_idx])) 
+    //                                                                     ? ex_reg_pf[fw_idx].reg_write_data: 
+    //                                                                     ((mem_reg_pf[fw_idx].reg_write_en && (mem_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[id_idx][reg_idx]))
+    //                                                                     ? mem_reg_pf[fw_idx].reg_write_data: 
+    //                                                                     ((wb_reg_pf[fw_idx].reg_write_en && (wb_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[id_idx][reg_idx]))
+    //                                                                     ? wb_reg_pf[fw_idx].reg_write_data:   
+    //                                                                     ((dispatch_i[id_idx].reg_read_en[reg_idx])
+    //                                                                     ? regfile_master.reg_read_data[id_idx][reg_idx]: dispatch_i[id_idx].imm)));
+    //             end
 
-            end
+    //         end
+    //     end
+    // endgenerate
+    generate 
+        for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
+             for (genvar reg_idx = 0; reg_idx < 2; reg_idx++) begin
+                always_comb begin
+                    for (integer fw_idx = 0; fw_idx < ISSUE_WIDTH; fw_idx++) begin
+                        if (dispatch_i[id_idx].reg_read_en[reg_idx]) begin
+                            dispatch_o[id_idx].reg_data[reg_idx] = regfile_master.reg_read_data[id_idx][reg_idx];
+                        end else begin
+                            dispatch_o[id_idx].reg_data[reg_idx] = dispatch_i[id_idx].imm;
+                        end
+                    end
+
+                    for (integer fw_idx = 0; fw_idx < ISSUE_WIDTH; fw_idx++) begin
+                        if (wb_reg_pf[fw_idx].reg_write_en && (wb_reg_pf[fw_idx].reg_write_addr == dispatch_i[id_idx].reg_read_addr[reg_idx])) begin
+                            dispatch_o[id_idx].reg_data[reg_idx] = wb_reg_pf[fw_idx].reg_write_data;
+                        end
+                    end
+
+                    for (integer fw_idx = 0; fw_idx < ISSUE_WIDTH; fw_idx++) begin
+                        if (mem_reg_pf[fw_idx].reg_write_en && (mem_reg_pf[fw_idx].reg_write_addr == dispatch_i[id_idx].reg_read_addr[reg_idx])) begin
+                            dispatch_o[id_idx].reg_data[reg_idx] = mem_reg_pf[fw_idx].reg_write_data;
+                        end
+                    end
+
+                    for (integer fw_idx = 0; fw_idx < ISSUE_WIDTH; fw_idx++) begin
+                        if (ex_reg_pf[fw_idx].reg_write_en && (ex_reg_pf[fw_idx].reg_write_addr == dispatch_i[id_idx].reg_read_addr[reg_idx])) begin
+                            dispatch_o[id_idx].reg_data[reg_idx] = ex_reg_pf[fw_idx].reg_write_data;
+                        end
+                    end
+                end
+             end
         end
     endgenerate
 

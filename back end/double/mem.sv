@@ -180,6 +180,10 @@ module mem
                     mem_o[0].reg_write_data = 32'b0;
                 end
             end
+            default: begin
+                pause_uncache = 1'b0;
+                mem_o[0].reg_write_data = mem_i[0].reg_write_data;
+            end
         endcase
     end
 

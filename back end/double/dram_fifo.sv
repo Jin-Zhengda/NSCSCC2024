@@ -42,8 +42,8 @@ module dram_fifo
 
     logic [2: 0] head_plus;
     assign head_plus = head + 1;
-    assign dqueue_data[0] = dqueue_en[0]? ram[head]: '0;
-    assign dqueue_data[1] = dqueue_en[1]? ram[head_plus]: '0;
+    assign dqueue_data[0] = (dqueue_en[0] && valid[head])? ram[head]: '0;
+    assign dqueue_data[1] = (dqueue_en[1] && valid[head_plus])? ram[head_plus]: '0;
     // always_comb begin: read
     //     case (dqueue_en)
     //         2'b11: begin
