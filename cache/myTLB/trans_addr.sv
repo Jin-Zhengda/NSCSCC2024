@@ -24,6 +24,22 @@
 
 
 
+interface dcache_transaddr;
+    logic                   data_fetch;    //指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
+    logic [31:0]            data_vaddr;    //虚拟地址
+    logic [31:0]            ret_data_paddr;//物理地址
+
+    modport master(
+        input ret_data_paddr,
+        output data_fetch,data_vaddr  
+    );
+
+    modport slave(
+        output ret_data_paddr,
+        input data_fetch,data_vaddr
+    );
+endinterface : dcache_transaddr
+
 
 module trans_addr
 #(
@@ -35,28 +51,24 @@ module trans_addr
     //trans mode
     input                  inst_addr_trans_en   ,//指令地址转换使能，assign inst_addr_trans_en = pg_mode && !dmw0_en && !dmw1_en;assign pg_mode = csr_pg && !csr_da;
     input                  data_addr_trans_en   ,//数据地址转换使能
+
+    icache_transaddr icache2transaddr,
+    dcache_transaddr dcache2transaddr,
+
+
+
     //inst addr trans
-    input                  inst_fetch           ,//指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
-    input  [31:0]          inst_vaddr           ,//指令的虚拟地址
     input                  inst_dmw0_en         ,//使用dmw0翻译地址assign dmw0_en = ((csr_dmw0[`PLV0] && csr_plv == 2'd0) || (csr_dmw0[`PLV3] && csr_plv == 2'd3)) && (fs_pc[31:29] == csr_dmw0[`VSEG]) && pg_mode;
     input                  inst_dmw1_en         ,//使用dmw1翻译地址assign dmw1_en = ((csr_dmw1[`PLV0] && csr_plv == 2'd0) || (csr_dmw1[`PLV3] && csr_plv == 2'd3)) && (fs_pc[31:29] == csr_dmw1[`VSEG]) && pg_mode;
-    output [ 7:0]          inst_index           ,//指令物理地址的index部分
-    output [19:0]          inst_tag             ,//指令物理地址的tag部分
-    output [ 3:0]          inst_offset          ,//指令物理地址的offset部分
     output                 inst_tlb_found       ,//指令地址在TLB中成功找到
     output                 inst_tlb_v           ,//TLB这个数据有效
     output                 inst_tlb_d           ,//TLB这个数据为脏
     output [ 1:0]          inst_tlb_mat         ,//TLB这个数据的存储访问类型
     output [ 1:0]          inst_tlb_plv         ,//TLB这个数据的特权等级
     //data addr trans
-    input                  data_fetch           ,
-    input  [31:0]          data_vaddr           ,
     input                  data_dmw0_en         ,
     input                  data_dmw1_en         ,
     input                  cacop_op_mode_di     ,
-    output [ 7:0]          data_index           ,
-    output [19:0]          data_tag             ,
-    output [ 3:0]          data_offset          ,
     output                 data_tlb_found       ,
     output [ 4:0]          data_tlb_index       ,
     output                 data_tlb_v           ,
@@ -290,6 +302,7 @@ assign inst_paddr = (pg_mode && inst_dmw0_en) ? {csr_dmw0[`PSEG], inst_vaddr_buf
 assign inst_offset = inst_vaddr[3:0];
 assign inst_index  = inst_vaddr[11:4];
 assign inst_tag    = inst_addr_trans_en ? ((s0_ps == 6'd12) ? s0_ppn : {s0_ppn[19:10], inst_paddr[21:12]}) : inst_paddr[31:12];
+
 
 //数据的物理地址
 assign data_paddr = (pg_mode && data_dmw0_en && !cacop_op_mode_di) ? {csr_dmw0[`PSEG], data_vaddr_buffer[28:0]} : 

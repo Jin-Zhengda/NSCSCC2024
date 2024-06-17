@@ -52,6 +52,23 @@ interface pc_icache;
 endinterface : pc_icache
 
 
+interface icache_transaddr;
+    logic                   inst_fetch;    //指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
+    logic [31:0]            inst_vaddr;    //虚拟地址
+    logic [31:0]            ret_inst_paddr;//物理地址
+
+    modport master(
+        input ret_inst_paddr,
+        output inst_fetch,inst_vaddr  
+    );
+
+    modport slave(
+        output ret_inst_paddr,
+        input inst_fetch,inst_vaddr
+    );
+endinterface : icache_transaddr
+
+
 
 
 `define ADDR_SIZE 32
@@ -191,9 +208,12 @@ end
 
 
 logic [`DATA_SIZE-1:0]read_from_mem[`BANK_NUM-1:0];
-for(genvar i =0 ;i<`BANK_NUM; i=i+1)begin
-	assign read_from_mem[i] = ret_data[32*(i+1)-1:32*i];
-end
+generate
+    for(genvar i =0 ;i<`BANK_NUM; i=i+1)begin
+	    assign read_from_mem[i] = ret_data[32*(i+1)-1:32*i];
+    end
+endgenerate
+
 
 
 //BANK 0~7 WAY 0~1

@@ -36,6 +36,24 @@ typedef struct packed {
 
 
 
+interface dcache_transaddr;
+    logic                   data_fetch;    //指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
+    logic [31:0]            data_vaddr;    //虚拟地址
+    logic [31:0]            ret_data_paddr;//物理地址
+
+    modport master(
+        input ret_data_paddr,
+        output data_fetch,data_vaddr  
+    );
+
+    modport slave(
+        output ret_data_paddr,
+        input data_fetch,data_vaddr
+    );
+endinterface : dcache_transaddr
+
+
+
 `timescale 1ns / 1ps
 
 `define ADDR_SIZE 32
@@ -62,6 +80,9 @@ module dcache (
     mem_dcache mem2dcache,
     input logic dcache_uncache,
     input cache_inst_t dcache_inst,
+
+    //to transaddr
+    dcache_transaddr dcache2transaddr,
 
     output logic stall,//比interface.sv里面的多了这个信号，你可以不接
 
@@ -172,7 +193,13 @@ end
 
 //TLB转换(未实现)
 bus32_t physical_addr;
-assign physical_addr=mem2dcache.valid||dcache_uncache?mem2dcache.virtual_addr:(dcache_inst.is_preld?dcache_inst.addr:32'b0);
+bus32_t virtual_addr;
+assign virtual_addr=mem2dcache.valid||dcache_uncache?mem2dcache.virtual_addr:(dcache_inst.is_preld?dcache_inst.addr:32'b0);
+
+assign dcache2transaddr.data_fetch=mem2dcache.valid||dcache_uncache||dcache_inst;
+assign dcache2transaddr.data_vaddr=virtual_addr;
+assign physical_addr=dcache2transaddr.ret_data_paddr;
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!改到这里！！！！！！！！！！！！！
 
 logic pre_valid,pre_op;
 logic[3:0]pre_wstrb;
