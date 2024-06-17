@@ -27,7 +27,7 @@ module regfile
             ram <= '{default: 32'b0};
         end else begin
             for (int i = 0; i < WRITE_PORTS; i++) begin
-                if (reg_write_en[i]) begin
+                if (reg_write_en[i] && reg_write_addr[i] != 5'b0) begin
                     ram[reg_write_addr[i]] <= reg_write_data[i];
                 end
             end
