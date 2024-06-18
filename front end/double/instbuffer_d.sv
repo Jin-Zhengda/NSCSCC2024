@@ -35,8 +35,8 @@ import pipeline_types::*;
     //icache传来的信号
     input logic [1:0][31:0] inst,
     input logic [1:0][31:0] pc,
-    input logic[5: 0] is_exception,
-    input logic[5: 0][6: 0] exception_cause,
+    input logic [1:0][5: 0] is_exception,
+    input logic [5:0][6: 0] exception_cause,
 
     //bpu传来的信号
     input logic [1:0] is_branch,
@@ -56,7 +56,8 @@ import pipeline_types::*;
     );
 
     always_ff @(posedge clk) begin
-        inst_and_pc_o.is_exception <= is_exception;
+        inst_and_pc_o.is_exception[0] <= is_exception[0];
+        inst_and_pc_o.is_exception[1] <= is_exception[1];
         inst_and_pc_o.exception_cause <= exception_cause;
     end
 

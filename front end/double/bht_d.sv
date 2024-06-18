@@ -35,8 +35,9 @@ module bht_d(
     output logic [1:0] taken_or_not
     );
 
-    logic [7:0]bht [255: 0];
-    (*ram_style = "distributed"*) logic [1:0]pht [255:0][255:0];
+    (*ram_style = "block"*) logic [7:0]bht [255: 0];
+
+    (*ram_style = "block"*) logic [1:0]pht [255:0][255:0];
 
     logic [7:0]history_1;
     logic [7:0]pht_index_1;

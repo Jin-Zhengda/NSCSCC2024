@@ -34,7 +34,7 @@ module btb_d (
 );
 
     //第44位为valid_bit，43-32位为tag，31-0位为BTA
-    logic [44:0] btb[511: 0];
+    (*ram_style = "block"*) logic [44:0] btb[511: 0];
 
     logic[11: 0] pc_tag_1;
     logic[8: 0] pc_index_1;
