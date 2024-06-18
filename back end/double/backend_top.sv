@@ -21,7 +21,10 @@ module backend_top
     output bus32_t new_pc,
 
     // to bpu
-    output branch_update [ISSUE_WIDTH - 1:0] update_info,
+    output branch_update update_info,
+
+    // to instbuffer
+    output logic [1:0] send_inst_en,
 
     // with cache
     mem_dcache dcache_master,

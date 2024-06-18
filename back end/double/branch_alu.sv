@@ -22,14 +22,10 @@ module branch_alu
 
     logic reg1_eq_reg2;
     logic reg1_lt_reg2;
-    bus32_t sum;
-
-    assign sum = reg1 + reg2;
 
     assign reg1_eq_reg2 = (reg1 == reg2);
-    assign reg1_lt_reg2 = (( aluop == `ALU_SLT) || ( aluop == `ALU_SLTI)) ?
-                            (( reg1[31] && ! reg2[31]) || (! reg1[31] && ! reg2[31] && sum[31]) || ( reg1[31] &&  reg2[31] && sum[31])) 
-                            : ( reg1 <  reg2);
+    assign reg1_lt_reg2 = (reg1[31] && !reg2[31]) || (!reg1[31] && !reg2[31] && (reg1 < reg2)) 
+                            || (reg1[31] && reg2[31] && (reg1 > reg2));
 
     bus32_t branch16_addr;
     bus32_t branch26_addr;

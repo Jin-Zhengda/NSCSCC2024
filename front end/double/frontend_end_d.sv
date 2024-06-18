@@ -101,10 +101,6 @@ import pipeline_types::*;
         .fetch_inst_en(pi_master.front_fetch_inst_en)
     );
 
-    assign pi_master.front_is_branch = is_branch;
-    assign pi_master.front_pre_taken_or_not = pre_taken_or_not;
-    assign pi_master.front_pre_branch_addr = pre_branch_addr;
-
     instbuffer_d u_instbuffer(
         .clk,
         .rst,

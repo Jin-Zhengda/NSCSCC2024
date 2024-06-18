@@ -23,7 +23,7 @@ module execute
     output cache_inst_t cache_inst,
 
     // to bpu
-    output branch_update [ISSUE_WIDTH - 1:0] update_info,
+    output branch_update update_info,
 
     // to dispatch
     output alu_op_t pre_ex_aluop,
@@ -41,6 +41,7 @@ module execute
     logic [1:0] pause_alu;
     logic [1:0] branch_flush_alu;
     bus32_t [ISSUE_WIDTH - 1: 0] branch_target_alu;
+    branch_update [1: 0] update_info_alu;
 
     ex_mem_t [ISSUE_WIDTH - 1: 0] ex_o;
 
@@ -50,7 +51,7 @@ module execute
         .ex_i(ex_i[0]),
         .cnt,
         .dcache_master,
-        .update_info(update_info[0]),
+        .update_info(update_info_alu[0]),
         .pause_alu(pause_alu[0]),
         .branch_flush(branch_flush_alu[0]),
         .branch_target_alu(branch_target_alu[0]),
@@ -63,7 +64,7 @@ module execute
         .clk,
         .rst,
         .ex_i(ex_i[1]),
-        .update_info(update_info[1]),
+        .update_info(update_info_alu[1]),
         .pause_alu(pause_alu[1]),
         .branch_flush(branch_flush_alu[1]),
         .branch_target_alu(branch_target_alu[1]),
@@ -83,6 +84,7 @@ module execute
     assign pause_ex = |pause_alu;
     assign branch_flush = |branch_flush_alu;
     assign branch_target = branch_flush_alu[0] ? branch_target_alu[0] : branch_target_alu[1];
+    assign update_info = branch_flush_alu[0] ? update_info_alu[0] : update_info_alu[1];
 
     // to mem
     always_ff @(posedge clk) begin

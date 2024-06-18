@@ -8,6 +8,7 @@ module dram_fifo
 (
     input logic clk,
     input logic rst,
+    input logic flush,
 
     input logic[WRITE_PORTS - 1: 0] enqueue_en,
     output logic [WRITE_PORTS-1: 0][DATA_WIDTH - 1: 0] enqueue_data,
@@ -25,62 +26,81 @@ module dram_fifo
     logic[$clog2(DEPTH) - 1: 0] head;
     logic[$clog2(DEPTH) - 1: 0] tail;
 
+    always_ff @(posedge clk) begin: tail_update
+        if (rst || flush) begin
+            tail <= 0;
+        end else begin
+            if (|enqueue_en) begin
+                tail <= tail + 2;
+            end
+        end
+    end
+
     always_ff @( posedge clk ) begin : enqueue
         if (rst) begin
-            tail <= 0;
             ram <= '{default:{DATA_WIDTH{1'b0}}};
         end else begin
             if (|enqueue_en) begin
                 ram[tail] <= enqueue_data[0];
                 ram[tail + 1] <= enqueue_data[1];
-                valid[tail] <= 1'b1;
-                valid[tail + 1] <= 1'b1;
-                tail <= tail + 2;
             end
         end       
     end
 
-    logic [2: 0] head_plus;
-    assign head_plus = head + 1;
-    assign dqueue_data[0] = (dqueue_en[0] && valid[head])? ram[head]: '0;
-    assign dqueue_data[1] = (dqueue_en[1] && valid[head_plus])? ram[head_plus]: '0;
-    // always_comb begin: read
-    //     case (dqueue_en)
-    //         2'b11: begin
-    //             dqueue_data[0] = ram[head];
-    //             dqueue_data[1] = ram[head + 1];
-    //         end
-    //         2'b00: begin
-    //             dqueue_data[0] = '0;
-    //             dqueue_data[1] = '0;
-    //         end 
-    //         default: begin
-    //             dqueue_data[0] = '0;
-    //             dqueue_data[1] = '0;
-    //         end
-    //     endcase
-    // end
-
-    always_ff @(posedge clk) begin : valid_set
-        if (rst) begin
-            valid <= '{default:0};    
+    always_ff @(posedge clk) begin : head_update
+        if (rst || flush) begin   
             head <= 0;
         end
         else begin
             case (invalid_en)
                 2'b11: begin
-                    valid[head] <= 1'b0;
-                    valid[head + 1] <= 1'b0;
                     head <= head + 2;
                 end 
                 2'b01: begin
-                    valid[head] <= 1'b0;
                     head <= head + 1;
                 end
             endcase
         end
     end
 
-    assign full = &valid;
+    always_ff @(posedge clk) begin: valid_update
+        if (rst || flush) begin
+            valid <= '{default:0}; 
+        end else begin
+            case (invalid_en)
+                2'b11: begin
+                    valid[head] <= 1'b0;
+                    valid[head + 1] <= 1'b0;
+                end 
+                2'b01: begin
+                    valid[head] <= 1'b0;
+                end
+            endcase
+
+            if (|enqueue_en) begin
+                valid[tail] <= 1'b1;
+                valid[tail + 1] <= 1'b1;
+            end
+        end
+    end
+
+    // dequeue
+    logic [2: 0] head_plus;
+    assign head_plus = head + 1;
+    assign dqueue_data[0] = (dqueue_en[0] && valid[head])? ram[head]: '0;
+    assign dqueue_data[1] = (dqueue_en[1] && valid[head_plus])? ram[head_plus]: '0;
+
+    // full judgement
+    logic[$clog2(DEPTH): 0] zero_cnt;
+    logic[$clog2(DEPTH): 0] sum;
+    always @(*) begin
+        sum = 0;
+        for (integer i = 0; i < $size(valid); i = i + 1) begin
+            sum = sum + valid[i];
+        end
+    end
+    assign zero_cnt = DEPTH - sum;
+
+    assign full = (zero_cnt == 1) || (zero_cnt == 0);
     
 endmodule

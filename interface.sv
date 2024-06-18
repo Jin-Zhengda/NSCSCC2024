@@ -32,8 +32,8 @@ interface mem_dcache;
 endinterface : mem_dcache
 
 interface frontend_backend;
-    logic flush;
-    logic pause;
+    logic[1:0] flush;
+    logic[1:0] pause;
     logic is_interrupt;
     logic [31:0] new_pc;
     logic [1:0] send_inst_en;
@@ -82,7 +82,7 @@ interface pc_icache;
                 stall_for_buffer, inst_for_buffer, icache_fetch_inst_en, icache_is_branch, icache_pre_taken_or_not, 
                 icache_pre_branch_addr,
         output pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_en, front_is_branch, 
-                front_pre_taken_or_not, front_pre_branch_addr, uncache_en   
+                front_pre_taken_or_not, front_pre_branch_addr, uncache_en
     );
 
     modport slave(
@@ -99,12 +99,12 @@ interface ex_tlb;
     // tlbwr, tlbfill
     logic tlbwr_en;
     logic tlbfill_en;
-    logic[4: 0] rand_index;
+    logic [4:0] rand_index;
     bus32_t tlbehi_in;
     bus32_t tlbelo0_in;
     bus32_t tlbelo1_in;
     bus32_t tlbidx_in;
-    logic[5: 0] ecode;
+    logic [5:0] ecode;
 
     // tlbsrch
     logic tlbsrch_en;
@@ -120,9 +120,9 @@ interface ex_tlb;
 
     // invtlb
     logic invtlb_en;
-    logic[9: 0] invtlb_asid;
-    logic[18: 0] invtlb_vpn;
-    logic[4: 0] invtlb_op;
+    logic [9:0] invtlb_asid;
+    logic [18:0] invtlb_vpn;
+    logic [4:0] invtlb_op;
 
     logic tlb_hit_valid;
 
@@ -138,7 +138,7 @@ interface ex_tlb;
                 tlbsrch_en, asid_in, tlbrd_en, invtlb_en, invtlb_asid, invtlb_vpn, invtlb_op
     );
 
-endinterface: ex_tlb
+endinterface : ex_tlb
 
 interface dispatch_regfile;
     bus32_t reg1_read_data;

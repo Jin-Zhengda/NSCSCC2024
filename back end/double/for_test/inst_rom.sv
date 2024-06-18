@@ -22,17 +22,17 @@ module inst_rom
     assign inst_addr[0] = addr[0][13:2];
     assign inst_addr[1] = addr[1][13:2];
 
-    always_ff @(posedge clk) begin
+    always_comb begin
         for (int i = 0; i < DECODER_WIDTH; i++) begin
             if (rst) begin
-                inst[i] <= 0;
-                pc[i]   <= 0;
+                inst[i] = 0;
+                pc[i]   = 0;
             end else if (inst_en) begin
-                inst[i] <= rom[inst_addr[i]];
-                pc[i]   <= addr[i];
+                inst[i] = rom[inst_addr[i]];
+                pc[i]   = addr[i];
             end else begin
-                inst[i] <= 0;
-                pc[i]   <= 0;
+                inst[i] = 0;
+                pc[i]   = 0;
             end
         end
     end
