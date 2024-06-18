@@ -1,5 +1,6 @@
 // simulate BRAM IP in simulation without Vivado
 // data read latency is 1 cycle
+`timescale 1ns / 1ps
 module BRAM #(
     parameter DATA_SIZE = 32,
     parameter ADDR_SIZE = 7

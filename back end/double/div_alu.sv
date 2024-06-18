@@ -9,6 +9,7 @@ module div_alu #(
     input logic [DIV_WIDTH-1:0] divisor,
     input logic start,
 
+    output logic is_running,
     output logic [DIV_WIDTH-1:0] remainder_out,
     output logic [DIV_WIDTH-1:0] quotient_out,
     output logic done
@@ -120,6 +121,7 @@ module div_alu #(
         else running <= (running & ~terminate) | (start & ~divisor_greater_than_dividend);
     end
 
+    assign is_running = running;
 
     // assign done = (running & terminate) | (start_delay & divisor_greater_than_dividend);
 

@@ -41,19 +41,17 @@ package pipeline_types;
     } pause_t;
 
     typedef struct packed {
-        bus32_t inst_o_1;
-        bus32_t inst_o_2;
-        bus32_t pc_o_1;
-        bus32_t pc_o_2;
+        bus32_t [1:0] inst_o;
+        bus32_t [1:0] pc_o;
+        logic [1:0] valid;
         logic [5:0] is_exception;
-        logic [5:0][EXC_CAUSE_WIDTH - 1 : 0] exception_cause;
+        logic [5:0][6:0] exception_cause;
     } inst_and_pc_t;
 
     typedef struct packed {
-        bus32_t pc_o_1;
-        bus32_t pc_o_2;
+        bus32_t pc_o;
         logic [5:0] is_exception;
-        logic [5:0][EXC_CAUSE_WIDTH - 1 : 0] exception_cause;
+        logic [5:0][6:0] exception_cause;
     } pc_out_t;
 
     typedef struct packed {

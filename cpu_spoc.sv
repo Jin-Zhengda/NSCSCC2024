@@ -4,9 +4,18 @@ module cpu_spoc
     import pipeline_types::*;
 (
     input logic clk,
-    input logic rst,
-    input logic continue_idle
+    input logic rst
 );
+
+    logic [PIPE_WIDTH - 1:0] flush;
+    logic [PIPE_WIDTH - 1:0] pause;
+
+    mem_dcache mem_dcache_io();
+    pc_icache pc_icache_io();
+    icache_mem icache_mem_io();
+    frontend_backend frontend_backend_io();
+
+    cache_inst_t cache_inst;
 
     bus32_t inst_addr;
     bus256_t inst;
@@ -22,30 +31,61 @@ module cpu_spoc
     logic[255: 0] data_o;
     logic data_valid;
 
-    ctrl_t ctrl;
-    logic branch_flush;
-    cache_inst_t cache_inst;
-
-    mem_dcache mem_dcache_io();
-    pc_icache pc_icache_io();
-    icache_mem icache_mem_io();
-
     assign inst_addr = icache_mem_io.rd_addr;
     assign inst_en = icache_mem_io.rd_req;
     assign icache_mem_io.ret_data = inst;
     assign icache_mem_io.ret_valid = inst_valid;
 
 
-    cpu_core u_cpu_core (
+    logic[1: 0] pre_is_branch;
+    logic [1:0] pre_is_branch_taken;
+    bus32_t [1:0] pre_branch_addr;
+
+    generate
+        for (genvar i = 0; i < 2; i++) begin
+            assign pre_is_branch[i] = frontend_backend_io.slave.branch_info[i].is_branch;
+            assign pre_is_branch_taken[i] = frontend_backend_io.slave.branch_info[i].pre_taken_or_not;
+            assign pre_branch_addr[i] = frontend_backend_io.slave.branch_info[i].pre_branch_addr;
+        end
+    endgenerate
+    
+
+    backend_top u_backend_top (
         .clk,
         .rst,
-        .continue_idle,
+
+        .pc(frontend_backend_io.slave.inst_and_pc_o.pc_o),
+        .inst(frontend_backend_io.slave.inst_and_pc_o.inst_o),
+
+        .pre_is_branch,
+        .pre_is_branch_taken,
+        .pre_branch_addr,
+
+        .is_exception(frontend_backend_io.slave.inst_and_pc_o.is_exception),
+        .exception_cause(frontend_backend_io.slave.inst_and_pc_o.exception_cause),
         
-        .icache_master(pc_icache_io.master),
-        .dcache_master(mem_dcache_io.master),
+        .is_interrupt(frontend_backend_io.slave.is_interrupt),
+        .new_pc(frontend_backend_io.slave.new_pc),
+
+        .update_info(frontend_backend_io.slave.update_info),
+        .send_en(frontend_backend_io.slave.send_inst_en),
+
+        .mem_dcache(mem_dcache_io.master),
         .cache_inst(cache_inst),
-        .ctrl(ctrl),
-        .branch_flush(branch_flush)
+
+        .flush(flush),
+        .pause(pause)
+    );
+
+    assign frontend_backend_io.master.flush = {flush[2], flush[0]};
+    assign frontend_backend_io.master.pause = {pause[2], pause[0]};
+
+    frontend_end_d u_frontend_end_d (
+        .clk,
+        .rst,
+
+        .pi_master(pc_icache_io.master),
+        .fb_master(frontend_backend_io.master)
     );
 
     logic iucache_ren_i;
@@ -65,11 +105,12 @@ module cpu_spoc
 
 
     icache u_icache (
-        .clk,
+        .clk(clk),
         .reset(rst),
+        .pause_icache(pause[1]),
+        .branch_flush(flush[1]),
+
         .pc2icache(pc_icache_io.slave),
-        .ctrl(ctrl),
-        .branch_flush(branch_flush),
 
         .rd_req(icache_mem_io.rd_req),
         .rd_addr(icache_mem_io.rd_addr),

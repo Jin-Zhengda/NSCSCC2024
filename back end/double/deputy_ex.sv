@@ -58,14 +58,20 @@ module deputy_ex
     logic start_div;
     logic op;
     logic done;
+    logic is_running;
 
     bus32_t remainder;
     bus32_t quotient;
 
+    bus32_t last_pc;
+    always_ff @( posedge clk ) begin
+        last_pc <= ex_i.pc;
+    end
+
     assign start_div = (ex_i.aluop == `ALU_DIVW || ex_i.aluop == `ALU_MODW || ex_i.aluop == `ALU_DIVWU 
-                        || ex_i.aluop == `ALU_MODWU) && !done;
+                        || ex_i.aluop == `ALU_MODWU) && !done && !is_running && (last_pc != ex_i.pc);
     assign op = (ex_i.aluop == `ALU_DIVW || ex_i.aluop == `ALU_MODW);
-    assign pause_ex_div = start_div;
+    assign pause_ex_div = start_div || is_running;
 
     div_alu u_div_alu(
         .clk,
@@ -76,6 +82,7 @@ module deputy_ex
         .divisor(ex_i.reg_data[1]),
         .start(start_div),
 
+        .is_running(is_running),
         .quotient_out(quotient),
         .remainder_out(remainder),
         .done

@@ -65,7 +65,7 @@ module decoder
         end
     endgenerate
 
-    assign enqueue_en = (rst || full || !id_o[0].inst_valid || !id_o[1].inst_valid) ? 2'b00 : 2'b11;
+    assign enqueue_en = (rst || full || (!id_o[0].inst_valid && !id_o[1].inst_valid)) ? 2'b00 : 2'b11;
 
     generate
         for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin

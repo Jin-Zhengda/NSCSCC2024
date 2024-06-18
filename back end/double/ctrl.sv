@@ -209,19 +209,19 @@ module ctrl
     // pause[4] dispatch, pause[5] ex, pause[6] mem, pause[7] wb
     always_comb begin : pause_ctrl
         if (pause_request.pause_if) begin
-            pause = 8'b11111111;
+            pause = 8'b00000001;
         end else if (pause_request.pause_icache) begin
-            pause = 8'b01111111;
-        end else if (pause_request.pause_buffer) begin
-            pause = 8'b00111111;
-        end else if (pause_request.pause_decoder) begin
-            pause = 8'b00011111;
-        end else if (pause_request.pause_dispatch) begin
-            pause = 8'b00001111;
-        end else if (pause_request.pause_execute) begin
-            pause = 8'b00000111;
-        end else if (pause_request.pause_mem || pause_idle) begin
             pause = 8'b00000011;
+        end else if (pause_request.pause_buffer) begin
+            pause = 8'b00000111;
+        end else if (pause_request.pause_decoder) begin
+            pause = 8'b00001111;
+        end else if (pause_request.pause_dispatch) begin
+            pause = 8'b00011111;
+        end else if (pause_request.pause_execute) begin
+            pause = 8'b00111111;
+        end else if (pause_request.pause_mem || pause_idle) begin
+            pause = 8'b01111111;
         end else begin
             pause = 8'b00000000;
         end

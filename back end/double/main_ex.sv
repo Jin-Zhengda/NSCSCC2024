@@ -68,14 +68,20 @@ module main_ex
     logic start_div;
     logic op;
     logic done;
+    logic is_running;
 
     bus32_t remainder;
     bus32_t quotient;
 
+    bus32_t last_pc;
+    always_ff @( posedge clk ) begin
+        last_pc <= ex_i.pc;
+    end
+
     assign start_div = (ex_i.aluop == `ALU_DIVW || ex_i.aluop == `ALU_MODW || ex_i.aluop == `ALU_DIVWU 
-                        || ex_i.aluop == `ALU_MODWU) && !done;
+                        || ex_i.aluop == `ALU_MODWU) && !done && !is_running && (last_pc != ex_i.pc);
     assign op = (ex_i.aluop == `ALU_DIVW || ex_i.aluop == `ALU_MODW);
-    assign pause_ex_div = start_div;
+    assign pause_ex_div = start_div || is_running;
 
     div_alu u_div_alu(
         .clk,
@@ -86,6 +92,7 @@ module main_ex
         .divisor(ex_i.reg_data[1]),
         .start(start_div),
 
+        .is_running(is_running),
         .quotient_out(quotient),
         .remainder_out(remainder),
         .done
@@ -149,7 +156,7 @@ module main_ex
                         || ex_i.aluop == `ALU_STH || ex_i.aluop == `ALU_STW || ex_i.aluop == `ALU_SCW;
 
     logic pause_ex_mem;
-    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.addr_ok && dcache_master.cache_miss;
+    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.addr_ok;
 
     logic[11: 0] si12;
     logic[13: 9] si14;
@@ -179,7 +186,7 @@ module main_ex
     always_comb begin
         if (ex_o.is_exception == 6'b0) begin
             // if (ex_i.pc < 32'h1c000100) begin
-            if (ex_i.pc < 32'h00000120) begin
+            if (ex_i.pc < 32'h00000000) begin
                 dcache_master.uncache_en = mem_is_valid;
                 dcache_master.valid = 1'b0;
             end 
