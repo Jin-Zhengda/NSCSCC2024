@@ -34,15 +34,17 @@ package pipeline_types;
     } ctrl_t;
 
     typedef struct packed {
-        bus32_t [1:0] inst_o;
-        bus32_t [1:0] pc_o;
-        logic [1:0] valid;
-        logic [5:0] is_exception;
+        bus32_t inst_o_1;
+        bus32_t inst_o_2;
+        bus32_t pc_o_1;
+        bus32_t pc_o_2;
+        logic [1:0][5:0] is_exception;
         logic [5:0][6:0] exception_cause;
     } inst_and_pc_t;
 
     typedef struct packed {
-        bus32_t pc_o;
+        bus32_t pc_o_1;
+        bus32_t pc_o_2;
         logic [5:0] is_exception;
         logic [5:0][6:0] exception_cause;
     } pc_out_t;
@@ -54,6 +56,7 @@ package pipeline_types;
     } branch_info_t;
 
     typedef struct packed {
+        logic branch_flush;
         logic update_en;
         logic taken_or_not_actual;
         bus32_t branch_actual_addr;

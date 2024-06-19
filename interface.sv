@@ -60,9 +60,9 @@ interface pc_icache;
     logic stall_for_buffer;
     bus32_t [1:0] pc_for_bpu;
     bus32_t [1:0] pc_for_buffer;
-    logic [5:0] front_is_exception;
+    logic [1:0][5:0] front_is_exception;
     logic [5:0][6:0] front_exception_cause;
-    logic [5:0] icache_is_exception;
+    logic [1:0][5:0] icache_is_exception;
     logic [5:0][6:0] icache_exception_cause;
     logic stall;
 
