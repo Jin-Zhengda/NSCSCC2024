@@ -15,17 +15,23 @@
 `define TAGV_SIZE 21
 
 
+`define IDLE 5'b00001//得到第一个pc命中结果，开始准备判断第二个pc命中结果，若未命中则
+`define ASKMEM1 5'b00010
+`define ASKMEM2 5'b00100
+`define RETURN 5'b01000
+`define UNCACHE_RETURN 5'b10000
+
 
 module icache 
     import pipeline_types::*;
 (
     input logic clk,
     input logic reset,
-    input ctrl_t ctrl,
-    input logic branch_flush,
+    input logic pause_icache,//给icache的pause信号
+    input logic branch_flush,//这个信号是不是还有，而且我会传给axi，当flush的时候，axi也不用从主存读了？就不会给我返回ret_valid了？
     //front-icache
     pc_icache pc2icache,
-    input logic icache_uncache,
+    icache_transaddr icache2transaddr,
     //icache-axi
     output logic rd_req,
     output bus32_t rd_addr,
@@ -33,7 +39,7 @@ module icache
     input bus256_t ret_data,
 
     input  logic             icacop_op_en   ,//使能信号
-    input  logic[ 1:0]       icacop_op_mode  ,//缓存操作的模 ?
+    input  logic[ 1:0]       icacop_op_mode  ,//缓存操作的模式
     input bus32_t icacop_addr,
 
     output logic iucache_ren_i,
@@ -41,229 +47,213 @@ module icache
     input logic iucache_rvalid_o,
     input bus32_t iucache_rdata_o
 );
-logic hit_success,hit_fail,hit_way0,hit_way1;
 
-logic ignore_one_ret;
-logic real_iucache_rvalid_o;
-assign real_iucache_rvalid_o=ignore_one_ret?1'b0:iucache_rvalid_o;
-
-
-logic uncache_stall;
-//ucache
-logic pre_uncache_en;
-assign uncache_stall=pre_uncache_en&&!real_iucache_rvalid_o;
+logic pre_valid;
 always_ff @( posedge clk ) begin
-    if(reset)pre_uncache_en<=1'b0;
-    else if(uncache_stall)pre_uncache_en<=pre_uncache_en;
-    else pre_uncache_en<=icache_uncache;
+    if(pc2icache.stall)pre_valid<=pre_valid;
+    else pre_valid<=|pc2icache.inst_en;
+end
+
+logic a_hit_success,a_hit_fail,b_hit_success,b_hit_fail;
+logic record_b_hit_result,record_a_hit_result;
+
+logic same_way;
+
+
+logic[4:0]current_state,next_state;
+
+logic write_delay;
+always_ff @( posedge clk ) begin
+    if(reset)write_delay<=1'b0;
+    else if(write_delay==1'b1)write_delay<=1'b0;
+    else if(next_state==`RETURN)write_delay<=1'b1;
+    else write_delay<=1'b0;
+end
+
+always_ff @( posedge clk ) begin
+    if(reset)current_state<=`IDLE;
+    else if(branch_flush)current_state<=`IDLE;
+    else if(pause_icache)current_state<=current_state;
+    else current_state<=next_state;
+end
+always_comb begin
+    if(reset)next_state=`IDLE;
+    else if(current_state==`IDLE)begin
+        if(!pre_valid)next_state=`IDLE;
+        else if(pc2icache.uncache_en)next_state=`UNCACHE_RETURN;
+        else if(a_hit_fail)next_state=`ASKMEM1;
+        else if(b_hit_fail)next_state=`ASKMEM2;
+        else next_state=`IDLE;
+    end
+    else if(current_state==`ASKMEM1)begin
+        if(ret_valid)begin
+            if(record_b_hit_result||same_way)next_state=`RETURN;
+            else next_state=`ASKMEM2;
+        end
+        else next_state=`ASKMEM1;
+    end
+    else if(current_state==`ASKMEM2)begin
+        if(ret_valid)next_state=`RETURN;
+        else next_state=`ASKMEM2;
+    end
+    else if(current_state==`RETURN)begin
+        if(write_delay)next_state=`RETURN;
+        else next_state=`IDLE;
+    end
+    else if(current_state==`UNCACHE_RETURN)begin
+        if(iucache_rvalid_o)next_state=`IDLE;
+        else next_state=`UNCACHE_RETURN;
+    end
+end
+
+always_ff @( posedge clk ) begin
+    if(current_state==`IDLE)record_b_hit_result=b_hit_success;
+    else record_b_hit_result<=record_b_hit_result;
+end
+always_ff @( posedge clk ) begin
+    if(current_state==`IDLE)record_a_hit_result=a_hit_success;
+    else record_a_hit_result<=record_a_hit_result;
 end
 
 
-logic[`TAG_SIZE-1:0] cacop_op_addr_tag;
-logic [`INDEX_SIZE-1:0]cacop_op_addr_index;
-logic [`OFFSET_SIZE-1:0]cacop_op_addr_offset;
-assign cacop_op_addr_tag=icacop_addr[`TAG_LOC];
-assign cacop_op_addr_index=icacop_addr[`INDEX_LOC];
-assign cacop_op_addr_offset=icacop_addr[`OFFSET_LOC];
+//TLB
+assign icache2transaddr.inst_fetch=|(pc2icache.inst_en);
+assign icache2transaddr.inst_vaddr=pc2icache.pc;
+logic[`ADDR_SIZE-1:0] p_addr_a;
+assign p_addr_a=icache2transaddr.ret_inst_paddr;
 
-logic cacop_op_0,cacop_op_1,cacop_op_2;
-assign cacop_op_0=icacop_op_en&&icacop_op_mode==2'd0;
-assign cacop_op_1=icacop_op_en&&icacop_op_mode==2'd1;
-assign cacop_op_2=icacop_op_en&&icacop_op_mode==2'd2;
 
-logic pre_cacop_en;
+logic[`ADDR_SIZE-1:0] pre_paddr_a,pre_physical_addr_a,pre_physical_addr_b;
 always_ff @( posedge clk ) begin
-    if(reset)begin
-        pre_cacop_en<=1'b0;
+    if(current_state==`IDLE&&!pause_icache)pre_paddr_a<=p_addr_a;
+    else pre_paddr_a<=pre_paddr_a;
+end
+assign pre_physical_addr_a=current_state==`IDLE?p_addr_a:pre_paddr_a;
+assign pre_physical_addr_b=pre_physical_addr_a+32'd4;//当地址转换刚好位于临界值时，可能paddr的tag部分应该不一样！！！！！！！
+
+logic[`ADDR_SIZE-1:0] virtual_addra,virtual_addrb;
+assign virtual_addra=pc2icache.pc;
+assign virtual_addrb=virtual_addra+`ADDR_SIZE'd4;
+
+assign same_way=virtual_addra[`TAG_LOC]==virtual_addrb[`TAG_LOC]&&virtual_addra[`INDEX_LOC]==virtual_addrb[`INDEX_LOC];
+
+logic[`ADDR_SIZE-1:0] pre_vaddr_a,pre_vaddr_b;
+always_ff @( posedge clk ) begin
+    if(current_state==`IDLE&&!pause_icache)begin
+        pre_vaddr_a<=virtual_addra;
+        pre_vaddr_b<=virtual_addrb;
     end
     else begin
-        pre_cacop_en<=icacop_op_en;
+        pre_vaddr_a<=pre_vaddr_a;
+        pre_vaddr_b<=pre_vaddr_b;
     end
 end
 
-
-logic branch_flush_delay;
-always_ff @( posedge clk ) begin
-    branch_flush_delay<=branch_flush;
-end
-
-logic flush;//我理解的flush???????????????
-logic flush_delay;//将所有的flush信号delay一拍
-//assign flush=branch_flush || branch_flush_delay || ctrl.exception_flush | (ctrl.pause[1] && !ctrl.pause[2]);
-assign flush=branch_flush || ctrl.exception_flush | (ctrl.pause[1] && !ctrl.pause[2]);
-always_ff @( posedge clk ) begin
-    flush_delay<=flush;
-end
-
-//flush会有多久，会持续到主存返回数据吗？1-给pc  2-读出hit_fail，给rd_req  3-ignore_one_ret=1  4及以后主存ret_valid
-
-always_ff @( posedge clk ) begin
-    if(reset)ignore_one_ret<=1'b0;
-    else if(flush&&(hit_fail||pre_uncache_en))ignore_one_ret<=1'b1;//flush_delay与hit_fail同拍
-    else if(ret_valid||iucache_rvalid_o)ignore_one_ret<=1'b0;
-    else ignore_one_ret<=ignore_one_ret;
-end
-logic real_ret_valid;
-assign real_ret_valid=ignore_one_ret?1'b0:ret_valid;
-
-//TLB转换(未实现?)
-bus32_t physical_addr;
-assign physical_addr=branch_flush? 32'b0:pc2icache.pc;
-
-logic pre_inst_en;
-bus32_t pre_physical_addr,pre_virtual_addr;
-
-//记录地址
-always_ff @( posedge clk ) begin
-    if(reset)begin
-        pre_inst_en<=1'b0;
-        pre_physical_addr<=32'b0;
-        pre_virtual_addr<=32'b0;
+logic[3:0]wea_way0,wea_way1;
+logic[`DATA_SIZE-1:0]data_to_write_way0[`BANK_NUM-1:0];
+logic[`DATA_SIZE-1:0]data_to_write_way1[`BANK_NUM-1:0];
+logic[`INDEX_SIZE-1:0]addr_way0a,addr_way0b,addr_way1a,addr_way1b;
+logic[`DATA_SIZE-1:0]way0_cachea[`BANK_NUM-1:0];
+logic[`DATA_SIZE-1:0]way0_cacheb[`BANK_NUM-1:0];
+logic[`DATA_SIZE-1:0]way1_cachea[`BANK_NUM-1:0];
+logic[`DATA_SIZE-1:0]way1_cacheb[`BANK_NUM-1:0];
+generate
+    for (genvar i=0;i<`BANK_NUM;i=i+1)begin
+        assign data_to_write_way0[i]=ret_valid?ret_data[i*`DATA_SIZE+`DATA_SIZE-1:i*`DATA_SIZE]:32'b0;
+        assign data_to_write_way1[i]=ret_valid?ret_data[i*`DATA_SIZE+`DATA_SIZE-1:i*`DATA_SIZE]:32'b0;
     end
-    else if(pc2icache.stall)begin
-        pre_physical_addr<=pre_physical_addr;
-        pre_inst_en<=pre_inst_en;
-        pre_virtual_addr<=pre_virtual_addr;
-    end
-    else begin
-        pre_inst_en<=pc2icache.inst_en;
-        pre_physical_addr<=physical_addr;
-        pre_virtual_addr<=pc2icache.pc;
-    end
-end
+endgenerate
+assign addr_way0a=wea_way0?(current_state==`ASKMEM1?pre_vaddr_a[`INDEX_LOC]:pre_vaddr_b[`INDEX_LOC]):(write_delay?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC]);
+assign addr_way0b=write_delay?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
+assign addr_way1a=wea_way1?(current_state==`ASKMEM1?pre_vaddr_a[`INDEX_LOC]:pre_vaddr_b[`INDEX_LOC]):(write_delay?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC]);
+assign addr_way1b=write_delay?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
 
+BRAM bank0_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[0]),.addra(addr_way0a),.douta(way0_cachea[0]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[0]));
+BRAM bank1_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[1]),.addra(addr_way0a),.douta(way0_cachea[1]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[1]));
+BRAM bank2_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[2]),.addra(addr_way0a),.douta(way0_cachea[2]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[2]));
+BRAM bank3_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[3]),.addra(addr_way0a),.douta(way0_cachea[3]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[3]));
+BRAM bank4_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[4]),.addra(addr_way0a),.douta(way0_cachea[4]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[4]));
+BRAM bank5_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[5]),.addra(addr_way0a),.douta(way0_cachea[5]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[5]));
+BRAM bank6_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[6]),.addra(addr_way0a),.douta(way0_cachea[6]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[6]));
+BRAM bank7_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[7]),.addra(addr_way0a),.douta(way0_cachea[7]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[7]));
 
+BRAM bank0_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[0]),.addra(addr_way1a),.douta(way1_cachea[0]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[0]));
+BRAM bank1_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[1]),.addra(addr_way1a),.douta(way1_cachea[1]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[1]));
+BRAM bank2_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[2]),.addra(addr_way1a),.douta(way1_cachea[2]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[2]));
+BRAM bank3_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[3]),.addra(addr_way1a),.douta(way1_cachea[3]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[3]));
+BRAM bank4_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[4]),.addra(addr_way1a),.douta(way1_cachea[4]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[4]));
+BRAM bank5_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[5]),.addra(addr_way1a),.douta(way1_cachea[5]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[5]));
+BRAM bank6_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[6]),.addra(addr_way1a),.douta(way1_cachea[6]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[6]));
+BRAM bank7_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[7]),.addra(addr_way1a),.douta(way1_cachea[7]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[7]));
 
-logic [`DATA_SIZE-1:0]read_from_mem[`BANK_NUM-1:0];
-for(genvar i =0 ;i<`BANK_NUM; i=i+1)begin
-	assign read_from_mem[i] = ret_data[32*(i+1)-1:32*i];
-end
+logic [`DATA_SIZE-1:0]data_to_write_tagv0a,data_to_write_tagv1a;
+logic [`TAG_SIZE-1:0]tag_to_write_tagv;
+assign tag_to_write_tagv=current_state==`ASKMEM1?pre_vaddr_a[`TAG_LOC]:pre_vaddr_b[`TAG_LOC];
+assign data_to_write_tagv0a={11'b0,1'b1,tag_to_write_tagv};
+assign data_to_write_tagv1a={11'b0,1'b1,tag_to_write_tagv};
+logic [`DATA_SIZE-1:0]way0_tagva,way0_tagvb,way1_tagva,way1_tagvb;
+BRAM tagv0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_tagv0a),.addra(addr_way0a),.douta(way0_tagva),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_tagvb));
+BRAM tagv1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_tagv1a),.addra(addr_way1a),.douta(way1_tagva),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_tagvb));
 
+logic a_hit_way0,a_hit_way1,b_hit_way0,b_hit_way1;
+assign a_hit_way0=way0_tagva[19:0]==pre_vaddr_a[`TAG_LOC]&&way0_tagva[20]==1'b1;
+assign a_hit_way1=way1_tagva[19:0]==pre_vaddr_a[`TAG_LOC]&&way1_tagva[20]==1'b1;
+assign b_hit_way0=way0_tagvb[19:0]==pre_vaddr_b[`TAG_LOC]&&way0_tagvb[20]==1'b1;
+assign b_hit_way1=way1_tagvb[19:0]==pre_vaddr_b[`TAG_LOC]&&way1_tagvb[20]==1'b1;
 
-//BANK 0~7 WAY 0~1
-logic [3:0]wea_way0;
-logic [3:0]wea_way1;
-    
-//port a:write  port b:read
-logic [`DATA_SIZE-1:0]way0_cache[`BANK_NUM-1:0];
-logic [`INDEX_SIZE-1:0] read_addr_index;
-assign read_addr_index = pc2icache.stall? pre_physical_addr[`INDEX_LOC] : physical_addr[`INDEX_LOC];//When pc2icache.stall, maintain the addr of ram 
-
-
-logic [`INDEX_SIZE-1:0] addra_way0_index;
-assign addra_way0_index=|wea_way0?pre_physical_addr[`INDEX_LOC]:read_addr_index;
-
-BRAM Bank0_way0 (.clk(clk),.ena(1'b1),.wea(wea_way0),.addra(addra_way0_index),.dina(read_from_mem[0]),.douta(way0_cache[0]),.enb(1'b0));
-BRAM Bank1_way0 (.clk(clk),.ena(1'b1),.wea(wea_way0),.addra(addra_way0_index),.dina(read_from_mem[1]),.douta(way0_cache[1]),.enb(1'b0));
-BRAM Bank2_way0 (.clk(clk),.ena(1'b1),.wea(wea_way0),.addra(addra_way0_index),.dina(read_from_mem[2]),.douta(way0_cache[2]),.enb(1'b0));
-BRAM Bank3_way0 (.clk(clk),.ena(1'b1),.wea(wea_way0),.addra(addra_way0_index),.dina(read_from_mem[3]),.douta(way0_cache[3]),.enb(1'b0));
-BRAM Bank4_way0 (.clk(clk),.ena(1'b1),.wea(wea_way0),.addra(addra_way0_index),.dina(read_from_mem[4]),.douta(way0_cache[4]),.enb(1'b0));
-BRAM Bank5_way0 (.clk(clk),.ena(1'b1),.wea(wea_way0),.addra(addra_way0_index),.dina(read_from_mem[5]),.douta(way0_cache[5]),.enb(1'b0));
-BRAM Bank6_way0 (.clk(clk),.ena(1'b1),.wea(wea_way0),.addra(addra_way0_index),.dina(read_from_mem[6]),.douta(way0_cache[6]),.enb(1'b0));
-BRAM Bank7_way0 (.clk(clk),.ena(1'b1),.wea(wea_way0),.addra(addra_way0_index),.dina(read_from_mem[7]),.douta(way0_cache[7]),.enb(1'b0));
-
-
-logic [`DATA_SIZE-1:0]way1_cache[`BANK_NUM-1:0]; 
-logic [`INDEX_SIZE-1:0] addra_way1_index;
-assign addra_way1_index=|wea_way1?pre_physical_addr[`INDEX_LOC]:read_addr_index;
-BRAM Bank0_way1 (.clk(clk),.ena(1'b1),.wea(wea_way1),.addra(addra_way1_index),.dina(read_from_mem[0]),.douta(way1_cache[0]),.enb(1'b0));
-BRAM Bank1_way1 (.clk(clk),.ena(1'b1),.wea(wea_way1),.addra(addra_way1_index),.dina(read_from_mem[1]),.douta(way1_cache[1]),.enb(1'b0));
-BRAM Bank2_way1 (.clk(clk),.ena(1'b1),.wea(wea_way1),.addra(addra_way1_index),.dina(read_from_mem[2]),.douta(way1_cache[2]),.enb(1'b0));
-BRAM Bank3_way1 (.clk(clk),.ena(1'b1),.wea(wea_way1),.addra(addra_way1_index),.dina(read_from_mem[3]),.douta(way1_cache[3]),.enb(1'b0));
-BRAM Bank4_way1 (.clk(clk),.ena(1'b1),.wea(wea_way1),.addra(addra_way1_index),.dina(read_from_mem[4]),.douta(way1_cache[4]),.enb(1'b0));
-BRAM Bank5_way1 (.clk(clk),.ena(1'b1),.wea(wea_way1),.addra(addra_way1_index),.dina(read_from_mem[5]),.douta(way1_cache[5]),.enb(1'b0));
-BRAM Bank6_way1 (.clk(clk),.ena(1'b1),.wea(wea_way1),.addra(addra_way1_index),.dina(read_from_mem[6]),.douta(way1_cache[6]),.enb(1'b0));
-BRAM Bank7_way1 (.clk(clk),.ena(1'b1),.wea(wea_way1),.addra(addra_way1_index),.dina(read_from_mem[7]),.douta(way1_cache[7]),.enb(1'b0));
-
-//Tag+Valid
-logic [`TAGV_SIZE-1:0]tagv_cache_w0;
-logic [`TAGV_SIZE-1:0]tagv_cache_w1;
-
-logic[`INDEX_SIZE-1:0] tagv_write_addr;
-assign tagv_write_addr=icacop_op_en?cacop_op_addr_index:pre_physical_addr[`INDEX_LOC];
-logic[`TAGV_SIZE-1:0]tagv_data_tagv;
-assign tagv_data_tagv=icacop_op_en?`TAGV_SIZE'b0:{1'b1,pre_physical_addr[`TAG_LOC]};
-
-logic[`INDEX_SIZE-1:0] tagv0_addr;
-assign tagv0_addr=|wea_way0?tagv_write_addr:read_addr_index;
-logic[`INDEX_SIZE-1:0] tagv1_addr;
-assign tagv1_addr=|wea_way1?tagv_write_addr:read_addr_index;
-
-
-
-BRAM TagV0(.clk(clk),.ena(1'b1),.wea(wea_way0),.addra(tagv0_addr),.dina(tagv_data_tagv),.douta(tagv_cache_w0),.enb(1'b0));
-BRAM TagV1(.clk(clk),.ena(1'b1),.wea(wea_way1),.addra(tagv1_addr),.dina(tagv_data_tagv),.douta(tagv_cache_w1),.enb(1'b0));
+assign a_hit_success=pre_valid&&(a_hit_way0||a_hit_way1);
+assign b_hit_success=pre_valid&&(b_hit_way0||b_hit_way1);
+assign a_hit_fail=pre_valid&&(!a_hit_success);
+assign b_hit_fail=pre_valid&&(!b_hit_success);
 
 
 logic read_success;
 always_ff @( posedge clk ) begin
-    if(real_ret_valid)read_success<=1'b1;
+    if(ret_valid)read_success<=1'b1;
     else read_success<=1'b0;
 end
-
-
 //LRU
 logic [`SET_SIZE-1:0]LRU;
-logic LRU_pick;
-assign LRU_pick = LRU[pre_physical_addr[`INDEX_LOC]];
-always_ff @( posedge clk ) begin
+always_ff @( posedge clk ) begin//这块没有完全用else-if了！！！！！！！！！！！！！！！！！！！！！！！
     if(reset)LRU<=0;
-    else if(pc2icache.inst_en&&hit_success)LRU[pre_physical_addr[`INDEX_LOC]] <= hit_way0;
-    else if(pc2icache.inst_en&&hit_fail&&read_success)LRU[pre_physical_addr[`INDEX_LOC]] <= wea_way0;
-    else LRU<=LRU;
-end
-
-
-//判断命中
-assign hit_way0 = (tagv_cache_w0[19:0]==pre_physical_addr[`TAG_LOC] && tagv_cache_w0[20]==1'b1)? 1'b1 : 1'b0;
-assign hit_way1 = (tagv_cache_w1[19:0]==pre_physical_addr[`TAG_LOC] && tagv_cache_w1[20]==1'b1)? 1'b1 : 1'b0;
-assign hit_success = (hit_way0 | hit_way1) & pre_inst_en;
-assign hit_fail = ~(hit_success) & pre_inst_en;
-
-
-assign pc2icache.stall=reset?1'b1:(flush?1'b0:((icacop_op_en||pre_cacop_en||uncache_stall)?1'b1:((hit_fail||read_success)?1'b1:1'b0)));
-//assign inst=branch_flush_delay? 32'b0:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&real_ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0)));
-//这个inst该我代码了不知道我现在写的对不对！！！！！！！！！！！！！！！！！！！！！！！
-assign pc2icache.inst=branch_flush? 32'b0:((pre_uncache_en&&iucache_rvalid_o)?iucache_rdata_o:(hit_way0?way0_cache[pre_physical_addr[4:2]]:(hit_way1?way1_cache[pre_physical_addr[4:2]]:(hit_fail&&real_ret_valid?read_from_mem[pre_physical_addr[4:2]]:32'h0))));
-
-assign wea_way0=(cacop_op_0||cacop_op_1||cacop_op_2)?4'b1111:(pre_inst_en&&real_ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
-assign wea_way1=(cacop_op_0||cacop_op_1||cacop_op_2)?4'b1111:(pre_inst_en&&real_ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
-
-
-assign rd_req=!flush&&!icacop_op_en&&!read_success&&hit_fail&&!real_ret_valid;
-assign rd_addr=pre_physical_addr;
-
-
-assign iucache_ren_i=pre_uncache_en;
-assign iucache_addr_i=iucache_ren_i?pre_physical_addr:32'b0;
-
-assign pc2icache.pc_for_bpu = flush? 32'b0:pre_physical_addr;
-
-always_ff @( posedge clk ) begin
-    if (reset || flush) begin
-        pc2icache.pc_for_buffer <= 32'b0;
-        pc2icache.icache_is_exception <= 6'b0;
-        pc2icache.icache_exception_cause <= 42'b0;
-        pc2icache.inst_for_buffer <= 32'b0;
-        pc2icache.stall_for_buffer <= 1'b1;
-        pc2icache.icache_fetch_inst_1_en <= 1'b0;
-
-        pc2icache.icache_is_branch_i_1 <= 1'b0;
-        pc2icache.icache_pre_taken_or_not <= 1'b0;
-        pc2icache.icache_pre_branch_addr <= 32'b0;
-    end
     else begin
-        pc2icache.pc_for_buffer <= pre_physical_addr;
-        pc2icache.icache_is_exception <= pc2icache.front_is_exception;
-        pc2icache.icache_exception_cause <= pc2icache.front_exception_cause;
-        pc2icache.inst_for_buffer <= pc2icache.inst;
-        pc2icache.stall_for_buffer <= pc2icache.stall;
-        pc2icache.icache_fetch_inst_1_en <= pc2icache.front_fetch_inst_1_en;
-        pc2icache.icache_is_branch_i_1 <= pc2icache.front_is_branch_i_1;
-        pc2icache.icache_pre_taken_or_not <= pc2icache.front_pre_taken_or_not;
-        pc2icache.icache_pre_branch_addr <= pc2icache.front_pre_branch_addr;
+        if(a_hit_success)LRU[pre_physical_addr_a[`INDEX_LOC]] <= a_hit_way0;
+        if(b_hit_success)LRU[pre_physical_addr_b[`INDEX_LOC]] <= b_hit_way0;
+        else begin
+            if(record_a_hit_result==1'b0&&read_success)LRU[pre_physical_addr_a[`INDEX_LOC]] <= wea_way0;
+            else LRU<=LRU;
+        end
     end
 end
+logic[`INDEX_SIZE-1:0]replace_index;
+assign replace_index=current_state==`ASKMEM1?pre_physical_addr_a[`INDEX_LOC]:(current_state==`ASKMEM2?pre_physical_addr_b[`INDEX_LOC]:`INDEX_SIZE'b1111111);
+logic LRU_pick;
+assign LRU_pick=LRU[replace_index];
+
+
+assign wea_way0=(pre_valid&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
+assign wea_way1=(pre_valid&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
+
+
+
+assign rd_req=current_state==`ASKMEM1||current_state==`ASKMEM2;
+assign rd_addr=current_state==`ASKMEM1?pre_physical_addr_a:pre_physical_addr_b;
+
+
+
+assign pc2icache.stall=next_state!=`IDLE;
+assign pc2icache.inst[0]=current_state==`UNCACHE_RETURN?iucache_rdata_o:(a_hit_success?(a_hit_way0?way0_cachea[pre_vaddr_a[4:2]]:way1_cachea[pre_vaddr_a[4:2]]):32'b0);//uncache情况下用inst[0]返回
+assign pc2icache.inst[1]=b_hit_success?(b_hit_way0?way0_cacheb[pre_vaddr_b[4:2]]:way1_cacheb[pre_vaddr_b[4:2]]):32'b0;
+
+logic[`ADDR_SIZE-1:0] record_uncache_pc;
+always_ff @( posedge clk ) begin
+    if(next_state==`UNCACHE_RETURN)record_uncache_pc<=pc2icache.pc;
+    else if(next_state==`IDLE)record_uncache_pc<=32'b0;
+    else record_uncache_pc<=record_uncache_pc;
+end
+assign iucache_ren_i=(current_state==`IDLE&&pc2icache.uncache_en)||current_state==`UNCACHE_RETURN;
+assign iucache_addr_i=current_state==`IDLE?pc2icache.pc:record_uncache_pc;//uncache模式直接用的虚拟地址，不知道对不对
+
 
 
 endmodule

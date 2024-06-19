@@ -1,4 +1,5 @@
 `timescale 1ns/1ps
+`include "pipeline_types.sv"
 
 module cpu_spoc 
     import pipeline_types::*;
@@ -80,7 +81,7 @@ module cpu_spoc
     assign frontend_backend_io.master.flush = {flush[2], flush[0]};
     assign frontend_backend_io.master.pause = {pause[2], pause[0]};
 
-    frontend_end_d u_frontend_end_d (
+    frontend_top_d u_frontend_top_d (
         .clk,
         .rst,
 

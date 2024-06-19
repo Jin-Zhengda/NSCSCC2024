@@ -16,6 +16,7 @@ module wb
 
     // to dispatch
     output pipeline_push_forward_t [ISSUE_WIDTH - 1:0] wb_reg_pf,
+    output csr_push_forward_t wb_csr_pf,
 
     // to ctrl
     output mem_wb_t [ISSUE_WIDTH - 1:0] wb_o,
@@ -42,6 +43,7 @@ module wb
         end
     end
 
+    // wb push forward
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
             assign wb_reg_pf[i].reg_write_en   = wb_o[i].reg_write_en;
@@ -50,5 +52,7 @@ module wb
         end
     endgenerate
 
-
+    assign wb_csr_pf.csr_write_en   = wb_o[0].csr_write_en;
+    assign wb_csr_pf.csr_write_addr = wb_o[0].csr_write_addr;
+    assign wb_csr_pf.csr_write_data = wb_o[0].csr_write_data;
 endmodule
