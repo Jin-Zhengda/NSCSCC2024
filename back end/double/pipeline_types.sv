@@ -119,6 +119,13 @@ package pipeline_types;
         bus32_t reg_write_data;
     } pipeline_push_forward_t;
 
+    // csr push forward
+    typedef struct packed {
+        logic csr_write_en;
+        csr_addr_t csr_write_addr;
+        bus32_t csr_write_data;
+    } csr_push_forward_t;
+
     // dispatch and ex
     typedef struct packed {
         bus32_t pc;

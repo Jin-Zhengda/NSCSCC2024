@@ -27,7 +27,8 @@ module execute
 
     // to dispatch
     output alu_op_t pre_ex_aluop,
-    output pipeline_push_forward_t [ISSUE_WIDTH - 1: 0] ex_reg_pf,
+    output pipeline_push_forward_t [ISSUE_WIDTH - 1:0] ex_reg_pf,
+    output csr_push_forward_t ex_csr_pf,
 
     // to ctrl
     output logic   pause_ex,
@@ -35,15 +36,15 @@ module execute
     output bus32_t branch_target,
 
     // to mem
-    output ex_mem_t [ISSUE_WIDTH - 1: 0] mem_i
+    output ex_mem_t [ISSUE_WIDTH - 1:0] mem_i
 );
 
     logic [1:0] pause_alu;
     logic [1:0] branch_flush_alu;
-    bus32_t [ISSUE_WIDTH - 1: 0] branch_target_alu;
-    branch_update [1: 0] update_info_alu;
+    bus32_t [ISSUE_WIDTH - 1:0] branch_target_alu;
+    branch_update [1:0] update_info_alu;
 
-    ex_mem_t [ISSUE_WIDTH - 1: 0] ex_o;
+    ex_mem_t [ISSUE_WIDTH - 1:0] ex_o;
 
     main_ex u_main_ex (
         .clk,
@@ -79,6 +80,10 @@ module execute
             assign ex_reg_pf[i].reg_write_data = ex_o[i].reg_write_data;
         end
     endgenerate
+
+    assign ex_csr_pf.csr_write_en = ex_o[0].csr_write_en;
+    assign ex_csr_pf.csr_write_addr = ex_o[0].csr_addr;
+    assign ex_csr_pf.csr_write_data = ex_o[0].csr_write_data;
 
     // to ctrl
     assign pause_ex = |pause_alu;

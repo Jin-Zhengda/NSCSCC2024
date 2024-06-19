@@ -19,6 +19,10 @@ module dispatch
     input pipeline_push_forward_t [ISSUE_WIDTH - 1: 0] mem_reg_pf,
     input pipeline_push_forward_t [ISSUE_WIDTH - 1: 0] wb_reg_pf,
 
+    input csr_push_forward_t ex_csr_pf,
+    input csr_push_forward_t mem_csr_pf,
+    input csr_push_forward_t wb_csr_pf,
+
     // from ex
     input alu_op_t pre_ex_aluop,
 
@@ -56,7 +60,8 @@ module dispatch
 
     assign privilege_inst = dispatch_i[0].is_privilege || dispatch_i[1].is_privilege;
     assign mem_inst = dispatch_i[0].alusel == `ALU_SEL_LOAD_STORE || dispatch_i[1].alusel == `ALU_SEL_LOAD_STORE;
-    assign data_relate_inst = (dispatch_i[0].reg_write_en && dispatch_i[0].reg_write_addr != 5'b0) && ((dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[0] && dispatch_i[1].reg_read_en[0]) 
+    assign data_relate_inst = (dispatch_i[0].reg_write_en && dispatch_i[0].reg_write_addr != 5'b0) 
+                                && ((dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[0] && dispatch_i[1].reg_read_en[0]) 
                                 || (dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[1] && dispatch_i[1].reg_read_en[1]));
     assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst && (|inst_valid);
 
@@ -94,23 +99,6 @@ module dispatch
         end
     endgenerate
 
-    // generate
-    //     for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
-    //         for (genvar reg_idx = 0; reg_idx < 2; reg_idx++) begin
-    //             for (genvar fw_idx = 0; fw_idx < ISSUE_WIDTH; fw_idx++) begin
-    //                 assign dispatch_o[id_idx].reg_data[reg_idx] =  (ex_reg_pf[fw_idx].reg_write_en && (ex_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[id_idx][reg_idx])) 
-    //                                                                     ? ex_reg_pf[fw_idx].reg_write_data: 
-    //                                                                     ((mem_reg_pf[fw_idx].reg_write_en && (mem_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[id_idx][reg_idx]))
-    //                                                                     ? mem_reg_pf[fw_idx].reg_write_data: 
-    //                                                                     ((wb_reg_pf[fw_idx].reg_write_en && (wb_reg_pf[fw_idx].reg_write_addr == regfile_master.reg_read_addr[id_idx][reg_idx]))
-    //                                                                     ? wb_reg_pf[fw_idx].reg_write_data:   
-    //                                                                     ((dispatch_i[id_idx].reg_read_en[reg_idx])
-    //                                                                     ? regfile_master.reg_read_data[id_idx][reg_idx]: dispatch_i[id_idx].imm)));
-    //             end
-
-    //         end
-    //     end
-    // endgenerate
     generate 
         for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
              for (genvar reg_idx = 0; reg_idx < 2; reg_idx++) begin
@@ -146,18 +134,23 @@ module dispatch
     endgenerate
 
     // with csr
-    generate
-        for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
-            assign csr_master.csr_read_en[id_idx]   = dispatch_i[id_idx].csr_read_en;
-            assign csr_master.csr_read_addr[id_idx] = dispatch_i[id_idx].csr_addr;
-        end
-    endgenerate
+    assign csr_master.csr_read_en   = dispatch_i[0].csr_read_en;
+    assign csr_master.csr_read_addr = dispatch_i[0].csr_addr;
 
-    generate
-        for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
-            assign dispatch_o[id_idx].csr_read_data = csr_master.csr_read_data[id_idx];
+    always_comb begin
+        if (ex_csr_pf.csr_write_en && (ex_csr_pf.csr_write_addr == dispatch_i[0].csr_addr)) begin
+            dispatch_o[0].csr_read_data = ex_csr_pf.csr_write_data;
+        end else if (mem_csr_pf.csr_write_en && (mem_csr_pf.csr_write_addr == dispatch_i[0].csr_addr)) begin
+            dispatch_o[0].csr_read_data = mem_csr_pf.csr_write_data;
+        end else if (wb_csr_pf.csr_write_en && (wb_csr_pf.csr_write_addr == dispatch_i[0].csr_addr)) begin
+            dispatch_o[0].csr_read_data = wb_csr_pf.csr_write_data;
+        end else if (csr_master.csr_read_en) begin
+            dispatch_o[0].csr_read_data = csr_master.csr_read_data;
+        end else begin
+            dispatch_o[0].csr_read_data = 32'b0;
         end
-    endgenerate
+    end
+    assign dispatch_o[1].csr_read_data = 32'b0;
 
     // handle load-use hazard
     logic load_pre;

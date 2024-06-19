@@ -117,6 +117,9 @@ module backend_top
     pipeline_push_forward_t [ISSUE_WIDTH - 1:0] ex_reg_pf;
     pipeline_push_forward_t [ISSUE_WIDTH - 1:0] mem_reg_pf;
     pipeline_push_forward_t [ISSUE_WIDTH - 1:0] wb_reg_pf;
+    csr_push_forward_t ex_csr_pf;
+    csr_push_forward_t mem_csr_pf;
+    csr_push_forward_t wb_csr_pf;
     alu_op_t pre_ex_aluop;
     dispatch_ex_t [ISSUE_WIDTH - 1:0] ex_i;
     logic [ISSUE_WIDTH - 1:0] dqueue_en;
@@ -177,6 +180,10 @@ module backend_top
         .mem_reg_pf,
         .wb_reg_pf,
 
+        .ex_csr_pf,
+        .mem_csr_pf,
+        .wb_csr_pf,
+
         .pre_ex_aluop,
 
         .regfile_master(dispatch_regfile_io.master),
@@ -207,6 +214,7 @@ module backend_top
 
         .pre_ex_aluop,
         .ex_reg_pf,
+        .ex_csr_pf,
 
         .pause_ex(pause_request.pause_execute),
         .branch_flush,
@@ -221,6 +229,7 @@ module backend_top
         .dcache_master,
 
         .mem_reg_pf,
+        .mem_csr_pf,
 
         .pause_mem(pause_request.pause_mem),
 
@@ -241,6 +250,7 @@ module backend_top
         .pause(pause[6]),
 
         .wb_reg_pf,
+        .wb_csr_pf,
 
         .wb_o,
         .commit_ctrl_o,
