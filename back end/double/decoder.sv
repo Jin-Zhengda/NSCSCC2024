@@ -27,6 +27,7 @@ module decoder
     output logic pause_decoder,
 
     // to dispatch
+    output logic [ISSUE_WIDTH-1:0] ages,
     output id_dispatch_t [DECODER_WIDTH - 1:0] dispatch_i
 );
 
@@ -55,26 +56,51 @@ module decoder
     id_dispatch_t [DECODER_WIDTH - 1:0] enqueue_data;
 
     id_dispatch_t [ISSUE_WIDTH - 1:0] dqueue_data;
-    logic full;
-
-    dram_fifo #(.DATA_WIDTH($size(id_dispatch_t))) u_issue_queue (.*);
+    logic [ISSUE_WIDTH - 1:0] full;
+    logic reset;
+    assign reset = rst || flush;
 
     generate
-        for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
-            assign enqueue_data[id_idx] = id_o[id_idx];
+        for (genvar i = 0; i < DECODER_WIDTH; i++) begin : issue_queue
+            dram_fifo #(
+                .DATA_WIDTH($size(id_dispatch_t))
+            ) u_issue_queue (
+                .clk,
+                .reset,
+
+                .enqueue_en(enqueue_en[i]),
+                .enqueue_data(enqueue_data[i]),
+                .dqueue_en(dqueue_en[i]),
+                .dqueue_data(dqueue_data[i]),
+
+                .invalid_en(invalid_en[i]),
+                .age(ages[i]),
+                .full(full[i])
+            );
         end
     endgenerate
 
-    assign enqueue_en = (rst || full || (!id_o[0].inst_valid && !id_o[1].inst_valid)) ? 2'b00 : 2'b11;
+    generate
+        for (genvar i = 0; i < DECODER_WIDTH; i++) begin
+            assign enqueue_data[i] = id_o[i];
+        end
+    endgenerate
+
+    assign enqueue_en = (rst || |full || (!id_o[0].inst_valid && !id_o[1].inst_valid)) ? 2'b00 : 2'b11;
+    generate
+        for (genvar i = 0; i < DECODER_WIDTH; i++) begin
+            assign enqueue_en[i] = !(rst || full[i] || !id_o[i].inst_valid);
+        end
+    endgenerate
 
     generate
-        for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
-            assign dispatch_i[id_idx] = dqueue_data[id_idx];
+        for (genvar i = 0; i < DECODER_WIDTH; i++) begin
+            assign dispatch_i[i] = dqueue_data[i];
         end
     endgenerate
 
     // pasue request
-    assign pause_decoder = |pause_id || full;
+    assign pause_decoder = |pause_id || |full;
 
 
 endmodule

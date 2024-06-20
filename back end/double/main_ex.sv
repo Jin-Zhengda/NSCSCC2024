@@ -145,6 +145,7 @@ module main_ex
     // load store alu
     logic LLbit;
     assign LLbit = ex_i.csr_read_data[0];
+    assign dcache_master.tlb_excp_cancel_req = 1'b0;
 
     bus32_t load_store_alu_res;
     assign load_store_alu_res = (ex_i.aluop == `ALU_SCW)? {31'b0, LLbit}: 32'b0;
