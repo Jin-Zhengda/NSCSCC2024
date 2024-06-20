@@ -70,7 +70,7 @@ typedef logic[255: 0] bus256_t;
 
 
 
-
+`timescale 1ns / 1ps
 `define ADDR_SIZE 32
 `define DATA_SIZE 32
 
@@ -109,6 +109,7 @@ module icache
     //icache-axi
     output logic rd_req,
     output bus32_t rd_addr,
+    output logic flush,
     input logic ret_valid,
     input bus256_t ret_data,
 
@@ -213,7 +214,7 @@ assign same_way=virtual_addra[`TAG_LOC]==virtual_addrb[`TAG_LOC]&&virtual_addra[
 
 logic[`ADDR_SIZE-1:0] pre_vaddr_a,pre_vaddr_b;
 always_ff @( posedge clk ) begin
-    if(current_state==`IDLE&&!pause_icache)begin
+    if(next_state==`IDLE&&!pause_icache)begin
         pre_vaddr_a<=virtual_addra;
         pre_vaddr_b<=virtual_addrb;
     end
@@ -328,6 +329,6 @@ end
 assign iucache_ren_i=(current_state==`IDLE&&pc2icache.uncache_en)||current_state==`UNCACHE_RETURN;
 assign iucache_addr_i=current_state==`IDLE?pc2icache.pc:record_uncache_pc;//uncache模式直接用的虚拟地址，不知道对不对
 
-
+assign flush=branch_flush;
 
 endmodule
