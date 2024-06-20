@@ -12,6 +12,7 @@ module dispatch
     input logic flush,
 
     // from decoder
+    input logic [DECODER_WIDTH-1: 0] ages,
     input id_dispatch_t [DECODER_WIDTH - 1:0] dispatch_i,
 
     // from ex and mem
@@ -60,12 +61,15 @@ module dispatch
 
     assign privilege_inst = dispatch_i[0].is_privilege || dispatch_i[1].is_privilege;
     assign mem_inst = dispatch_i[0].alusel == `ALU_SEL_LOAD_STORE || dispatch_i[1].alusel == `ALU_SEL_LOAD_STORE;
-    assign data_relate_inst = (dispatch_i[0].reg_write_en && dispatch_i[0].reg_write_addr != 5'b0) 
+    assign data_relate_inst = ((dispatch_i[0].reg_write_en && dispatch_i[0].reg_write_addr != 5'b0) 
                                 && ((dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[0] && dispatch_i[1].reg_read_en[0]) 
-                                || (dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[1] && dispatch_i[1].reg_read_en[1]));
+                                || (dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[1] && dispatch_i[1].reg_read_en[1])))
+                                || ((dispatch_i[1].reg_write_en && dispatch_i[1].reg_write_addr != 5'b0) 
+                                && ((dispatch_i[1].reg_write_addr == dispatch_i[0].reg_read_addr[0] && dispatch_i[0].reg_read_en[0]) 
+                                || (dispatch_i[1].reg_write_addr == dispatch_i[0].reg_read_addr[1] && dispatch_i[0].reg_read_en[1])));
     assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst && (|inst_valid);
 
-    assign issue_en = (flush || rst || !(|inst_valid)) ? 2'b00 : (issue_double_en ? 2'b11 : 2'b01);
+    assign issue_en = (flush || rst || !(|inst_valid)) ? 2'b00 : (issue_double_en ? 2'b11 : ((ages == 2'b10) ? 2'b10: 2'b01));
 
     // signal assignment
     generate
