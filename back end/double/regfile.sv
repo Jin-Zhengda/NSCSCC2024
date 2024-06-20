@@ -18,21 +18,33 @@ module regfile
     output bus32_t regs_diff[32]
 );
 
-    (* ram_style="distributed" *) bus32_t ram[32];
+    bus32_t ram[32];
 
     assign regs_diff = ram;
 
-    always_ff @(posedge clk) begin : ram_write
-        if (rst) begin
-            ram <= '{default: 32'b0};
-        end else begin
-            for (int i = 0; i < WRITE_PORTS; i++) begin
+    // for simulation
+    initial begin
+        for (int i = 0; i < 32; i++) begin
+            ram[i] = 32'b0;
+        end
+    end
+
+    generate
+        for (genvar i = 0; i < WRITE_PORTS; i++) begin
+            always_ff @(posedge clk) begin : ram_write
                 if (reg_write_en[i] && reg_write_addr[i] != 5'b0) begin
                     ram[reg_write_addr[i]] <= reg_write_data[i];
                 end
             end
         end
-    end
+    endgenerate
+    // always_ff @(posedge clk) begin : ram_write
+    //     for (int i = 0; i < WRITE_PORTS; i++) begin
+    //         if (reg_write_en[i] && reg_write_addr[i] != 5'b0) begin
+    //             ram[reg_write_addr[i]] <= reg_write_data[i];
+    //         end
+    //     end
+    // end
 
     always_comb begin : ram_read
         for (int i = 0; i < 2; i++) begin

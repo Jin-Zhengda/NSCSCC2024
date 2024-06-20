@@ -46,10 +46,15 @@ module execute
 
     ex_mem_t [ISSUE_WIDTH - 1:0] ex_o;
 
+    dispatch_ex_t main_ex_i;
+    dispatch_ex_t deputy_ex_i;
+    assign main_ex_i = (ex_i[1].is_privilege || ex_i[1].alusel == `ALU_SEL_LOAD_STORE)? ex_i[1]: ex_i[0];
+    assign deputy_ex_i = (ex_i[1].is_privilege || ex_i[1].alusel == `ALU_SEL_LOAD_STORE)? ex_i[0]: ex_i[1];
+
     main_ex u_main_ex (
         .clk,
         .rst,
-        .ex_i(ex_i[0]),
+        .ex_i(main_ex_i),
         .cnt,
         .dcache_master,
         .update_info(update_info_alu[0]),
@@ -64,7 +69,7 @@ module execute
     deputy_ex u_deputy_ex (
         .clk,
         .rst,
-        .ex_i(ex_i[1]),
+        .ex_i(deputy_ex_i),
         .update_info(update_info_alu[1]),
         .pause_alu(pause_alu[1]),
         .branch_flush(branch_flush_alu[1]),
@@ -92,13 +97,18 @@ module execute
     assign update_info = branch_flush_alu[0] ? update_info_alu[0] : update_info_alu[1];
 
     // to mem
+    logic pc1_lt_pc2;
+    assign pc1_lt_pc2 = main_ex_i.pc < deputy_ex_i.pc;
     always_ff @(posedge clk) begin
         if (rst || flush) begin
             mem_i <= '{default: 0};
         end else if (!pause) begin
-            if (branch_flush_alu[0]) begin
+            if (branch_flush_alu[0] && pc1_lt_pc2) begin
                 mem_i[0] <= ex_o[0];
                 mem_i[1] <= 0;
+            end else if (branch_flush_alu[1] && pc1_lt_pc2) begin
+                mem_i[0] <= 0;
+                mem_i[1] <= ex_o[1];
             end else begin
                 mem_i <= ex_o;
             end

@@ -13,14 +13,12 @@ module dram_fifo #(
 
     input logic invalid_en,
 
-    output logic age,
     output logic full
 );
 
-    (* ram_style="distributed" *) logic [DATA_WIDTH - 1:0] ram[DEPTH];
+    (* ram_style="distributed" *) logic [DATA_WIDTH - 1:0] ram[DEPTH-1: 0];
     logic empty;
     logic [DEPTH - 1:0] valid;
-    logic [DEPTH - 1:0] ages;
     logic [$clog2(DEPTH) - 1:0] head;
     logic [$clog2(DEPTH) - 1:0] tail;
 
@@ -37,7 +35,7 @@ module dram_fifo #(
             tail <= 0;
         end else begin
             if (enqueue_en) begin
-                tail <= tail + 2;
+                tail <= tail + 1;
             end
         end
     end
@@ -72,20 +70,10 @@ module dram_fifo #(
         end
     end
 
-    always_ff @(posedge clk) begin : age_update
-        if (reset) begin
-            ages <= '{default: 0};
-        end else if (enqueue_en) begin
-            ages[tail] <= 0;
-        end else begin
-            ages[head] <= 1;
-        end
-    end
-
     // dequeue
-    logic [2:0] head_plus;
-    assign dqueue_data = (dqueue_en && valid[head] && !empty) ? ram[head] : '0;
-    assign age = ages[head];
+    logic [DATA_WIDTH - 1:0] data;
+    assign data = ram[head];
+    assign dqueue_data = (dqueue_en && valid[head] && !empty) ? data: '0;
 
     // full and empty judgement
     assign full = &valid;

@@ -1,5 +1,6 @@
 `timescale 1ns / 1ps
 `include "pipeline_types.sv"
+`include "interface.sv"
 
 module backend_top
     import pipeline_types::*;
@@ -112,7 +113,6 @@ module backend_top
 
     // decoder
     id_dispatch_t [DECODER_WIDTH - 1 :0] dispatch_i;
-    logic [DECODER_WIDTH-1: 0] ages;
 
     // dispatch
     pipeline_push_forward_t [ISSUE_WIDTH - 1:0] ex_reg_pf;
@@ -165,7 +165,6 @@ module backend_top
 
         .pause_decoder(pause_request.pause_decoder),
 
-        .ages,
         .dispatch_i
     );
 
@@ -177,7 +176,6 @@ module backend_top
         .pause(pause[4]),
         .flush(flush[4]),
 
-        .ages,
         .dispatch_i,
 
         .ex_reg_pf,
