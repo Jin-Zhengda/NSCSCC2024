@@ -47,6 +47,8 @@ module main_ex
     assign ex_o.is_exception = {ex_i.is_exception[5: 2], ex_is_exception, ex_i.is_exception[0]};
     assign ex_o.exception_cause = {ex_i.exception_cause[5: 2], ex_exception_cause, ex_i.exception_cause[0]};
 
+    assign pre_ex_aluop = ex_i.aluop;
+
     // regular alu
     bus32_t regular_alu_res;
     bus32_t reg1;

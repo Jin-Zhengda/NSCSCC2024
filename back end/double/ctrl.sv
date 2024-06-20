@@ -75,6 +75,9 @@ module ctrl
     };
 
     // commit
+    logic pc1_lt_pc2;
+    assign pc1_lt_pc2 = commit_ctrl_o[0].pc < commit_ctrl_o[1].pc;
+
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
             assign reg_write_addr[i] = wb_o[i].reg_write_addr;
@@ -82,8 +85,15 @@ module ctrl
         end
     endgenerate
 
-    assign reg_write_en[0] = is_exception[0] || pause[0] ? 1'b0 : wb_o[0].reg_write_en;
-    assign reg_write_en[1] = |is_exception || pause[0] ? 1'b0 : wb_o[1].reg_write_en;
+    always_comb begin
+        if (pc1_lt_pc2) begin
+            reg_write_en[0] = is_exception[0] || pause[0] ? 1'b0 : wb_o[0].reg_write_en;
+            reg_write_en[1] = |is_exception || pause[0] ? 1'b0 : wb_o[1].reg_write_en;
+        end else begin
+            reg_write_en[0] = |is_exception || pause[0] ? 1'b0 : wb_o[0].reg_write_en;
+            reg_write_en[1] = is_exception[1] || pause[0] ? 1'b0 : wb_o[1].reg_write_en;
+        end
+    end
 
     assign is_llw_scw = is_exception[0] || pause[0] ? 1'b0 : wb_o[0].is_llw_scw;
     assign csr_write_en = is_exception[0] || pause[0] ? 1'b0 : wb_o[0].csr_write_en;
@@ -201,7 +211,7 @@ module ctrl
         endcase
     end
 
-    // pause assign
+    // pause assignment
     logic pause_idle;
     assign pause_idle = (commit_ctrl_o[0].aluop == `ALU_IDLE) && (int_vec == 12'b0);
 

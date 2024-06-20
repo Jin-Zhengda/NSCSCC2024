@@ -27,7 +27,6 @@ module decoder
     output logic pause_decoder,
 
     // to dispatch
-    output logic [ISSUE_WIDTH-1:0] ages,
     output id_dispatch_t [DECODER_WIDTH - 1:0] dispatch_i
 );
 
@@ -74,7 +73,7 @@ module decoder
                 .dqueue_data(dqueue_data[i]),
 
                 .invalid_en(invalid_en[i]),
-                .age(ages[i]),
+
                 .full(full[i])
             );
         end
@@ -86,7 +85,6 @@ module decoder
         end
     endgenerate
 
-    assign enqueue_en = (rst || |full || (!id_o[0].inst_valid && !id_o[1].inst_valid)) ? 2'b00 : 2'b11;
     generate
         for (genvar i = 0; i < DECODER_WIDTH; i++) begin
             assign enqueue_en[i] = !(rst || full[i] || !id_o[i].inst_valid);
