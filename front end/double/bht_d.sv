@@ -39,91 +39,40 @@ module bht_d(
 
     (*ram_style = "block"*) logic [1:0]pht [255:0][255:0];
 
-    logic [7:0]history_1;
-    logic [7:0]pht_index_1;
-    logic [1:0]judge_1;
+    logic [1:0][7:0]history;
+    logic [1:0][7:0]pht_index;
+    logic [1:0][1:0]judge;
 
-    always_ff @(posedge clk) begin
-        if(rst) begin
-            taken_or_not[0] <= 0;
-        end else begin
-            history_1 = bht[pc[0][`Index]];
-            pht_index_1 = history_1^pc[0][`Index];
-            judge_1 = pht[pht_index_1][history_1];
-            case(judge_1)
-                2'b00:begin
-                    taken_or_not[0] <= 0;
+    generate
+        for (genvar i = 0; i < 2; i++) begin
+            always_ff @(posedge clk) begin
+                if(rst) begin
+                    taken_or_not[i] <= 0;
+                end else begin
+                    history[i] = bht[pc[i][`Index]];
+                    pht_index[i] = history[i]^pc[i][`Index];
+                    judge[i] = pht[pht_index[i]][history[i]];
+                    case(judge[i])
+                        2'b00:begin
+                            taken_or_not[i] <= 0;
+                        end
+                        2'b01:begin
+                            taken_or_not[i] <= 0;
+                        end
+                        2'b10:begin
+                            taken_or_not[i] <= 1;
+                        end
+                        2'b11:begin
+                            taken_or_not[i] <= 1;
+                        end
+                        default:begin
+                            taken_or_not[i] <= 0;
+                        end
+                    endcase
                 end
-                2'b01:begin
-                    taken_or_not[0] <= 0;
-                end
-                2'b10:begin
-                    taken_or_not[0] <= 1;
-                end
-                2'b11:begin
-                    taken_or_not[0] <= 1;
-                end
-                default:begin
-                    taken_or_not[0] <= 0;
-                end
-            endcase
+            end
         end
-    end
-
-    logic [7:0]history_2;
-    logic [7:0]pht_index_2;
-    logic [1:0]judge_2;
-
-    always_ff @(posedge clk) begin
-        if(rst) begin
-            taken_or_not[1] <= 0;
-        end else begin
-            history_2 = bht[pc[1][`Index]];
-            pht_index_2 = history_2^pc[1][`Index];
-            judge_2 = pht[pht_index_2][history_2];
-            case(judge_2)
-                2'b00:begin
-                    taken_or_not[1] <= 0;
-                end
-                2'b01:begin
-                    taken_or_not[1] <= 0;
-                end
-                2'b10:begin
-                    taken_or_not[1] <= 1;
-                end
-                2'b11:begin
-                    taken_or_not[1] <= 1;
-                end
-                default:begin
-                    taken_or_not[1] <= 0;
-                end
-            endcase
-        end
-    end
-    // assign history = bht[pc[`Index]];
-    // assign pht_index = history^pc[`Index];
-    // assign judge = pht[pht_index][history];
-
-    // always_comb begin
-    //     case(judge)
-    //         2'b00:begin
-    //             taken_or_not = 0;
-    //         end
-    //         2'b01:begin
-    //             taken_or_not = 0;
-    //         end
-    //         2'b10:begin
-    //             taken_or_not = 1;
-    //         end
-    //         2'b11:begin
-    //             taken_or_not = 1;
-    //         end
-    //         default:begin
-    //             taken_or_not = 0;
-    //         end
-    //     endcase
-
-    // end
+    endgenerate
 
     logic [7:0]history_up;
     logic [7:0]pht_index_up;

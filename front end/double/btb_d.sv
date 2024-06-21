@@ -36,55 +36,33 @@ module btb_d (
     //第44位为valid_bit，43-32位为tag，31-0位为BTA
     (*ram_style = "block"*) logic [44:0] btb[511: 0];
 
-    logic[11: 0] pc_tag_1;
-    logic[8: 0] pc_index_1;
+    logic [1:0][11: 0] pc_tag;
+    logic [1:0][8: 0] pc_index;
 
-    assign pc_tag_1   = {pc[0][30:28], pc[0][19:11]};
-    assign pc_index_1 = pc[0][10:2];
+    generate
+        for (genvar i = 0; i < 2; i++) begin
+            assign pc_tag[i]   = {pc[i][30:28], pc[i][19:11]};
+            assign pc_index[i] = pc[i][10:2];
+        end
+    endgenerate
 
-    always_ff @(posedge clk) begin
-        if (rst) begin
-            pre_branch_addr[0] <= 0;
-        end else begin
-            if ((btb[pc_index_1][43:32] == pc_tag_1) && (btb[pc_index_1][44] == 1)) begin
-                pre_branch_addr[0] <= btb[pc_index_1][31:0];
-                btb_valid[0] <= 1'b1;
-            end else begin
-                pre_branch_addr[0] <= 32'b0;
-                btb_valid[0] <= 0;
+    generate
+        for (genvar i = 0; i < 2; i++) begin
+            always_ff @(posedge clk) begin
+                if (rst) begin
+                    pre_branch_addr[i] <= 0;
+                end else begin
+                    if ((btb[pc_index[i]][43:32] == pc_tag[i]) && (btb[pc_index[i]][44] == 1)) begin
+                        pre_branch_addr[i] <= btb[pc_index[i]][31:0];
+                        btb_valid[i] <= 1'b1;
+                    end else begin
+                        pre_branch_addr[i] <= 32'b0;
+                        btb_valid[i] <= 0;
+                    end
+                end
             end
         end
-    end
-
-    logic[11: 0] pc_tag_2;
-    logic[8: 0] pc_index_2;
-
-    assign pc_tag_2   = {pc[1][30:28], pc[1][19:11]};
-    assign pc_index_2 = pc[1][10:2];
-
-    always_ff @(posedge clk) begin
-        if (rst) begin
-            pre_branch_addr[1] <= 0;
-        end else begin
-            if ((btb[pc_index_2][43:32] == pc_tag_2) && (btb[pc_index_2][44] == 1)) begin
-                pre_branch_addr[1] <= btb[pc_index_2][31:0];
-                btb_valid[1] <= 1'b1;
-            end else begin
-                pre_branch_addr[1] <= 32'b0;
-                btb_valid[1] <= 0;
-            end
-        end
-    end
-
-    // always_comb begin
-    //     if ((btb[pc_index][43:32] == pc_tag) && (btb[pc_index][44] == 1)) begin
-    //         pre_branch_addr <= btb[pc_index][31:0];
-    //         btb_valid <= 1'b1;
-    //     end else begin
-    //         pre_branch_addr <= 32'b0;
-    //         btb_valid <= 0;
-    //     end
-    // end
+    endgenerate
 
     logic[8: 0] pc_dispatch_index;
     assign pc_dispatch_index = pc_dispatch[10:2];

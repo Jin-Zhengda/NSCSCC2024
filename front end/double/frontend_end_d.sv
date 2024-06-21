@@ -28,14 +28,8 @@ import pipeline_types::*;
     //icache
     pc_icache pi_master,
     
-
     //和后端的交互
-    frontend_backend fb_master,
-
-    //不用
-    input logic send_inst_2_en,
-    output branch_info_t branch_info2
-
+    frontend_backend fb_master
     );
 
     //pc
@@ -49,8 +43,6 @@ import pipeline_types::*;
 
     //bpu
     inst_and_pc_t inst_and_pc;
-    logic fetch_inst_1_en;
-    logic fetch_inst_2_en;
     logic is_exception;
     logic exception_cause;
 
