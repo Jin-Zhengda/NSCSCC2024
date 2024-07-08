@@ -103,7 +103,8 @@ module cpu
 
     mem_dcache mem_dcache_io ();
     pc_icache pc_icache_io ();
-    frontend_backend fb ();
+    frontend_backend frontend_backend_io ();
+    icache_transaddr icache_transaddr_io ();
 
     logic [1:0] pre_is_branch;
     logic [1:0] pre_is_branch_taken;
@@ -135,9 +136,9 @@ module cpu
         .new_pc(frontend_backend_io.slave.new_pc),
 
         .update_info(frontend_backend_io.slave.update_info),
-        .send_en(frontend_backend_io.slave.send_inst_en),
+        .send_inst_en(frontend_backend_io.slave.send_inst_en),
 
-        .mem_dcache(mem_dcache_io.master),
+        .dcache_master(mem_dcache_io.master),
         .cache_inst(cache_inst),
 
         .flush(flush),
@@ -198,8 +199,8 @@ module cpu
         .csr_pgdh_diff
     );
 
-    assign frontend_backend_io.master.flush = {flush[2], flush[0]};
-    assign frontend_backend_io.master.pause = {pause[2], pause[0]};
+    assign frontend_backend_io.slave.flush = {flush[2], flush[0]};
+    assign frontend_backend_io.slave.pause = {pause[2], pause[0]};
 
     frontend_top_d u_frontend_top_d (
         .clk,
@@ -214,6 +215,11 @@ module cpu
     assign icache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2:0] == 3'b0);
     assign dcache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2:0] == 3'b1);
 
+    trans_addr u_trans_addr(
+        .clk(clk),
+        .icache2transaddr(icache_transaddr_io.slave)
+    );
+
     icache u_icache (
         .clk(clk),
         .reset(rst),
@@ -221,7 +227,7 @@ module cpu
         .branch_flush(flush[1]),
 
         .pc2icache(pc_icache_io.slave),
-        .icache_uncache(pc_icache_io.uncache_en),
+        .icache2transaddr(icache_transaddr_io.master),
 
         .rd_req(icache_rd_req),
         .rd_addr(icache_rd_addr),

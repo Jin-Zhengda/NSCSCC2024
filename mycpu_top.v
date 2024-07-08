@@ -560,7 +560,7 @@ endgenerate
         .coreid             (0              ),
         .valid              (trap           ),
         .code               (trap_code      ),
-        .pc                 (cmt_pc         ),
+        .pc                 (cmt_pc[0]      ),
         .cycleCnt           (cycleCnt       ),
         .instrCnt           (instrCnt       )
     );

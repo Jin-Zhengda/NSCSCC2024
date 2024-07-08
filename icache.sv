@@ -110,11 +110,11 @@ always_comb begin
 end
 
 always_ff @( posedge clk ) begin
-    if(current_state==`IDLE)record_b_hit_result=b_hit_success;
+    if(current_state==`IDLE)record_b_hit_result<=b_hit_success;
     else record_b_hit_result<=record_b_hit_result;
 end
 always_ff @( posedge clk ) begin
-    if(current_state==`IDLE)record_a_hit_result=a_hit_success;
+    if(current_state==`IDLE)record_a_hit_result<=a_hit_success;
     else record_a_hit_result<=record_a_hit_result;
 end
 
@@ -128,10 +128,10 @@ assign p_addr_a=icache2transaddr.ret_inst_paddr;
 
 logic[`ADDR_SIZE-1:0] pre_paddr_a,pre_physical_addr_a,pre_physical_addr_b;
 always_ff @( posedge clk ) begin
-    if(current_state==`IDLE&&!pause_icache)pre_paddr_a<=p_addr_a;
+    if((current_state==`IDLE)&&!pause_icache)pre_paddr_a<=p_addr_a;
     else pre_paddr_a<=pre_paddr_a;
 end
-assign pre_physical_addr_a=current_state==`IDLE?p_addr_a:pre_paddr_a;
+assign pre_physical_addr_a=(current_state==`IDLE)?p_addr_a:pre_paddr_a;
 assign pre_physical_addr_b=pre_physical_addr_a+32'd4;//当地址转换刚好位于临界值时，可能paddr的tag部分应该不一样！！！！！！！
 
 logic[`ADDR_SIZE-1:0] virtual_addra,virtual_addrb;
@@ -142,7 +142,7 @@ assign same_way=virtual_addra[`TAG_LOC]==virtual_addrb[`TAG_LOC]&&virtual_addra[
 
 logic[`ADDR_SIZE-1:0] pre_vaddr_a,pre_vaddr_b;
 always_ff @( posedge clk ) begin
-    if(next_state==`IDLE&&!pause_icache)begin
+    if((next_state==`IDLE)&&!pause_icache)begin
         pre_vaddr_a<=virtual_addra;
         pre_vaddr_b<=virtual_addrb;
     end
@@ -166,9 +166,9 @@ generate
         assign data_to_write_way1[i]=ret_valid?ret_data[i*`DATA_SIZE+`DATA_SIZE-1:i*`DATA_SIZE]:32'b0;
     end
 endgenerate
-assign addr_way0a=wea_way0?(current_state==`ASKMEM1?pre_vaddr_a[`INDEX_LOC]:pre_vaddr_b[`INDEX_LOC]):(write_delay?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC]);
+assign addr_way0a=wea_way0?((current_state==`ASKMEM1)?pre_vaddr_a[`INDEX_LOC]:pre_vaddr_b[`INDEX_LOC]):(write_delay?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC]);
 assign addr_way0b=write_delay?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
-assign addr_way1a=wea_way1?(current_state==`ASKMEM1?pre_vaddr_a[`INDEX_LOC]:pre_vaddr_b[`INDEX_LOC]):(write_delay?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC]);
+assign addr_way1a=wea_way1?((current_state==`ASKMEM1)?pre_vaddr_a[`INDEX_LOC]:pre_vaddr_b[`INDEX_LOC]):(write_delay?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC]);
 assign addr_way1b=write_delay?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
 
 BRAM bank0_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[0]),.addra(addr_way0a),.douta(way0_cachea[0]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[0]));
@@ -191,7 +191,7 @@ BRAM bank7_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[7])
 
 logic [`DATA_SIZE-1:0]data_to_write_tagv0a,data_to_write_tagv1a;
 logic [`TAG_SIZE-1:0]tag_to_write_tagv;
-assign tag_to_write_tagv=current_state==`ASKMEM1?pre_vaddr_a[`TAG_LOC]:pre_vaddr_b[`TAG_LOC];
+assign tag_to_write_tagv=(current_state==`ASKMEM1)?pre_vaddr_a[`TAG_LOC]:pre_vaddr_b[`TAG_LOC];
 assign data_to_write_tagv0a={11'b0,1'b1,tag_to_write_tagv};
 assign data_to_write_tagv1a={11'b0,1'b1,tag_to_write_tagv};
 logic [`DATA_SIZE-1:0]way0_tagva,way0_tagvb,way1_tagva,way1_tagvb;
@@ -229,7 +229,7 @@ always_ff @( posedge clk ) begin//这块没有完全用else-if了！！！！！
     end
 end
 logic[`INDEX_SIZE-1:0]replace_index;
-assign replace_index=current_state==`ASKMEM1?pre_physical_addr_a[`INDEX_LOC]:(current_state==`ASKMEM2?pre_physical_addr_b[`INDEX_LOC]:`INDEX_SIZE'b1111111);
+assign replace_index=(current_state==`ASKMEM1)?pre_physical_addr_a[`INDEX_LOC]:((current_state==`ASKMEM2)?pre_physical_addr_b[`INDEX_LOC]:`INDEX_SIZE'b1111111);
 logic LRU_pick;
 assign LRU_pick=LRU[replace_index];
 
@@ -239,13 +239,13 @@ assign wea_way1=(pre_valid&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
 
 
 
-assign rd_req=current_state==`ASKMEM1||current_state==`ASKMEM2;
-assign rd_addr=current_state==`ASKMEM1?pre_physical_addr_a:pre_physical_addr_b;
+assign rd_req=(current_state==`ASKMEM1)||(current_state==`ASKMEM2);
+assign rd_addr=(current_state==`ASKMEM1)?pre_physical_addr_a:pre_physical_addr_b;
 
 
 
-assign pc2icache.stall=next_state!=`IDLE;
-assign pc2icache.inst[0]=current_state==`UNCACHE_RETURN?iucache_rdata_o:(a_hit_success?(a_hit_way0?way0_cachea[pre_vaddr_a[4:2]]:way1_cachea[pre_vaddr_a[4:2]]):32'b0);//uncache情况下用inst[0]返回
+assign pc2icache.stall=(next_state!=`IDLE);
+assign pc2icache.inst[0]=(current_state==`UNCACHE_RETURN)?iucache_rdata_o:(a_hit_success?(a_hit_way0?way0_cachea[pre_vaddr_a[4:2]]:way1_cachea[pre_vaddr_a[4:2]]):32'b0);//uncache情况下用inst[0]返回
 assign pc2icache.inst[1]=b_hit_success?(b_hit_way0?way0_cacheb[pre_vaddr_b[4:2]]:way1_cacheb[pre_vaddr_b[4:2]]):32'b0;
 assign pc2icache.pc_for_bpu[0]=pre_vaddr_a;
 assign pc2icache.pc_for_bpu[1]=pre_vaddr_b;
@@ -257,8 +257,8 @@ always_ff @( posedge clk ) begin
     else if(next_state==`IDLE)record_uncache_pc<=32'b0;
     else record_uncache_pc<=record_uncache_pc;
 end
-assign iucache_ren_i=(current_state==`IDLE&&pc2icache.uncache_en)||current_state==`UNCACHE_RETURN;
-assign iucache_addr_i=current_state==`IDLE?pc2icache.pc:record_uncache_pc;//uncache模式直接用的虚拟地址，不知道对不对
+assign iucache_ren_i=((current_state==`IDLE)&&pc2icache.uncache_en)||(current_state==`UNCACHE_RETURN);
+assign iucache_addr_i=(current_state==`IDLE)?pc2icache.pc:record_uncache_pc;//uncache模式直接用的虚拟地址，不知道对不对
 
 assign flush=branch_flush;
 
@@ -270,9 +270,6 @@ always_ff @(posedge clk) begin
         pc2icache.icache_is_exception <= 0;
         pc2icache.icache_exception_cause <= 0;
         pc2icache.icache_fetch_inst_en <= 0;
-        pc2icache.icache_is_branch <= 0;
-        pc2icache.icache_pre_taken_or_not <= 0;
-        pc2icache.icache_pre_branch_addr <= 0; 
     end
     else begin
         pc2icache.pc_for_buffer <= pc2icache.pc_for_bpu;
@@ -281,9 +278,6 @@ always_ff @(posedge clk) begin
         pc2icache.icache_is_exception <= {2{pc2icache.front_is_exception}};
         pc2icache.icache_exception_cause <= {2{pc2icache.front_exception_cause}};
         pc2icache.icache_fetch_inst_en <= pc2icache.front_fetch_inst_en;
-        pc2icache.icache_is_branch <= pc2icache.front_is_branch;
-        pc2icache.icache_pre_taken_or_not <= pc2icache.front_pre_taken_or_not;
-        pc2icache.icache_pre_branch_addr <= pc2icache.front_pre_branch_addr;
     end
 end
 
