@@ -148,7 +148,7 @@ end
 always_ff @( posedge clk ) begin
     if(data_bvalid_o)data_bvalid_o<=1'b0;
     else if(wr_req)data_bvalid_o<=1'b1;
-    
+    else data_bvalid_o<=1'b0;
 end
 
 
