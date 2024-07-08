@@ -22,7 +22,4 @@ module trans_addr (
 always_ff @( posedge clk ) begin
     if(icache2transaddr.inst_fetch)icache2transaddr.ret_inst_paddr<={8'hff,icache2transaddr.inst_vaddr[23:0]};
 end
-
-
-    
 endmodule

@@ -8,7 +8,7 @@ reg clk,reset,wr_rdy,rd_rdy,ret_valid;
 bus256_t ret_data;
 
 
-logic rd_req,wr_req;
+logic rd_req,wr_req,data_bvalid_o;
 wire [2:0]rd_type;
 wire [3:0]wr_wstrb;
 bus32_t rd_addr,wr_addr;
@@ -145,6 +145,12 @@ always_ff @( posedge clk ) begin
     else ducache_bvalid_o<=1'b0;
 end
 
+always_ff @( posedge clk ) begin
+    if(data_bvalid_o)data_bvalid_o<=1'b0;
+    else if(wr_req)data_bvalid_o<=1'b1;
+    
+end
+
 
 dcache_transaddr dcache2transaddr();
 
@@ -172,6 +178,7 @@ dcache u_dcache(
     .rd_rdy(rd_rdy),
     .ret_valid(ret_valid),
     .ret_data(ret_data),
+    .data_bvalid_o(data_bvalid_o),
     .ducache_ren_i(ducache_ren_i),
     .ducache_araddr_i(ducache_araddr_i),
     .ducache_rvalid_o(ducache_rvalid_o),
