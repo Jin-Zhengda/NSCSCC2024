@@ -319,6 +319,9 @@ assign rd_addr=current_state==`ASKMEM1?pre_physical_addr_a:pre_physical_addr_b;
 assign pc2icache.stall=next_state!=`IDLE;
 assign pc2icache.inst[0]=current_state==`UNCACHE_RETURN?iucache_rdata_o:(a_hit_success?(a_hit_way0?way0_cachea[pre_vaddr_a[4:2]]:way1_cachea[pre_vaddr_a[4:2]]):32'b0);//uncache情况下用inst[0]返回
 assign pc2icache.inst[1]=b_hit_success?(b_hit_way0?way0_cacheb[pre_vaddr_b[4:2]]:way1_cacheb[pre_vaddr_b[4:2]]):32'b0;
+assign pc2icache.pc_for_bpu[0]=pre_vaddr_a;
+assign pc2icache.pc_for_bpu[1]=pre_vaddr_b;
+
 
 logic[`ADDR_SIZE-1:0] record_uncache_pc;
 always_ff @( posedge clk ) begin
@@ -330,5 +333,7 @@ assign iucache_ren_i=(current_state==`IDLE&&pc2icache.uncache_en)||current_state
 assign iucache_addr_i=current_state==`IDLE?pc2icache.pc:record_uncache_pc;//uncache模式直接用的虚拟地址，不知道对不对
 
 assign flush=branch_flush;
+
+
 
 endmodule
