@@ -262,6 +262,29 @@ assign iucache_addr_i=current_state==`IDLE?pc2icache.pc:record_uncache_pc;//unca
 
 assign flush=branch_flush;
 
-
+always_ff @(posedge clk) begin
+    if (reset) begin
+        pc2icache.pc_for_buffer <= 0;
+        pc2icache.stall_for_buffer <= 0;
+        pc2icache.inst_for_buffer <= 0;
+        pc2icache.icache_is_exception <= 0;
+        pc2icache.icache_exception_cause <= 0;
+        pc2icache.icache_fetch_inst_en <= 0;
+        pc2icache.icache_is_branch <= 0;
+        pc2icache.icache_pre_taken_or_not <= 0;
+        pc2icache.icache_pre_branch_addr <= 0; 
+    end
+    else begin
+        pc2icache.pc_for_buffer <= pc2icache.pc_for_bpu;
+        pc2icache.stall_for_buffer <= pc2icache.stall;
+        pc2icache.inst_for_buffer <= pc2icache.inst;
+        pc2icache.icache_is_exception <= {2{pc2icache.front_is_exception}};
+        pc2icache.icache_exception_cause <= {2{pc2icache.front_exception_cause}};
+        pc2icache.icache_fetch_inst_en <= pc2icache.front_fetch_inst_en;
+        pc2icache.icache_is_branch <= pc2icache.front_is_branch;
+        pc2icache.icache_pre_taken_or_not <= pc2icache.front_pre_taken_or_not;
+        pc2icache.icache_pre_branch_addr <= pc2icache.front_pre_branch_addr;
+    end
+end
 
 endmodule

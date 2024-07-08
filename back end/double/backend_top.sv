@@ -107,7 +107,6 @@ module backend_top
 
     // ctrl
     pause_t pause_request;
-
     logic branch_flush;
     bus32_t branch_target;
 
@@ -276,6 +275,7 @@ module backend_top
         .pause,
         .new_pc,
         .is_interrupt,
+        .send_inst_en,
 
         .reg_write_en,
         .reg_write_addr,

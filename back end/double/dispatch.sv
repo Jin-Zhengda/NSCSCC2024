@@ -52,24 +52,30 @@ module dispatch
     logic [1:0] inst_valid;
     assign inst_valid = {dispatch_i[1].inst_valid, dispatch_i[0].inst_valid};
 
+    logic pc1_lt_pc2;
+    assign pc1_lt_pc2 = dispatch_i[0].pc < dispatch_i[1].pc;
+
     logic issue_double_en;
 
     logic privilege_inst;
     logic mem_inst;
     logic data_relate_inst;
 
+    logic inst1_relate;
+    logic inst2_relate;
+
     assign privilege_inst = dispatch_i[0].is_privilege || dispatch_i[1].is_privilege;
     assign mem_inst = dispatch_i[0].alusel == `ALU_SEL_LOAD_STORE || dispatch_i[1].alusel == `ALU_SEL_LOAD_STORE;
-    assign data_relate_inst = ((dispatch_i[0].reg_write_en && dispatch_i[0].reg_write_addr != 5'b0) 
-                                && ((dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[0] && dispatch_i[1].reg_read_en[0]) 
-                                || (dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[1] && dispatch_i[1].reg_read_en[1])))
-                                || ((dispatch_i[1].reg_write_en && dispatch_i[1].reg_write_addr != 5'b0) 
-                                && ((dispatch_i[1].reg_write_addr == dispatch_i[0].reg_read_addr[0] && dispatch_i[0].reg_read_en[0]) 
-                                || (dispatch_i[1].reg_write_addr == dispatch_i[0].reg_read_addr[1] && dispatch_i[0].reg_read_en[1])));
+
+    assign inst1_relate = (dispatch_i[0].reg_write_en && dispatch_i[0].reg_write_addr != 5'b0) 
+                            && ((dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[0] && dispatch_i[1].reg_read_en[0]) 
+                            || (dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[1] && dispatch_i[1].reg_read_en[1]));
+    assign inst2_relate = (dispatch_i[1].reg_write_en && dispatch_i[1].reg_write_addr != 5'b0) 
+                            && ((dispatch_i[1].reg_write_addr == dispatch_i[0].reg_read_addr[0] && dispatch_i[0].reg_read_en[0]) 
+                            || (dispatch_i[1].reg_write_addr == dispatch_i[0].reg_read_addr[1] && dispatch_i[0].reg_read_en[1]));
+    assign data_relate_inst = pc1_lt_pc2 ? inst1_relate : inst2_relate;
     assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst && (&inst_valid);
 
-    logic pc1_lt_pc2;
-    assign pc1_lt_pc2 = dispatch_i[0].pc < dispatch_i[1].pc;
     always_comb begin
         if (flush || rst || !(|inst_valid)) begin
             issue_en = 2'b00;

@@ -60,37 +60,26 @@ interface pc_icache;
     logic stall_for_buffer;
     bus32_t [1:0] pc_for_bpu;
     bus32_t [1:0] pc_for_buffer;
-    logic [1:0][5:0] front_is_exception;
-    logic [1:0][5:0][6:0] front_exception_cause;
+    logic [5:0] front_is_exception;
+    logic [5:0][6:0] front_exception_cause;
     logic [1:0][5:0] icache_is_exception;
     logic [1:0][5:0][6:0] icache_exception_cause;
     logic stall;
 
     logic [1:0] front_fetch_inst_en;
     logic [1:0] icache_fetch_inst_en;
-    logic [1:0] front_is_branch;
-    logic [1:0] front_pre_taken_or_not;
-    bus32_t front_pre_branch_addr;
-    logic [1:0] icache_is_branch;
-    logic [1:0] icache_pre_taken_or_not;
-    bus32_t icache_pre_branch_addr;
-
     logic uncache_en;
 
     modport master(
         input inst, stall, icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
-                stall_for_buffer, inst_for_buffer, icache_fetch_inst_en, icache_is_branch, icache_pre_taken_or_not, 
-                icache_pre_branch_addr,
-        output pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_en, front_is_branch, 
-                front_pre_taken_or_not, front_pre_branch_addr, uncache_en
+                stall_for_buffer, inst_for_buffer, icache_fetch_inst_en,
+        output pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_en, uncache_en
     );
 
     modport slave(
         output inst, stall,icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
-                stall_for_buffer, inst_for_buffer, icache_fetch_inst_en, icache_is_branch, icache_pre_taken_or_not, 
-                icache_pre_branch_addr,
-        input pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_en, front_is_branch, 
-                front_pre_taken_or_not, front_pre_branch_addr, uncache_en
+                stall_for_buffer, inst_for_buffer, icache_fetch_inst_en,
+        input pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_en, uncache_en
     );
 endinterface : pc_icache
 
