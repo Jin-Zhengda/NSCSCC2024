@@ -1,5 +1,6 @@
 `timescale 1ns/1ps
 `include "pipeline_types.sv"
+`include "interface.sv"
 
 module cpu_spoc 
     import pipeline_types::*;
@@ -69,9 +70,9 @@ module cpu_spoc
         .new_pc(frontend_backend_io.slave.new_pc),
 
         .update_info(frontend_backend_io.slave.update_info),
-        .send_en(frontend_backend_io.slave.send_inst_en),
+        .send_inst_en(frontend_backend_io.slave.send_inst_en),
 
-        .mem_dcache(mem_dcache_io.master),
+        .dcache_master(mem_dcache_io.master),
         .cache_inst(cache_inst),
 
         .flush(flush),
@@ -103,7 +104,12 @@ module cpu_spoc
     bus32_t ducache_awaddr_i;
     logic[3: 0] ducache_strb;
     logic ducache_bvalid_o;
+    icache_transaddr icache2transaddr();
 
+    trans_addr u_trans_addr(
+        .clk(clk),
+        .icache2transaddr(icache2transaddr.slave)
+    );
 
     icache u_icache (
         .clk(clk),
@@ -112,6 +118,7 @@ module cpu_spoc
         .branch_flush(flush[1]),
 
         .pc2icache(pc_icache_io.slave),
+        .icache2transaddr(icache2transaddr.master),
 
         .rd_req(icache_mem_io.rd_req),
         .rd_addr(icache_mem_io.rd_addr),
@@ -122,7 +129,6 @@ module cpu_spoc
         .icacop_op_mode(cache_inst.cacop_code[4: 3]),
         .icacop_addr(cache_inst.addr),
 
-        .icache_uncache(pc_icache_io.uncache_en),
         .iucache_ren_i(iucache_ren_i),
         .iucache_addr_i(iucache_addr_i),
         .iucache_rvalid_o(iucache_rvalid_o),
