@@ -56,16 +56,14 @@ module pc_reg_d
     //     pause_pc <= pause;
     // end
 
-    generate
-        for (genvar i = 0; i < 2; i++) begin
-            always_ff @(posedge clk) begin
-                pc.is_exception[i] <= {is_interrupt, {(pc.pc_o[1: 0] == 2'b00) ? 1'b0 : 1'b1}, 4'b0};
-                pc.exception_cause[i] <= {{is_interrupt ? `EXCEPTION_INT: `EXCEPTION_NOP}, 
-                                {(pc.pc_o[1: 0] == 2'b00) ?  `EXCEPTION_NOP: `EXCEPTION_ADEF},
-                                {4{`EXCEPTION_NOP}}};
-            end
-        end
-    endgenerate
+
+   always_ff @(posedge clk) begin
+       pc.is_exception <= {is_interrupt, {(pc.pc_o[1: 0] == 2'b00) ? 1'b0 : 1'b1}, 4'b0};
+       pc.exception_cause <= {{is_interrupt ? `EXCEPTION_INT: `EXCEPTION_NOP}, 
+                       {(pc.pc_o[1: 0] == 2'b00) ?  `EXCEPTION_NOP: `EXCEPTION_ADEF},
+                       {4{`EXCEPTION_NOP}}};
+   end
+
 
     always_ff @(posedge clk) begin
         if(rst) begin

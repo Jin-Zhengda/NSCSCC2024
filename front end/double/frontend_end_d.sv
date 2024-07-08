@@ -86,8 +86,8 @@ import pipeline_types::*;
         .inst_en_2,
 
         .is_branch,
-        .pre_taken_or_not(pre_taken_or_not),
-        .pre_branch_addr(pre_branch_addr),
+        .pre_taken_or_not,
+        .pre_branch_addr,
         .taken_sure,
 
         .fetch_inst_en(pi_master.front_fetch_inst_en)
@@ -105,9 +105,9 @@ import pipeline_types::*;
         .is_exception(pi_master.icache_is_exception),
         .exception_cause(pi_master.icache_exception_cause),
 
-        .is_branch(pi_master.icache_is_branch),
-        .pre_taken_or_not(pi_master.icache_pre_taken_or_not),
-        .pre_branch_addr(pi_master.icache_pre_branch_addr),
+        .is_branch,
+        .pre_taken_or_not,
+        .pre_branch_addr,
 
         .send_inst_en(fb_master.send_inst_en),
 

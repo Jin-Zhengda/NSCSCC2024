@@ -50,8 +50,8 @@ package pipeline_types;
 
     typedef struct packed {
         bus32_t pc_o;
-        logic [1:0][5:0] is_exception;
-        logic [1:0][5:0][6:0] exception_cause;
+        logic [5:0] is_exception;
+        logic [5:0][6:0] exception_cause;
     } pc_out_t;
 
     typedef struct packed {

@@ -44,8 +44,8 @@ package pipeline_types;
         bus32_t [1:0] inst_o;
         bus32_t [1:0] pc_o;
         logic [1:0] valid;
-        logic [5:0] is_exception;
-        logic [5:0][6:0] exception_cause;
+        logic [1:0][5:0] is_exception;
+        logic [1:0][5:0][6:0] exception_cause;
     } inst_and_pc_t;
 
     typedef struct packed {

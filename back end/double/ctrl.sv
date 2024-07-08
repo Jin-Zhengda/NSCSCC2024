@@ -23,6 +23,7 @@ module ctrl
     output logic [PIPE_WIDTH - 1:0] pause,
     output bus32_t new_pc,
     output logic is_interrupt,
+    output logic [1:0] send_inst_en,
 
     // to regfile
     output logic [ISSUE_WIDTH - 1:0] reg_write_en,
@@ -88,11 +89,11 @@ module ctrl
     logic [ISSUE_WIDTH - 1:0] reg_write_en_out;
     always_comb begin
         if (pc1_lt_pc2) begin
-            reg_write_en_out[0] = is_exception[0] || pause[0] ? 1'b0 : wb_o[0].reg_write_en;
-            reg_write_en_out[1] = |is_exception || pause[0] ? 1'b0 : wb_o[1].reg_write_en;
+            reg_write_en_out[0] = (is_exception[0] || pause[0]) ? 1'b0 : wb_o[0].reg_write_en;
+            reg_write_en_out[1] = (|is_exception || pause[0]) ? 1'b0 : wb_o[1].reg_write_en;
         end else begin
-            reg_write_en_out[0] = |is_exception || pause[0] ? 1'b0 : wb_o[0].reg_write_en;
-            reg_write_en_out[1] = is_exception[1] || pause[0] ? 1'b0 : wb_o[1].reg_write_en;
+            reg_write_en_out[0] = (|is_exception || pause[0]) ? 1'b0 : wb_o[0].reg_write_en;
+            reg_write_en_out[1] = (is_exception[1] || pause[0]) ? 1'b0 : wb_o[1].reg_write_en;
         end
     end
 
@@ -253,6 +254,7 @@ module ctrl
         end
     end
 
+    assign send_inst_en = pause[2] ? 2'b00 : 2'b11;
 
     // diff 
     generate
