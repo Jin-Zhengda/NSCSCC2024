@@ -93,6 +93,9 @@ module inst_rom
         else if (cnt_end && rom_inst_en)begin
             rom_inst_valid <= 1'b1;
         end
+        else begin
+            rom_inst_valid <= 1'b0;
+        end
     end
 
     assign rom_inst = {inst[7], inst[6], inst[5], inst[4], inst[3], inst[2], inst[1], inst[0]};
