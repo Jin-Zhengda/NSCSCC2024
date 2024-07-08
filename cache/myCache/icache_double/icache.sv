@@ -154,8 +154,8 @@ end
 always_comb begin
     if(reset)next_state=`IDLE;
     else if(current_state==`IDLE)begin
-        if(!pre_valid)next_state=`IDLE;
-        else if(pc2icache.uncache_en)next_state=`UNCACHE_RETURN;
+        if(pc2icache.uncache_en)next_state=`UNCACHE_RETURN;
+        else if(!pre_valid)next_state=`IDLE;
         else if(a_hit_fail)next_state=`ASKMEM1;
         else if(b_hit_fail)next_state=`ASKMEM2;
         else next_state=`IDLE;
@@ -182,11 +182,11 @@ always_comb begin
 end
 
 always_ff @( posedge clk ) begin
-    if(current_state==`IDLE)record_b_hit_result=b_hit_success;
+    if(current_state==`IDLE)record_b_hit_result<=b_hit_success;
     else record_b_hit_result<=record_b_hit_result;
 end
 always_ff @( posedge clk ) begin
-    if(current_state==`IDLE)record_a_hit_result=a_hit_success;
+    if(current_state==`IDLE)record_a_hit_result<=a_hit_success;
     else record_a_hit_result<=record_a_hit_result;
 end
 
@@ -320,7 +320,7 @@ assign pc2icache.stall=(next_state!=`IDLE);
 assign pc2icache.inst[0]=(current_state==`UNCACHE_RETURN)?iucache_rdata_o:(a_hit_success?(a_hit_way0?way0_cachea[pre_vaddr_a[4:2]]:way1_cachea[pre_vaddr_a[4:2]]):32'b0);//uncache情况下用inst[0]返回
 assign pc2icache.inst[1]=b_hit_success?(b_hit_way0?way0_cacheb[pre_vaddr_b[4:2]]:way1_cacheb[pre_vaddr_b[4:2]]):32'b0;
 assign pc2icache.pc_for_bpu[0]=pre_vaddr_a;
-assign pc2icache.pc_for_bpu[1]=pre_vaddr_b;
+assign pc2icache.pc_for_bpu[1]=(current_state==`UNCACHE_RETURN)?(`DATA_SIZE'b0): pre_vaddr_b;
 
 
 logic[`ADDR_SIZE-1:0] record_uncache_pc;
