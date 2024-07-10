@@ -189,7 +189,7 @@ end
 
 always_ff @( posedge clk ) begin
     if(pause_icache)record_b_hit_result<=record_b_hit_result;
-    else if(current_state==`IDLE)record_b_hit_result=b_hit_success;
+    else if(current_state==`IDLE)record_b_hit_result<=b_hit_success;
     else record_b_hit_result<=record_b_hit_result;
 end
 always_ff @( posedge clk ) begin

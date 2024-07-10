@@ -31,7 +31,7 @@ end
 
 logic pause_icache,branch_flush;
 always_ff @( posedge clk ) begin
-    if(counter==22||counter==7)pause_icache<=1'b1;
+    if(counter==22||counter==7)pause_icache<=1'b0;
     else pause_icache<=1'b0;
 end
 always_ff @( posedge clk ) begin
@@ -66,15 +66,18 @@ always_ff @( posedge clk ) begin
     else counter<=counter+1;
 end
 
+/*
 always_ff @( posedge clk ) begin
     if(counter>2)pc2icache.inst_en<=2'b11;
     else pc2icache.inst_en<=2'b0;
 end
+*/
+assign pc2icache.inst_en=reset?2'b0:(pc2icache.uncache_en?2'b0:2'b11);
 
 
 always_ff @( posedge clk ) begin
     if(reset)pc2icache.pc<=32'b0;
-    else if(!pc2icache.stall&&pc2icache.inst_en)pc2icache.pc<=pc2icache.pc+32'd4;
+    else if(!pc2icache.stall&&(pc2icache.inst_en||pc2icache.uncache_en))pc2icache.pc<=pc2icache.pc+32'd4;
     else pc2icache.pc<=pc2icache.pc;
 end
 /*
@@ -100,24 +103,14 @@ always_ff @( posedge clk ) begin
         ret_data<=256'hffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff;
     end
 end
-
+/*
 always_ff @( posedge clk ) begin
     if(counter==14)pc2icache.uncache_en<=1'b1;
     else pc2icache.uncache_en<=1'b0;
 end
-
-/*
-always_ff @( posedge clk ) begin
-    if(counter==13)pc2icache.front_is_valid<=1'b0;
-    else if(counter==8)pc2icache.front_is_valid<=1'b0;
-    else pc2icache.front_is_valid<=1'b1;
-end
-
-always_ff @( posedge clk ) begin
-    pc2icache.front_is_exception<=counter;
-    pc2icache.front_exception_cause<={6{counter}};
-end
 */
+
+assign pc2icache.uncache_en=reset?1'b0:(((pc2icache.pc==32'h0)||(pc2icache.pc==32'h8))?1'b1:1'b0);
 
 
 

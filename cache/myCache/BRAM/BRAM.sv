@@ -37,24 +37,22 @@ module BRAM #(
 
     // Read logic
     always_ff @(posedge clk) begin
-        if (ena & wea) douta <= dina;
+        if (ena & (|wea)) douta <= dina;
         else if (ena) douta <= data[addra];
         else douta <= 0;
 
-        if (enb & web) doutb <= dinb;
+        if (enb & (|web)) doutb <= dinb;
         else if (enb) doutb <= data[addrb];
         else doutb <= 0;
     end
 
     // Write logic
     always_ff @(posedge clk) begin
-        if (enb & web) begin
-            data[addrb] <= (dinb&write_mask_b)|(data[addrb]&~write_mask_b);
-        end
-
-        // A port has priority
-        if (ena & wea) begin
+        if (ena & (|wea)) begin
             data[addra] <= (dina&write_mask_a)|(data[addra]&~write_mask_a);
+        end
+        else if (enb & (|web)) begin
+            data[addrb] <= (dinb&write_mask_b)|(data[addrb]&~write_mask_b);
         end
     end
 
