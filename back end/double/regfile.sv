@@ -14,42 +14,44 @@ module regfile
     // with dispatch
     dispatch_regfile slave,
 
-    // for diff
-    output bus32_t regs_diff[32]
+    output bus32_t regs_diff[0:31]
+
 );
 
-    bus32_t ram[32];
+    bus32_t regs[0:31];
+    assign regs_diff = regs;
 
-    assign regs_diff = ram;
-
-    // for simulation
+    // simulation
     initial begin
         for (int i = 0; i < 32; i++) begin
-            ram[i] = 32'b0;
+            regs[i] = 32'b0;
         end
     end
 
-    generate
-        for (genvar i = 0; i < WRITE_PORTS; i++) begin
-            always_ff @(posedge clk) begin : ram_write
-                if (reg_write_en[i] && reg_write_addr[i] != 5'b0) begin
-                    ram[reg_write_addr[i]] <= reg_write_data[i];
-                end
-            end
+    logic[REG_ADDR_WIDTH-1:0] addr1;
+    assign addr1 = reg_write_addr[0];
+    logic[REG_ADDR_WIDTH-1:0] addr2;
+    assign addr2 = reg_write_addr[1];
+
+    bus32_t data1;
+    bus32_t data2;
+    assign data1 = reg_write_data[0];
+    assign data2 = reg_write_data[1];
+
+    always_ff@ (posedge clk) begin
+        if (reg_write_en[0]) begin
+            regs[addr1] <= data1;
+        end 
+
+        if (reg_write_en[1]) begin
+            regs[addr2] <= data2;
         end
-    endgenerate
-    // always_ff @(posedge clk) begin : ram_write
-    //     for (int i = 0; i < WRITE_PORTS; i++) begin
-    //         if (reg_write_en[i] && reg_write_addr[i] != 5'b0) begin
-    //             ram[reg_write_addr[i]] <= reg_write_data[i];
-    //         end
-    //     end
-    // end
+    end
 
     always_comb begin : ram_read
         for (int i = 0; i < 2; i++) begin
             for (int j = 0; j < 2; j++) begin
-                slave.reg_read_data[i][j] = ram[slave.reg_read_addr[i][j]];
+                slave.reg_read_data[i][j] = regs[slave.reg_read_addr[i][j]];
                 for (int k = 0; k < WRITE_PORTS; k++) begin
                     if (slave.reg_read_addr[i][j] == reg_write_addr[k] && reg_write_en[k]) begin
                         slave.reg_read_data[i][j] = reg_write_data[k];

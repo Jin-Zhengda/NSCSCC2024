@@ -89,7 +89,7 @@ module bht_d(
         end
         else begin
             if(update_en) begin
-                bht[pc_dispatch[`Index]] <= {bht[pc_dispatch[`Index]][7:1],taken_actual};
+                bht[pc_dispatch[`Index]] <= {bht[pc_dispatch[`Index]][6:0],taken_actual};
                 if(taken_actual) begin
                     case(pht[pht_index_up][history_up])
                         2'b00:begin

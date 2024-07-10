@@ -36,32 +36,10 @@ module backend_top
     output logic [PIPE_WIDTH - 1:0] pause,
 
     // debug
-    output logic [31:0] debug_wb_pc[2],
-    output logic [31:0] debug_wb_inst[2],
-    output logic [3:0] debug_wb_rf_wen[2],
-    output logic [4:0] debug_wb_rf_wnum[2],
-    output logic [31:0] debug_wb_rf_wdata[2],
+    output bus64_t cnt,
+    output diff_t [1:0] diff,
 
-    output logic inst_valid_diff[2],
-    output logic cnt_inst_diff[2],
-    output logic csr_rstat_en_diff[2],
-    output logic [31:0] csr_data_diff[2],
-    output logic [63:0] timer_64_diff[2],
-
-    output logic excp_flush[2],
-    output logic ertn_flush[2],
-    output logic [5:0] ecode[2],
-
-    output logic [7:0] inst_st_en_diff[2],
-    output logic [31:0] st_paddr_diff[2],
-    output logic [31:0] st_vaddr_diff[2],
-    output logic [31:0] st_data_diff[2],
-
-    output logic [ 7:0] inst_ld_en_diff[2],
-    output logic [31:0] ld_paddr_diff  [2],
-    output logic [31:0] ld_vaddr_diff  [2],
-
-    output logic [31:0] regs_diff[31:0],
+    output bus32_t regs_diff[0:31],
 
     output logic [31:0] csr_crmd_diff,
     output logic [31:0] csr_prmd_diff,
@@ -111,7 +89,7 @@ module backend_top
     bus32_t branch_target;
 
     // decoder
-    id_dispatch_t [DECODER_WIDTH - 1 :0] dispatch_i;
+    id_dispatch_t [DECODER_WIDTH - 1 : 0] dispatch_i;
 
     // dispatch
     pipeline_push_forward_t [ISSUE_WIDTH - 1:0] ex_reg_pf;
@@ -136,13 +114,9 @@ module backend_top
     commit_ctrl_t [ISSUE_WIDTH - 1:0] commit_ctrl_o;
     mem_wb_t [ISSUE_WIDTH - 1:0] wb_o;
 
-    // counter
-    bus64_t cnt;
-
     // diff
     diff_t [ISSUE_WIDTH - 1:0] wb_diff_i;
     diff_t [ISSUE_WIDTH - 1:0] wb_diff_o;
-    diff_t [ISSUE_WIDTH - 1:0] diff;
 
     decoder u_decoder (
         .clk,
@@ -286,7 +260,7 @@ module backend_top
         .csr_write_addr,
         .csr_write_data,
 
-        .ctrl_diff_i(wb_diff_i),
+        .ctrl_diff_i(wb_diff_o),
         .ctrl_diff_o(diff)
     );
 
@@ -301,7 +275,7 @@ module backend_top
 
         .slave(dispatch_regfile_io.slave),
 
-        .regs_diff
+        .regs_diff(regs_diff)
     );
 
     //csr
@@ -372,33 +346,5 @@ module backend_top
         .cnt
     );
 
-    // diff
-    generate
-        for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign debug_wb_pc[i] = diff[i].debug_wb_pc;
-            assign debug_wb_inst[i] = diff[i].debug_wb_inst;
-            assign debug_wb_rf_wen[i] = diff[i].debug_wb_rf_wen;
-            assign debug_wb_rf_wnum[i] = diff[i].debug_wb_rf_wnum;
-            assign debug_wb_rf_wdata[i] = diff[i].debug_wb_rf_wdata;
 
-            assign inst_valid_diff[i] = diff[i].inst_valid;
-            assign cnt_inst_diff[i] = diff[i].cnt_inst;
-            assign csr_rstat_en_diff[i] = diff[i].csr_rstat_en;
-            assign csr_data_diff[i] = diff[i].csr_data;
-            assign timer_64_diff[i] = cnt;
-
-            assign excp_flush[i] = diff[i].excp_flush;
-            assign ertn_flush[i] = diff[i].ertn_flush;
-            assign ecode[i] = diff[i].ecode;
-
-            assign inst_st_en_diff[i] = diff[i].inst_st_en;
-            assign st_paddr_diff[i] = diff[i].st_paddr;
-            assign st_vaddr_diff[i] = diff[i].st_vaddr;
-            assign st_data_diff[i] = (i == 0) ? dcache_master.wdata : 32'b0;
-
-            assign inst_ld_en_diff[i] = diff[i].inst_ld_en;
-            assign ld_paddr_diff[i] = diff[i].ld_paddr;
-            assign ld_vaddr_diff[i] = diff[i].ld_vaddr;
-        end
-    endgenerate
 endmodule
