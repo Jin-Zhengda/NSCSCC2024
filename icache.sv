@@ -53,7 +53,7 @@ module icache
 
 logic pre_valid;
 always_ff @( posedge clk ) begin
-    if(pc2icache.stall)pre_valid<=pre_valid;
+    if(pc2icache.stall||pause_icache)pre_valid<=pre_valid;
     else pre_valid<=|pc2icache.inst_en;
 end
 
@@ -62,12 +62,19 @@ logic record_b_hit_result,record_a_hit_result;
 
 logic same_way;
 
+logic paused_ret_valid;
+always_ff @( posedge clk ) begin
+    if(!pause_icache)paused_ret_valid<=1'b0;
+    else if(ret_valid&&pause_icache)paused_ret_valid<=1'b1;
+    else paused_ret_valid<=paused_ret_valid;
+end
 
 logic[4:0]current_state,next_state;
 
 logic write_delay;
 always_ff @( posedge clk ) begin
     if(reset)write_delay<=1'b0;
+    else if(pause_icache)write_delay<=write_delay;
     else if(write_delay==1'b1)write_delay<=1'b0;
     else if(next_state==`RETURN)write_delay<=1'b1;
     else write_delay<=1'b0;
@@ -94,32 +101,36 @@ always_comb begin
         else next_state=`IDLE;
     end
     else if(current_state==`ASKMEM1)begin
-        if(ret_valid)begin
+        if(ret_valid||paused_ret_valid)begin
             if(record_b_hit_result||same_way)next_state=`RETURN;
             else next_state=`ASKMEM2;
         end
         else next_state=`ASKMEM1;
     end
     else if(current_state==`ASKMEM2)begin
-        if(ret_valid)next_state=`RETURN;
+        if(ret_valid||paused_ret_valid)next_state=`RETURN;
         else next_state=`ASKMEM2;
     end
     else if(current_state==`RETURN)begin
-        if(write_delay)next_state=`RETURN;
-        else next_state=`IDLE;
+        //if(write_delay)next_state=`RETURN;
+        //else next_state=`IDLE;
+        next_state=`IDLE;
     end
     else if(current_state==`UNCACHE_RETURN)begin
         if(iucache_rvalid_o)next_state=`IDLE;
         else next_state=`UNCACHE_RETURN;
     end
+    else next_state=`IDLE;
 end
 
 always_ff @( posedge clk ) begin
-    if(current_state==`IDLE)record_b_hit_result<=b_hit_success;
+    if(pause_icache)record_b_hit_result<=record_b_hit_result;
+    else if(current_state==`IDLE)record_b_hit_result<=b_hit_success;
     else record_b_hit_result<=record_b_hit_result;
 end
 always_ff @( posedge clk ) begin
-    if(current_state==`IDLE)record_a_hit_result<=a_hit_success;
+    if(pause_icache)record_a_hit_result<=record_a_hit_result;
+    else if(current_state==`IDLE)record_a_hit_result<=a_hit_success;
     else record_a_hit_result<=record_a_hit_result;
 end
 
@@ -171,37 +182,46 @@ generate
         assign data_to_write_way1[i]=ret_valid?ret_data[i*`DATA_SIZE+`DATA_SIZE-1:i*`DATA_SIZE]:32'b0;
     end
 endgenerate
-assign addr_way0a=wea_way0?((current_state==`ASKMEM1)?pre_vaddr_a[`INDEX_LOC]:pre_vaddr_b[`INDEX_LOC]):(write_delay?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC]);
-assign addr_way0b=write_delay?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
-assign addr_way1a=wea_way1?((current_state==`ASKMEM1)?pre_vaddr_a[`INDEX_LOC]:pre_vaddr_b[`INDEX_LOC]):(write_delay?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC]);
-assign addr_way1b=write_delay?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
 
-BRAM bank0_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[0]),.addra(addr_way0a),.douta(way0_cachea[0]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[0]));
-BRAM bank1_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[1]),.addra(addr_way0a),.douta(way0_cachea[1]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[1]));
-BRAM bank2_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[2]),.addra(addr_way0a),.douta(way0_cachea[2]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[2]));
-BRAM bank3_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[3]),.addra(addr_way0a),.douta(way0_cachea[3]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[3]));
-BRAM bank4_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[4]),.addra(addr_way0a),.douta(way0_cachea[4]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[4]));
-BRAM bank5_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[5]),.addra(addr_way0a),.douta(way0_cachea[5]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[5]));
-BRAM bank6_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[6]),.addra(addr_way0a),.douta(way0_cachea[6]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[6]));
-BRAM bank7_way0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_way0[7]),.addra(addr_way0a),.douta(way0_cachea[7]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[7]));
+logic[3:0] wea_way0_a,wea_way0_b,wea_way1_a,wea_way1_b;
+assign wea_way0_a=(current_state==`ASKMEM1)?wea_way0:4'b0;
+assign wea_way0_b=((current_state==`ASKMEM2)||((current_state==`ASKMEM1)&&same_way))?wea_way0:4'b0;
+assign wea_way1_a=(current_state==`ASKMEM1)?wea_way1:4'b0;
+assign wea_way1_b=((current_state==`ASKMEM2)||((current_state==`ASKMEM1)&&same_way))?wea_way1:4'b0;
 
-BRAM bank0_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[0]),.addra(addr_way1a),.douta(way1_cachea[0]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[0]));
-BRAM bank1_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[1]),.addra(addr_way1a),.douta(way1_cachea[1]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[1]));
-BRAM bank2_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[2]),.addra(addr_way1a),.douta(way1_cachea[2]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[2]));
-BRAM bank3_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[3]),.addra(addr_way1a),.douta(way1_cachea[3]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[3]));
-BRAM bank4_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[4]),.addra(addr_way1a),.douta(way1_cachea[4]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[4]));
-BRAM bank5_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[5]),.addra(addr_way1a),.douta(way1_cachea[5]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[5]));
-BRAM bank6_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[6]),.addra(addr_way1a),.douta(way1_cachea[6]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[6]));
-BRAM bank7_way1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_way1[7]),.addra(addr_way1a),.douta(way1_cachea[7]),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_cacheb[7]));
+assign addr_way0a=(next_state!=`IDLE)?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC];
+assign addr_way0b=(next_state!=`IDLE)?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
+assign addr_way1a=(next_state!=`IDLE)?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC];
+assign addr_way1b=(next_state!=`IDLE)?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
 
-logic [`DATA_SIZE-1:0]data_to_write_tagv0a,data_to_write_tagv1a;
+
+
+BRAM bank0_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_a),.dina(data_to_write_way0[0]),.addra(addr_way0a),.douta(way0_cachea[0]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way0[0]),.addrb(addr_way0b),.doutb(way0_cacheb[0]));
+BRAM bank1_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_a),.dina(data_to_write_way0[1]),.addra(addr_way0a),.douta(way0_cachea[1]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way0[1]),.addrb(addr_way0b),.doutb(way0_cacheb[1]));
+BRAM bank2_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_a),.dina(data_to_write_way0[2]),.addra(addr_way0a),.douta(way0_cachea[2]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way0[2]),.addrb(addr_way0b),.doutb(way0_cacheb[2]));
+BRAM bank3_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_a),.dina(data_to_write_way0[3]),.addra(addr_way0a),.douta(way0_cachea[3]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way0[3]),.addrb(addr_way0b),.doutb(way0_cacheb[3]));
+BRAM bank4_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_a),.dina(data_to_write_way0[4]),.addra(addr_way0a),.douta(way0_cachea[4]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way0[4]),.addrb(addr_way0b),.doutb(way0_cacheb[4]));
+BRAM bank5_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_a),.dina(data_to_write_way0[5]),.addra(addr_way0a),.douta(way0_cachea[5]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way0[5]),.addrb(addr_way0b),.doutb(way0_cacheb[5]));
+BRAM bank6_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_a),.dina(data_to_write_way0[6]),.addra(addr_way0a),.douta(way0_cachea[6]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way0[6]),.addrb(addr_way0b),.doutb(way0_cacheb[6]));
+BRAM bank7_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_a),.dina(data_to_write_way0[7]),.addra(addr_way0a),.douta(way0_cachea[7]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way0[7]),.addrb(addr_way0b),.doutb(way0_cacheb[7]));
+
+BRAM bank0_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[0]),.addra(addr_way1a),.douta(way1_cachea[0]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[0]),.addrb(addr_way1b),.doutb(way1_cacheb[0]));
+BRAM bank1_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[1]),.addra(addr_way1a),.douta(way1_cachea[1]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[1]),.addrb(addr_way1b),.doutb(way1_cacheb[1]));
+BRAM bank2_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[2]),.addra(addr_way1a),.douta(way1_cachea[2]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[2]),.addrb(addr_way1b),.doutb(way1_cacheb[2]));
+BRAM bank3_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[3]),.addra(addr_way1a),.douta(way1_cachea[3]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[3]),.addrb(addr_way1b),.doutb(way1_cacheb[3]));
+BRAM bank4_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[4]),.addra(addr_way1a),.douta(way1_cachea[4]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[4]),.addrb(addr_way1b),.doutb(way1_cacheb[4]));
+BRAM bank5_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[5]),.addra(addr_way1a),.douta(way1_cachea[5]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[5]),.addrb(addr_way1b),.doutb(way1_cacheb[5]));
+BRAM bank6_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[6]),.addra(addr_way1a),.douta(way1_cachea[6]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[6]),.addrb(addr_way1b),.doutb(way1_cacheb[6]));
+BRAM bank7_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[7]),.addra(addr_way1a),.douta(way1_cachea[7]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[7]),.addrb(addr_way1b),.doutb(way1_cacheb[7]));
+
+logic [`DATA_SIZE-1:0]data_to_write_tagv0,data_to_write_tagv1;
 logic [`TAG_SIZE-1:0]tag_to_write_tagv;
 assign tag_to_write_tagv=(current_state==`ASKMEM1)?pre_vaddr_a[`TAG_LOC]:pre_vaddr_b[`TAG_LOC];
-assign data_to_write_tagv0a={11'b0,1'b1,tag_to_write_tagv};
-assign data_to_write_tagv1a={11'b0,1'b1,tag_to_write_tagv};
+assign data_to_write_tagv0={11'b0,1'b1,tag_to_write_tagv};
+assign data_to_write_tagv1={11'b0,1'b1,tag_to_write_tagv};
 logic [`DATA_SIZE-1:0]way0_tagva,way0_tagvb,way1_tagva,way1_tagvb;
-BRAM tagv0(.clk(clk),.ena(1'b1),.wea(wea_way0),.dina(data_to_write_tagv0a),.addra(addr_way0a),.douta(way0_tagva),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_tagvb));
-BRAM tagv1(.clk(clk),.ena(1'b1),.wea(wea_way1),.dina(data_to_write_tagv1a),.addra(addr_way1a),.douta(way1_tagva),.enb(1'b1),.web(4'b0),.dinb(32'b0),.addrb(addr_way1b),.doutb(way1_tagvb));
+BRAM tagv0(.clk(clk),.ena(1'b1),.wea(wea_way0_a),.dina(data_to_write_tagv0),.addra(addr_way0a),.douta(way0_tagva),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_tagv0),.addrb(addr_way0b),.doutb(way0_tagvb));
+BRAM tagv1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_tagv1),.addra(addr_way1a),.douta(way1_tagva),.enb(1'b1),.web(wea_way1_b),.dinb(data_to_write_tagv1),.addrb(addr_way1b),.doutb(way1_tagvb));
 
 logic a_hit_way0,a_hit_way1,b_hit_way0,b_hit_way1;
 assign a_hit_way0=way0_tagva[19:0]==pre_vaddr_a[`TAG_LOC]&&way0_tagva[20]==1'b1;
@@ -228,7 +248,7 @@ always_ff @( posedge clk ) begin//这块没有完全用else-if了！！！！！
         if(a_hit_success)LRU[pre_physical_addr_a[`INDEX_LOC]] <= a_hit_way0;
         if(b_hit_success)LRU[pre_physical_addr_b[`INDEX_LOC]] <= b_hit_way0;
         else begin
-            if(record_a_hit_result==1'b0&&read_success)LRU[pre_physical_addr_a[`INDEX_LOC]] <= wea_way0;
+            if(record_a_hit_result==1'b0&&read_success)LRU[pre_physical_addr_a[`INDEX_LOC]] <= |wea_way0;
             else LRU<=LRU;
         end
     end
@@ -244,7 +264,7 @@ assign wea_way1=(pre_valid&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
 
 
 
-assign rd_req=(current_state==`ASKMEM1)||(current_state==`ASKMEM2);
+assign rd_req=((current_state==`ASKMEM1)||(current_state==`ASKMEM2))&&!paused_ret_valid;
 assign rd_addr=(current_state==`ASKMEM1)?pre_physical_addr_a:pre_physical_addr_b;
 
 
@@ -258,8 +278,7 @@ assign pc2icache.pc_for_bpu[1]=(current_state==`UNCACHE_RETURN)?(`DATA_SIZE'b0):
 
 logic[`ADDR_SIZE-1:0] record_uncache_pc;
 always_ff @( posedge clk ) begin
-    if(next_state==`UNCACHE_RETURN)record_uncache_pc<=pc2icache.pc;
-    else if(next_state==`IDLE)record_uncache_pc<=32'b0;
+    if(pc2icache.uncache_en)record_uncache_pc<=pc2icache.pc;
     else record_uncache_pc<=record_uncache_pc;
 end
 assign iucache_ren_i=((current_state==`IDLE)&&pc2icache.uncache_en)||(current_state==`UNCACHE_RETURN);
