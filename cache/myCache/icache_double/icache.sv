@@ -123,6 +123,16 @@ module icache
     input bus32_t iucache_rdata_o
 );
 
+logic real_ret_valid,drop_one_ret;
+always_ff @( posedge clk ) begin
+    if(reset)drop_one_ret<=1'b0;
+    else if(branch_flush&&!ret_valid)drop_one_ret<=1'b1;
+    else if(ret_valid)drop_one_ret<=1'b0;
+    else drop_one_ret<=drop_one_ret;
+end
+
+assign real_ret_valid=(drop_one_ret||branch_flush)?1'b0:ret_valid;
+
 logic pre_valid;
 always_ff @( posedge clk ) begin
     if(pc2icache.stall||pause_icache)pre_valid<=pre_valid;
@@ -137,7 +147,7 @@ logic same_way;
 logic paused_ret_valid;
 always_ff @( posedge clk ) begin
     if(!pause_icache)paused_ret_valid<=1'b0;
-    else if(ret_valid&&pause_icache)paused_ret_valid<=1'b1;
+    else if(real_ret_valid&&pause_icache)paused_ret_valid<=1'b1;
     else paused_ret_valid<=paused_ret_valid;
 end
 
@@ -173,14 +183,14 @@ always_comb begin
         else next_state=`IDLE;
     end
     else if(current_state==`ASKMEM1)begin
-        if(ret_valid||paused_ret_valid)begin
+        if(real_ret_valid||paused_ret_valid)begin
             if(record_b_hit_result||same_way)next_state=`RETURN;
             else next_state=`ASKMEM2;
         end
         else next_state=`ASKMEM1;
     end
     else if(current_state==`ASKMEM2)begin
-        if(ret_valid||paused_ret_valid)next_state=`RETURN;
+        if(real_ret_valid||paused_ret_valid)next_state=`RETURN;
         else next_state=`ASKMEM2;
     end
     else if(current_state==`RETURN)begin
@@ -250,8 +260,8 @@ logic[`DATA_SIZE-1:0]way1_cachea[`BANK_NUM-1:0];
 logic[`DATA_SIZE-1:0]way1_cacheb[`BANK_NUM-1:0];
 generate
     for (genvar i=0;i<`BANK_NUM;i=i+1)begin
-        assign data_to_write_way0[i]=ret_valid?ret_data[i*`DATA_SIZE+`DATA_SIZE-1:i*`DATA_SIZE]:32'b0;
-        assign data_to_write_way1[i]=ret_valid?ret_data[i*`DATA_SIZE+`DATA_SIZE-1:i*`DATA_SIZE]:32'b0;
+        assign data_to_write_way0[i]=real_ret_valid?ret_data[i*`DATA_SIZE+`DATA_SIZE-1:i*`DATA_SIZE]:32'b0;
+        assign data_to_write_way1[i]=real_ret_valid?ret_data[i*`DATA_SIZE+`DATA_SIZE-1:i*`DATA_SIZE]:32'b0;
     end
 endgenerate
 
@@ -309,7 +319,7 @@ assign b_hit_fail=pre_valid&&(!b_hit_success);
 
 logic read_success;
 always_ff @( posedge clk ) begin
-    if(ret_valid)read_success<=1'b1;
+    if(real_ret_valid)read_success<=1'b1;
     else read_success<=1'b0;
 end
 //LRU
@@ -331,8 +341,8 @@ logic LRU_pick;
 assign LRU_pick=LRU[replace_index];
 
 
-assign wea_way0=(pre_valid&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
-assign wea_way1=(pre_valid&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
+assign wea_way0=(pre_valid&&real_ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
+assign wea_way1=(pre_valid&&real_ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
 
 
 
@@ -350,11 +360,11 @@ assign pc2icache.pc_for_bpu[1]=(current_state==`UNCACHE_RETURN)?(`DATA_SIZE'b0):
 
 logic[`ADDR_SIZE-1:0] record_uncache_pc;
 always_ff @( posedge clk ) begin
-    if(pc2icache.uncache_en)record_uncache_pc<=pc2icache.pc;
+    if(pc2icache.uncache_en&&(next_state==`IDLE))record_uncache_pc<=pc2icache.pc;
     else record_uncache_pc<=record_uncache_pc;
 end
 assign iucache_ren_i=((current_state==`IDLE)&&pc2icache.uncache_en)||(current_state==`UNCACHE_RETURN);
-assign iucache_addr_i=(current_state==`IDLE)?pc2icache.pc:record_uncache_pc;//uncache模式直接用的虚拟地址，不知道对不对
+assign iucache_addr_i=record_uncache_pc;//uncache模式直接用的虚拟地址，不知道对不对
 
 assign flush=branch_flush;
 
