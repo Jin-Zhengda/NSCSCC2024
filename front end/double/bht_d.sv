@@ -35,9 +35,9 @@ module bht_d(
     output logic [1:0] taken_or_not
     );
 
-    (*ram_style = "block"*) logic [7:0]bht [255: 0];
+    (*ram_style = "block"*) logic [7:0]bht [31: 0];
 
-    (*ram_style = "block"*) logic [1:0]pht [255:0][255:0];
+    (*ram_style = "block"*) logic [1:0]pht [31:0][31:0];
 
     logic [1:0][7:0]history;
     logic [1:0][7:0]pht_index;
@@ -49,9 +49,9 @@ module bht_d(
                 if(rst) begin
                     taken_or_not[i] <= 0;
                 end else begin
-                    history[i] = bht[pc[i][`Index]];
-                    pht_index[i] = history[i]^pc[i][`Index];
-                    judge[i] = pht[pht_index[i]][history[i]];
+                    history[i] <= bht[pc[i][`Index]];
+                    pht_index[i] <= history[i]^pc[i][`Index];
+                    judge[i] <= pht[pht_index[i]][history[i]];
                     case(judge[i])
                         2'b00:begin
                             taken_or_not[i] <= 0;

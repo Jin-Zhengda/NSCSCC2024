@@ -52,18 +52,17 @@ module fifo #(
 
     //写入逻辑
     always_ff @(posedge clk) begin
-        // if (rst|flush) ram <= '{default: '0};
-        // else 
-        if (push) ram[write_index] <= push_data;
+        if (rst|flush) ram <= '{default: '0};
+        else if (push) ram[write_index] <= push_data;
     end
 
     //更新指针
     always_ff @(posedge clk) begin
         if (rst|flush) begin
             read_index <= 0;
-            for(integer i = 0 ; i < DEPTH ; ++i) begin
-                ram[i] = 0;
-            end
+            // for(integer i = 0 ; i < DEPTH ; ++i) begin
+            //     ram[i] = 0;
+            // end
         end
         else if (pop & ~empty) read_index <= read_index + 1;
     end

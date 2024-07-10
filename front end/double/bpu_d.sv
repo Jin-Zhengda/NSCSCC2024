@@ -61,37 +61,37 @@ module bpu_d
             always_ff @(posedge clk) begin
                 case (branch_judge[i])
                     6'b010010: begin
-                        is_branch[i] = 1'b1;
+                        is_branch[i] <= 1'b1;
                     end
                     6'b010011: begin
-                        is_branch[i] = 1'b1;
+                        is_branch[i] <= 1'b1;
                     end
                     6'b010100: begin
-                        is_branch[i] = 1'b1;
+                        is_branch[i] <= 1'b1;
                     end
                     6'b010101: begin
-                        is_branch[i] = 1'b1;
+                        is_branch[i] <= 1'b1;
                     end
                     6'b010110: begin
-                        is_branch[i] = 1'b1;
+                        is_branch[i] <= 1'b1;
                     end
                     6'b010111: begin
-                        is_branch[i] = 1'b1;
+                        is_branch[i] <= 1'b1;
                     end
                     6'b011000: begin
-                        is_branch[i] = 1'b1;
+                        is_branch[i] <= 1'b1;
                     end
                     6'b011001: begin
-                        is_branch[i] = 1'b1;
+                        is_branch[i] <= 1'b1;
                     end
                     6'b011010: begin
-                        is_branch[i] = 1'b1;
+                        is_branch[i] <= 1'b1;
                     end
                     6'b011011: begin
-                        is_branch[i] = 1'b1;
+                        is_branch[i] <= 1'b1;
                     end
                     default: begin
-                        is_branch[i] = 1'b0;
+                        is_branch[i] <= 1'b0;
                     end
                 endcase
             end
@@ -113,12 +113,12 @@ module bpu_d
             fetch_inst_en[0] = 1'b1;
             fetch_inst_en[1] = 1'b1;
             pre_branch_addr = prediction_addr[1];
-            taken_sure <= 1'b1;
+            taken_sure = 1'b1;
         end else begin
             fetch_inst_en[0] = 1'b1;
             fetch_inst_en[1] = 1'b1;
             pre_branch_addr = 32'b0;
-            taken_sure <= 1'b0;
+            taken_sure = 1'b0;
         end
     end
 

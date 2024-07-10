@@ -1,5 +1,8 @@
 `timescale 1ns / 1ps
 
+`include "pipeline_types.sv"
+`include "interface.sv"
+
 module core_top (
     input           aclk,
     input           aresetn,
@@ -127,54 +130,56 @@ module core_top (
     wire[3:0] axi_wsel_o;
 
     // difftest
-    // wire    [1:0][31:0]  debug_wb_pc      ;
-    // wire    [1:0][ 3:0]  debug_wb_rf_wen  ;
-    // wire    [1:0][ 4:0]  debug_wb_rf_wnum ;
-    // wire    [1:0][31:0]  debug_wb_rf_wdata;
-    // wire    [1:0][31:0]  debug_wb_inst    ;
-    // // from wb_stage
-    // wire    [1:0]        inst_valid_diff  ;
-    // wire    [1:0]        cnt_inst_diff    ;
-    // wire    [1:0][63:0]  timer_64_diff    ;
-    // wire    [1:0][ 7:0]  inst_ld_en_diff  ;
-    // wire    [1:0][31:0]  ld_paddr_diff    ;
-    // wire    [1:0][31:0]  ld_vaddr_diff    ;
-    // wire    [1:0][ 7:0]  inst_st_en_diff  ;
-    // wire    [1:0][31:0]  st_paddr_diff    ;
-    // wire    [1:0][31:0]  st_vaddr_diff    ;
-    // wire    [1:0][31:0]  st_data_diff     ;
-    // wire    [1:0]        csr_rstat_en_diff;
-    // wire    [1:0][31:0]  csr_data_diff    ;
-    // wire    [1:0]        excp_flush       ;
-    // wire    [1:0]        ertn_flush       ;
-    // wire    [1:0][5: 0]  ecode            ;
-    wire    [1:0]        tlbfill_en       ;
+    wire            tlbfill_en0       ;
+    wire            tlbfill_en1       ;
     wire    [ 4:0]  rand_index            ;
 
-    reg     [1:0]        cmt_valid        ;
-    reg     [1:0]        cmt_cnt_inst     ;
-    reg     [1:0][63:0]  cmt_timer_64     ;
-    reg     [1:0][ 7:0]  cmt_inst_ld_en   ;
-    reg     [1:0][31:0]  cmt_ld_paddr     ;
-    reg     [1:0][31:0]  cmt_ld_vaddr     ;
-    reg     [1:0][ 7:0]  cmt_inst_st_en   ;
-    reg     [1:0][31:0]  cmt_st_paddr     ;
-    reg     [1:0][31:0]  cmt_st_vaddr     ;
-    reg     [1:0][31:0]  cmt_st_data      ;
-    reg     [1:0]        cmt_csr_rstat_en ;
-    reg     [1:0][31:0]  cmt_csr_data     ;
+    reg             cmt0_valid        ;
+    reg             cmt0_cnt_inst     ;
+    reg     [63:0]  cmt0_timer_64     ;
+    reg     [ 7:0]  cmt0_inst_ld_en   ;
+    reg     [31:0]  cmt0_ld_paddr     ;
+    reg     [31:0]  cmt0_ld_vaddr     ;
+    reg     [ 7:0]  cmt0_inst_st_en   ;
+    reg     [31:0]  cmt0_st_paddr     ;
+    reg     [31:0]  cmt0_st_vaddr     ;
+    reg     [31:0]  cmt0_st_data      ;
+    reg             cmt0_csr_rstat_en ;
+    reg     [31:0]  cmt0_csr_data     ;
+
+    reg             cmt1_valid        ;
+    reg             cmt1_cnt_inst     ;
+    reg     [63:0]  cmt1_timer_64     ;
+    reg     [ 7:0]  cmt1_inst_ld_en   ;
+    reg     [31:0]  cmt1_ld_paddr     ;
+    reg     [31:0]  cmt1_ld_vaddr     ;
+    reg     [ 7:0]  cmt1_inst_st_en   ;
+    reg     [31:0]  cmt1_st_paddr     ;
+    reg     [31:0]  cmt1_st_vaddr     ;
+    reg     [31:0]  cmt1_st_data      ;
+    reg             cmt1_csr_rstat_en ;
+    reg     [31:0]  cmt1_csr_data     ;
  
-    reg     [1:0]        cmt_wen          ;
-    reg     [1:0][ 7:0]  cmt_wdest        ;
-    reg     [1:0][31:0]  cmt_wdata        ;
-    reg     [1:0][31:0]  cmt_pc           ;
-    reg     [1:0][31:0]  cmt_inst         ;
-  
-    reg     [1:0]        cmt_excp_flush   ;
-    reg     [1:0]        cmt_ertn         ;
-    reg     [1:0][5:0]   cmt_csr_ecode    ;
-    reg     [1:0]        cmt_tlbfill_en   ;
-    reg     [4:0]   cmt_rand_index        ;
+    reg             cmt0_wen          ;
+    reg     [ 7:0]  cmt0_wdest        ;
+    reg     [31:0]  cmt0_wdata        ;
+    reg     [31:0]  cmt0_pc           ;
+    reg     [31:0]  cmt0_inst         ;
+    reg             cmt0_excp_flush   ;
+    reg             cmt0_ertn         ;
+    reg     [5:0]   cmt0_csr_ecode    ;
+    reg             cmt0_tlbfill_en   ;
+
+    reg             cmt1_wen          ;
+    reg     [ 7:0]  cmt1_wdest        ;
+    reg     [31:0]  cmt1_wdata        ;
+    reg     [31:0]  cmt1_pc           ;
+    reg     [31:0]  cmt1_inst         ;
+    reg             cmt1_excp_flush   ;
+    reg             cmt1_ertn         ;
+    reg     [5:0]   cmt1_csr_ecode    ;
+    reg             cmt1_tlbfill_en   ;
+    reg             cmt_rand_index    ;
 
     // to difftest debug
     reg             trap                  ;
@@ -183,7 +188,7 @@ module core_top (
     reg     [63:0]  instrCnt              ;
  
     // from regfile 
-    wire    [31:0]  regs[0:31]            ;
+    wire    [31:0]  regs_diff[0:31]       ;
     diff_t  [1:0]   diff                  ;
     wire    [63:0]  cnt                   ;
   
@@ -268,13 +273,10 @@ module core_top (
         .flush(flush),
         .pause(pause),
 
-        .dispatch_master(dispatch_regfile_io.master),
-        .reg_write_en,
-        .reg_write_addr,
-        .reg_write_data,
-
         .diff,
         .cnt,
+
+        .regs_diff,
 
         .csr_crmd_diff      (csr_crmd_diff_0    ),
         .csr_prmd_diff      (csr_prmd_diff_0    ),
@@ -304,17 +306,6 @@ module core_top (
         .csr_pgdh_diff      (csr_pgdh_diff_0    )
     );
 
-    regfile u_regfile (
-        .clk(aclk),
-        .rst,
-
-        .reg_write_en,
-        .reg_write_addr,
-        .reg_write_data,
-
-        .slave(dispatch_regfile_io.slave)
-    );
-
     assign frontend_backend_io.slave.flush = {flush[2], flush[0]};
     assign frontend_backend_io.slave.pause = {pause[2], pause[0]};
 
@@ -330,6 +321,7 @@ module core_top (
     logic dcache_cacop;
     assign icache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2:0] == 3'b0);
     assign dcache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2:0] == 3'b1);
+    logic cache_flush;
 
     trans_addr u_trans_addr(
         .clk(aclk),
@@ -341,6 +333,7 @@ module core_top (
         .reset(rst),
         .pause_icache(pause[1]),
         .branch_flush(flush[1]),
+        .flush(cache_flush),
 
         .pc2icache(pc_icache_io.slave),
         .icache2transaddr(icache_transaddr_io.master),
@@ -366,6 +359,7 @@ module core_top (
         .reset(rst),
         .mem2dcache(mem_dcache_io.slave),
         .dcache_uncache(mem_dcache_io.uncache_en),
+        .dcache_inst(cache_inst),
 
         .rd_req  (dcache_rd_req),
         .rd_type (dcache_rd_type),
@@ -461,7 +455,7 @@ module core_top (
     axi_interface u_axi_interface (
         .clk(aclk),
         .resetn(aresetn),     // 低有效
-        .flush(1'b0),         // 给定值0，忽略该信号
+        .flush(cache_flush),         // 给定值0，忽略该信号
         // input                   wire [5:0]             stall,
         // output                  wire                   stallreq, // Stall请求
 
@@ -535,56 +529,64 @@ module core_top (
     );
 
     always @(posedge aclk) begin
-        cmt_valid       [0]<= diff[0].inst_valid;
-        cmt_cnt_inst    [0]<= diff[0].cnt_inst;
-        cmt_timer_64    [0]<= cnt;
-        cmt_inst_ld_en  [0]<= diff[0].inst_ld_en;
-        cmt_ld_paddr    [0]<= diff[0].ld_paddr;
-        cmt_ld_vaddr    [0]<= diff[0].ld_vaddr;
-        cmt_inst_st_en  [0]<= diff[0].inst_st_en;
-        cmt_st_paddr    [0]<= diff[0].st_paddr;
-        cmt_st_vaddr    [0]<= diff[0].st_vaddr;
-        cmt_st_data     [0]<= mem_dcache_io.wdata;
-        cmt_csr_rstat_en[0]<= diff[0].csr_rstat_en;
-        cmt_csr_data    [0]<= diff[0].csr_data;
+        if (rst) begin
+            {cmt0_valid, cmt0_cnt_inst, cmt0_timer_64, cmt0_inst_ld_en, cmt0_ld_paddr, cmt0_ld_vaddr, cmt0_inst_st_en, cmt0_st_paddr, cmt0_st_vaddr, cmt0_st_data, cmt0_csr_rstat_en, cmt0_csr_data} <= 0;
+            {cmt0_wen, cmt0_wdest, cmt0_wdata, cmt0_pc, cmt0_inst} <= 0;
+            {trap, trap_code, cycleCnt, instrCnt} <= 0;
+        end
+        else begin
+            cmt0_valid       <= diff[0].inst_valid;
+            cmt0_cnt_inst    <= diff[0].cnt_inst;
+            cmt0_timer_64    <= cnt;
+            cmt0_inst_ld_en  <= diff[0].inst_ld_en;
+            cmt0_ld_paddr    <= diff[0].ld_paddr;
+            cmt0_ld_vaddr    <= diff[0].ld_vaddr;
+            cmt0_inst_st_en  <= diff[0].inst_st_en;
+            cmt0_st_paddr    <= diff[0].st_paddr;
+            cmt0_st_vaddr    <= diff[0].st_vaddr;
+            cmt0_st_data     <= mem_dcache_io.wdata;
+            cmt0_csr_rstat_en<= diff[0].csr_rstat_en;
+            cmt0_csr_data    <= diff[0].csr_data;
 
-        cmt_wen         [0]<= diff[0].debug_wb_rf_wen;
-        cmt_wdest       [0]<= {3'd0, diff[0].debug_wb_rf_wnum};
+            cmt0_wen         <= diff[0].debug_wb_rf_wen;
+            cmt0_wdest       <= {3'd0, diff[0].debug_wb_rf_wnum};
 
-        cmt_wdata       [0]<= diff[0].debug_wb_rf_wdata;
-        cmt_pc          [0]<= diff[0].debug_wb_pc;
-        cmt_inst        [0]<= diff[0].debug_wb_inst;
+            cmt0_wdata       <= diff[0].debug_wb_rf_wdata;
+            cmt0_pc          <= diff[0].debug_wb_pc;
+            cmt0_inst        <= diff[0].debug_wb_inst;
 
-        cmt_excp_flush  [0]<= diff[0].excp_flush;
-        cmt_ertn        [0]<= diff[0].ertn_flush;
-        cmt_csr_ecode   [0]<= diff[0].ecode;
-        cmt_tlbfill_en  [0]<= tlbfill_en         [0];   
+            cmt0_excp_flush  <= diff[0].excp_flush;
+            cmt0_ertn        <= diff[0].ertn_flush;
+            cmt0_csr_ecode   <= diff[0].ecode;
+            cmt0_tlbfill_en  <= tlbfill_en0         ;   
 
-        cmt_valid       [1]<= diff[1].inst_valid;
-        cmt_cnt_inst    [1]<= diff[1].cnt_inst;
-        cmt_timer_64    [1]<= cnt;
-        cmt_inst_ld_en  [1]<= diff[1].inst_ld_en;
-        cmt_ld_paddr    [1]<= diff[1].ld_paddr;
-        cmt_ld_vaddr    [1]<= diff[1].ld_vaddr;
-        cmt_inst_st_en  [1]<= diff[1].inst_st_en;
-        cmt_st_paddr    [1]<= diff[1].st_paddr;
-        cmt_st_vaddr    [1]<= diff[1].st_vaddr;
-        cmt_st_data     [1]<= mem_dcache_io.wdata;
-        cmt_csr_rstat_en[1]<= diff[1].csr_rstat_en;
-        cmt_csr_data    [1]<= diff[1].csr_data;
+            cmt1_valid       <= diff[1].inst_valid;
+            cmt1_cnt_inst    <= diff[1].cnt_inst;
+            cmt1_timer_64    <= cnt;
+            cmt1_inst_ld_en  <= diff[1].inst_ld_en;
+            cmt1_ld_paddr    <= diff[1].ld_paddr;
+            cmt1_ld_vaddr    <= diff[1].ld_vaddr;
+            cmt1_inst_st_en  <= diff[1].inst_st_en;
+            cmt1_st_paddr    <= diff[1].st_paddr;
+            cmt1_st_vaddr    <= diff[1].st_vaddr;
+            cmt1_st_data     <= mem_dcache_io.wdata;
+            cmt1_csr_rstat_en<= diff[1].csr_rstat_en;
+            cmt1_csr_data    <= diff[1].csr_data;
 
-        cmt_wen         [1]<= diff[1].debug_wb_rf_wen;
-        cmt_wdest       [1]<= {3'd0, diff[1].debug_wb_rf_wnum};
+            cmt1_wen         <= diff[1].debug_wb_rf_wen;
+            cmt1_wdest       <= {3'd0, diff[1].debug_wb_rf_wnum};
 
-        cmt_wdata       [1]<= diff[1].debug_wb_rf_wdata;
-        cmt_pc          [1]<= diff[1].debug_wb_pc;
-        cmt_inst        [1]<= diff[1].debug_wb_inst;
+            cmt1_wdata       <= diff[1].debug_wb_rf_wdata;
+            cmt1_pc          <= diff[1].debug_wb_pc;
+            cmt1_inst        <= diff[1].debug_wb_inst;
 
-        cmt_excp_flush  [1]<= diff[1].excp_flush;
-        cmt_ertn        [1]<= diff[1].ertn_flush;
-        cmt_csr_ecode   [1]<= diff[1].ecode;
-        cmt_tlbfill_en  [1]<= tlbfill_en         [1];
-        cmt_rand_index     <= rand_index            ;    
+            cmt1_excp_flush  <= diff[1].excp_flush;
+            cmt1_ertn        <= diff[1].ertn_flush;
+            cmt1_csr_ecode   <= diff[1].ecode;
+            cmt1_tlbfill_en  <= tlbfill_en1         ;
+            cmt_rand_index   <= rand_index            ;  
+        end
+          
     end
 
     assign debug0_wb_inst = diff[0].debug_wb_inst;
@@ -615,54 +617,83 @@ module core_top (
         .clock              (aclk           ),
         .coreid             (0              ),
         .index              (0              ),
-        .valid              (cmt_valid[0]   ),
-        .pc                 (cmt_pc[0]      ),
-        .instr              (cmt_inst[0]    ),
+        .valid              (cmt0_valid   ),
+        .pc                 (cmt0_pc      ),
+        .instr              (cmt0_inst    ),
         .skip               (0              ),
-        // .is_TLBFILL         (cmt_tlbfill_en[0]),
+        // .is_TLBFILL         (cmt_tlbfill_en0),
         .is_TLBFILL         (0),
         // .TLBFILL_index      (cmt_rand_index ),
         .TLBFILL_index      (0),
-        .is_CNTinst         (cmt_cnt_inst[0]),
-        .timer_64_value     (cmt_timer_64[0]),
-        .wen                (cmt_wen     [0]),
-        .wdest              (cmt_wdest   [0]),
-        .wdata              (cmt_wdata   [0]),
-        .csr_rstat          (cmt_csr_rstat_en[0]),
-        .csr_data           (cmt_csr_data[0])
+        .is_CNTinst         (cmt0_cnt_inst),
+        .timer_64_value     (cmt0_timer_64),
+        .wen                (cmt0_wen     ),
+        .wdest              (cmt0_wdest   ),
+        .wdata              (cmt0_wdata   ),
+        .csr_rstat          (cmt0_csr_rstat_en),
+        .csr_data           (cmt0_csr_data)
     );
 
-    // DifftestInstrCommit DifftestInstrCommit_1(
-    //     .clock              (aclk           ),
-    //     .coreid             (0              ),
-    //     .index              (1              ),
-    //     .valid              (cmt_valid[1]   ),
-    //     .pc                 (cmt_pc[1]      ),
-    //     .instr              (cmt_inst[1]    ),
-    //     .skip               (0              ),
-    //     // .is_TLBFILL         (cmt_tlbfill_en[1]),
-    //     .is_TLBFILL         (0),
-    //     // .TLBFILL_index      (cmt_rand_index ),
-    //     .TLBFILL_index      (0),
-    //     .is_CNTinst         (cmt_cnt_inst[1]),
-    //     .timer_64_value     (cmt_timer_64[1]),
-    //     .wen                (cmt_wen     [1]),
-    //     .wdest              (cmt_wdest   [1]),
-    //     .wdata              (cmt_wdata   [1]),
-    //     .csr_rstat          (cmt_csr_rstat_en[1]),
-    //     .csr_data           (cmt_csr_data[1])
-    // );
+    DifftestInstrCommit DifftestInstrCommit_1(
+        .clock              (aclk           ),
+        .coreid             (0              ),
+        .index              (1              ),
+        .valid              (cmt1_valid   ),
+        .pc                 (cmt1_pc      ),
+        .instr              (cmt1_inst    ),
+        .skip               (0              ),
+        // .is_TLBFILL         (cmt_tlbfill_en1),
+        .is_TLBFILL         (0),
+        // .TLBFILL_index      (cmt_rand_index ),
+        .TLBFILL_index      (0),
+        .is_CNTinst         (cmt1_cnt_inst),
+        .timer_64_value     (cmt1_timer_64),
+        .wen                (cmt1_wen     ),
+        .wdest              (cmt1_wdest   ),
+        .wdata              (cmt1_wdata   ),
+        .csr_rstat          (cmt1_csr_rstat_en),
+        .csr_data           (cmt1_csr_data)
+    );
 
+    logic pc1_lt_pc2;
+    logic excp_flush;
+    bus32_t excp_pc;
+    bus32_t excp_inst;
+    
+    assign pc1_lt_pc2 = cmt0_pc < cmt1_pc;
+    always_comb begin
+        if (pc1_lt_pc2) begin
+            if (cmt0_excp_flush) begin
+                excp_flush = cmt0_excp_flush;
+                excp_pc = cmt0_pc;
+                excp_inst = cmt0_inst;
+            end else begin
+                excp_flush = cmt1_excp_flush;
+                excp_pc = cmt1_pc;
+                excp_inst = cmt1_inst;
+            end
+        end else begin
+            if (cmt1_excp_flush) begin
+                excp_flush = cmt1_excp_flush;
+                excp_pc = cmt1_pc;
+                excp_inst = cmt1_inst;
+            end else begin
+                excp_flush = cmt0_excp_flush;
+                excp_pc = cmt0_pc;
+                excp_inst = cmt0_inst;
+            end
+        end
+    end
 
     DifftestExcpEvent DifftestExcpEvent(
         .clock              (aclk           ),
         .coreid             (0              ),
-        .excp_valid         (cmt_excp_flush[0] | cmt_excp_flush[1]),
-        .eret               (cmt_ertn      [0] | cmt_ertn      [1]),
+        .excp_valid         (excp_flush     ),
+        .eret               (cmt0_ertn      ),
         .intrNo             (csr_estat_diff_0[12:2]),
-        .cause              (cmt_csr_ecode [0]),
-        .exceptionPC        (cmt_pc        [0]),
-        .exceptionInst      (cmt_inst      [0])
+        .cause              (cmt0_csr_ecode ),
+        .exceptionPC        (excp_pc        ),
+        .exceptionInst      (excp_inst      )
     );
 
     DifftestTrapEvent DifftestTrapEvent(
@@ -670,48 +701,29 @@ module core_top (
         .coreid             (0              ),
         .valid              (trap           ),
         .code               (trap_code      ),
-        .pc                 (cmt_pc[0]      ),
+        .pc                 (cmt0_pc        ),
         .cycleCnt           (cycleCnt       ),
         .instrCnt           (instrCnt       )
     );
 
-    DifftestStoreEvent DifftestStoreEvent0(
+    DifftestStoreEvent DifftestStoreEvent(
         .clock              (aclk             ),
         .coreid             (0                ),
         .index              (0                ),
-        .valid              (cmt_inst_st_en[0]),
-        .storePAddr         (cmt_st_paddr  [0]),
-        .storeVAddr         (cmt_st_vaddr  [0]),
-        .storeData          (cmt_st_data   [0])
+        .valid              (cmt0_inst_st_en),
+        .storePAddr         (cmt0_st_paddr  ),
+        .storeVAddr         (cmt0_st_vaddr  ),
+        .storeData          (cmt0_st_data   )
     );
 
-    // DifftestStoreEvent DifftestStoreEvent1(
-    //     .clock              (aclk             ),
-    //     .coreid             (0                ),
-    //     .index              (1                ),
-    //     .valid              (cmt_inst_st_en[1]),
-    //     .storePAddr         (cmt_st_paddr  [1]),
-    //     .storeVAddr         (cmt_st_vaddr  [1]),
-    //     .storeData          (cmt_st_data   [1])
-    // );
-
-    DifftestLoadEvent DifftestLoadEvent0(
+    DifftestLoadEvent DifftestLoadEvent(
         .clock              (aclk             ),
         .coreid             (0                ),
         .index              (0                ),
-        .valid              (cmt_inst_ld_en[0]),
-        .paddr              (cmt_ld_paddr  [0]),
-        .vaddr              (cmt_ld_vaddr  [0])
+        .valid              (cmt0_inst_ld_en),
+        .paddr              (cmt0_ld_paddr  ),
+        .vaddr              (cmt0_ld_vaddr  )
     );
-
-    // DifftestLoadEvent DifftestLoadEvent1(
-    //     .clock              (aclk             ),
-    //     .coreid             (0                ),
-    //     .index              (1                ),
-    //     .valid              (cmt_inst_ld_en[1]),
-    //     .paddr              (cmt_ld_paddr  [1]),
-    //     .vaddr              (cmt_ld_vaddr  [1])
-    // );
 
     DifftestCSRRegState DifftestCSRRegState(
         .clock              (aclk               ),
@@ -749,37 +761,37 @@ module core_top (
         .clock              (aclk       ),
         .coreid             (0          ),
         .gpr_0              (0          ),
-        .gpr_1              (u_regfile.ram[1]    ),
-        .gpr_2              (u_regfile.ram[2]    ),
-        .gpr_3              (u_regfile.ram[3]    ),
-        .gpr_4              (u_regfile.ram[4]    ),
-        .gpr_5              (u_regfile.ram[5]    ),
-        .gpr_6              (u_regfile.ram[6]    ),
-        .gpr_7              (u_regfile.ram[7]    ),
-        .gpr_8              (u_regfile.ram[8]    ),
-        .gpr_9              (u_regfile.ram[9]    ),
-        .gpr_10             (u_regfile.ram[10]   ),
-        .gpr_11             (u_regfile.ram[11]   ),
-        .gpr_12             (u_regfile.ram[12]   ),
-        .gpr_13             (u_regfile.ram[13]   ),
-        .gpr_14             (u_regfile.ram[14]   ),
-        .gpr_15             (u_regfile.ram[15]   ),
-        .gpr_16             (u_regfile.ram[16]   ),
-        .gpr_17             (u_regfile.ram[17]   ),
-        .gpr_18             (u_regfile.ram[18]   ),
-        .gpr_19             (u_regfile.ram[19]   ),
-        .gpr_20             (u_regfile.ram[20]   ),
-        .gpr_21             (u_regfile.ram[21]   ),
-        .gpr_22             (u_regfile.ram[22]   ),
-        .gpr_23             (u_regfile.ram[23]   ),
-        .gpr_24             (u_regfile.ram[24]   ),
-        .gpr_25             (u_regfile.ram[25]   ),
-        .gpr_26             (u_regfile.ram[26]   ),
-        .gpr_27             (u_regfile.ram[27]   ),
-        .gpr_28             (u_regfile.ram[28]   ),
-        .gpr_29             (u_regfile.ram[29]   ),
-        .gpr_30             (u_regfile.ram[30]   ),
-        .gpr_31             (u_regfile.ram[31]   )
+        .gpr_1              (regs_diff[1]   ),
+        .gpr_2              (regs_diff[2]   ),
+        .gpr_3              (regs_diff[3]   ),
+        .gpr_4              (regs_diff[4]   ),
+        .gpr_5              (regs_diff[5]   ),
+        .gpr_6              (regs_diff[6]   ),
+        .gpr_7              (regs_diff[7]   ),
+        .gpr_8              (regs_diff[8]   ),
+        .gpr_9              (regs_diff[9]   ),
+        .gpr_10             (regs_diff[10]   ),
+        .gpr_11             (regs_diff[11]   ),
+        .gpr_12             (regs_diff[12]   ),
+        .gpr_13             (regs_diff[13]   ),
+        .gpr_14             (regs_diff[14]   ),
+        .gpr_15             (regs_diff[15]   ),
+        .gpr_16             (regs_diff[16]   ),
+        .gpr_17             (regs_diff[17]   ),
+        .gpr_18             (regs_diff[18]   ),
+        .gpr_19             (regs_diff[19]   ),
+        .gpr_20             (regs_diff[20]   ),
+        .gpr_21             (regs_diff[21]   ),
+        .gpr_22             (regs_diff[22]   ),
+        .gpr_23             (regs_diff[23]   ),
+        .gpr_24             (regs_diff[24]   ),
+        .gpr_25             (regs_diff[25]   ),
+        .gpr_26             (regs_diff[26]   ),
+        .gpr_27             (regs_diff[27]   ),
+        .gpr_28             (regs_diff[28]   ),
+        .gpr_29             (regs_diff[29]   ),
+        .gpr_30             (regs_diff[30]   ),
+        .gpr_31             (regs_diff[31]   )
     );
 
 endmodule

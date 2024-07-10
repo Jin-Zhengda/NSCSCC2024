@@ -162,9 +162,9 @@ module main_ex
     assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.addr_ok;
 
     logic[11: 0] si12;
-    logic[13: 9] si14;
+    logic[13: 0] si14;
     assign si12 = ex_i.inst[21: 10];
-    assign si14 = ex_i.inst[14: 10];
+    assign si14 = ex_i.inst[23: 10];
 
     always_comb begin
         case (ex_i.aluop)
@@ -341,7 +341,6 @@ module main_ex
 
     // csr && privilege alu
     bus32_t csr_alu_res;
-    bus32_t csr_mask;
 
     always_comb begin
         if (ex_i.aluop == `ALU_LLW) begin
@@ -353,7 +352,7 @@ module main_ex
         else if (ex_i.aluop == `ALU_SCW && LLbit) begin
             ex_o.csr_write_en = 1'b1;
             ex_o.csr_addr = `CSR_LLBCTL;
-            ex_o.csr_write_data = 1'b0;
+            ex_o.csr_write_data = 32'b0;
             ex_o.is_llw_scw = 1'b1;
         end
         else begin

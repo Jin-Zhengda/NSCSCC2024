@@ -128,17 +128,6 @@ interface ex_div;
     
 endinterface : ex_div
 
-interface mem_csr;
-    bus32_t csr_read_data;
-    logic csr_read_en;
-    csr_addr_t csr_read_addr;
-
-    modport master(input csr_read_data, output csr_read_en, output csr_read_addr);
-
-    modport slave(output csr_read_data, input csr_read_en, input csr_read_addr);
-
-endinterface : mem_csr
-
 interface ctrl_csr;
     bus32_t eentry;
     bus32_t era;

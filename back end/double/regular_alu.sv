@@ -54,10 +54,8 @@ module regular_alu
         endcase
     end
 
-    logic   reg1_eq_reg2;
     logic   reg1_lt_reg2;
     bus32_t reg2_i_mux;
-    bus32_t reg1_i_not;
     bus32_t sum_result;
 
     assign reg2_i_mux = ((aluop == `ALU_SUBW) || (aluop == `ALU_SLT)) ? ~reg2 + 1 : reg2;
@@ -88,7 +86,7 @@ module regular_alu
                 arithmetic_res = sum_result;
             end
             `ALU_SLT, `ALU_SLTU, `ALU_SLTI, `ALU_SLTUI: begin
-                arithmetic_res = reg1_lt_reg2;
+                arithmetic_res = {31'b0, reg1_lt_reg2};
             end
             `ALU_MULW: begin
                 arithmetic_res = mul_result[31:0];

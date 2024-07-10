@@ -110,8 +110,6 @@ module branch_alu
         endcase
     end
 
-    assign update_info.pc_dispatch = pc;
-
     always_comb begin : branch_target
         if (is_branch) begin
             if (is_branch_taken && pre_is_branch_taken) begin

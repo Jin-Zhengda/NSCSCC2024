@@ -63,7 +63,7 @@ import pipeline_types::*;
         .branch_actual_addr(fb_master.update_info.branch_actual_addr),
         .flush(fb_master.flush[0]),
 
-        .pause(fb_master.pause),
+        .pause(fb_master.pause[0]),
         .is_interrupt(fb_master.is_interrupt),
         .new_pc(fb_master.new_pc),
 
@@ -98,7 +98,7 @@ import pipeline_types::*;
         .rst,
         .flush(fb_master.flush[1]),
         .stall(pi_master.stall_for_buffer),
-        .pause(fb_master.pause),
+        .pause(fb_master.pause[1]),
 
         .inst(pi_master.inst_for_buffer),
         .pc(pi_master.pc_for_buffer),
