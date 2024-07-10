@@ -125,7 +125,7 @@ module icache
 
 logic pre_valid;
 always_ff @( posedge clk ) begin
-    if(pc2icache.stall)pre_valid<=pre_valid;
+    if(pc2icache.stall||pause_icache)pre_valid<=pre_valid;
     else pre_valid<=(|pc2icache.inst_en&&!branch_flush);
 end
 
@@ -140,6 +140,7 @@ logic[4:0]current_state,next_state;
 logic write_delay;//需不需要考虑pause！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
 always_ff @( posedge clk ) begin
     if(reset)write_delay<=1'b0;
+    else if(pause_icache)write_delay<=write_delay;
     else if(write_delay==1'b1)write_delay<=1'b0;
     else if(next_state==`RETURN)write_delay<=1'b1;
     else write_delay<=1'b0;
@@ -149,13 +150,18 @@ always_ff @( posedge clk ) begin
     if(reset)current_state<=`IDLE;
     else current_state<=next_state;
 end
+logic pre_uncache_en;
+always_ff @( posedge clk ) begin : blockName
+    if(pc2icache.stall)pre_uncache_en<=pre_uncache_en;
+    else pre_uncache_en<=pc2icache.uncache_en;
+end
 always_comb begin
     if(reset)next_state=`IDLE;
     else if(branch_flush)next_state=`IDLE;
     else if(pause_icache)next_state=current_state;
     else if(current_state==`IDLE)begin
-        if(!pre_valid)next_state=`IDLE;
-        else if(pc2icache.uncache_en)next_state=`UNCACHE_RETURN;
+        if(pre_uncache_en)next_state=`UNCACHE_RETURN;
+        else if(!pre_valid)next_state=`IDLE;
         else if(a_hit_fail)next_state=`ASKMEM1;
         else if(b_hit_fail)next_state=`ASKMEM2;
         else next_state=`IDLE;
@@ -182,11 +188,13 @@ always_comb begin
 end
 
 always_ff @( posedge clk ) begin
-    if(current_state==`IDLE)record_b_hit_result=b_hit_success;
+    if(pause_icache)record_b_hit_result<=record_b_hit_result;
+    else if(current_state==`IDLE)record_b_hit_result=b_hit_success;
     else record_b_hit_result<=record_b_hit_result;
 end
 always_ff @( posedge clk ) begin
-    if(current_state==`IDLE)record_a_hit_result=a_hit_success;
+    if(pause_icache)record_a_hit_result<=record_a_hit_result;
+    else if(current_state==`IDLE)record_a_hit_result<=a_hit_success;
     else record_a_hit_result<=record_a_hit_result;
 end
 
@@ -243,28 +251,9 @@ generate
     end
 endgenerate
 assign addr_way0a=wea_way0?((current_state==`ASKMEM1)?pre_vaddr_a[`INDEX_LOC]:pre_vaddr_b[`INDEX_LOC]):(write_delay?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC]);
-assign addr_way0b=write_delay?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
+assign addr_way0b=(current_state==`RETURN)?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
 assign addr_way1a=wea_way1?((current_state==`ASKMEM1)?pre_vaddr_a[`INDEX_LOC]:pre_vaddr_b[`INDEX_LOC]):(write_delay?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC]);
-assign addr_way1b=write_delay?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
-
-
-
-BRAM testbram (
-  .clka(clk),    // input wire clka
-  .ena(ena),      // input wire ena
-  .wea(wea),      // input wire [0 : 0] wea
-  .addra(addra),  // input wire [6 : 0] addra
-  .dina(dina),    // input wire [31 : 0] dina
-  .douta(douta),  // output wire [31 : 0] douta
-  .clkb(clk),    // input wire clkb
-  .enb(enb),      // input wire enb
-  .web(web),      // input wire [0 : 0] web
-  .addrb(addrb),  // input wire [6 : 0] addrb
-  .dinb(dinb),    // input wire [31 : 0] dinb
-  .doutb(doutb)  // output wire [31 : 0] doutb
-);
-
-
+assign addr_way1b=(current_state==`RETURN)?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
 
 
 BRAM bank0_way0(.clka(clk),.ena(1'b1),.wea(|wea_way0),.dina(data_to_write_way0[0]),.addra(addr_way0a),.douta(way0_cachea[0]),.clkb(clk),.enb(1'b1),.web(1'b0),.dinb(32'b0),.addrb(addr_way0b),.doutb(way0_cacheb[0]));
@@ -349,7 +338,8 @@ assign pc2icache.pc_for_bpu[1]=pre_vaddr_b;
 
 logic[`ADDR_SIZE-1:0] record_uncache_pc;
 always_ff @( posedge clk ) begin
-    if(next_state==`UNCACHE_RETURN)record_uncache_pc<=pc2icache.pc;
+    if(pause_icache)record_uncache_pc<=record_uncache_pc;
+    else if(next_state==`UNCACHE_RETURN)record_uncache_pc<=pc2icache.pc;
     else if(next_state==`IDLE)record_uncache_pc<=32'b0;
     else record_uncache_pc<=record_uncache_pc;
 end

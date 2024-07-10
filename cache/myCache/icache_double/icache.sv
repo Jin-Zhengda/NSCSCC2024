@@ -147,14 +147,19 @@ end
 
 always_ff @( posedge clk ) begin
     if(reset)current_state<=`IDLE;
-    else if(branch_flush)current_state<=`IDLE;
-    else if(pause_icache)current_state<=current_state;
     else current_state<=next_state;
+end
+logic pre_uncache_en;
+always_ff @( posedge clk ) begin : blockName
+    if(pc2icache.stall)pre_uncache_en<=pre_uncache_en;
+    else pre_uncache_en<=pc2icache.uncache_en;
 end
 always_comb begin
     if(reset)next_state=`IDLE;
+    else if(branch_flush)next_state=`IDLE;
+    else if(pause_icache)next_state=current_state;
     else if(current_state==`IDLE)begin
-        if(pc2icache.uncache_en)next_state=`UNCACHE_RETURN;
+        if(pre_uncache_en)next_state=`UNCACHE_RETURN;
         else if(!pre_valid)next_state=`IDLE;
         else if(a_hit_fail)next_state=`ASKMEM1;
         else if(b_hit_fail)next_state=`ASKMEM2;
