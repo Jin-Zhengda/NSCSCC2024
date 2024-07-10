@@ -67,8 +67,8 @@ module pc_reg_d
 
     always_ff @(posedge clk) begin
         if(rst) begin
-            //pc.pc_o <= 32'h1bfffffc;
-            pc.pc_o <= 32'h100;
+            pc.pc_o <= 32'h1c000000;
+            //pc.pc_o <= 32'h100;
         end
         else if(flush) begin
             pc.pc_o <= new_pc;
@@ -93,11 +93,12 @@ module pc_reg_d
                 pc.pc_o <= pre_branch_addr;
             end
             else begin
-                pc.pc_o <= pc.pc_o + 4'h8;
+                if (uncache_en) pc.pc_o <= pc.pc_o + 4'h4;
+                else pc.pc_o <= pc.pc_o + 4'h8;
             end
         end
     end
 
-    // assign uncache_en = (pc.pc_o <= 32'h1c000100) ? 1'b1: 1'b0;
-    assign uncache_en = 1'b0;
+    assign uncache_en = (pc.pc_o <= 32'h1c000100 && !rst) ? 1'b1: 1'b0;
+    //assign uncache_en = 1'b0;
 endmodule

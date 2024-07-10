@@ -74,9 +74,9 @@ import pipeline_types::*;
     logic fetch_cancel;
     assign fetch_cancel = (last_is_branch_delay && last_pre_taken_or_not) || (last_is_branch_ddelay && last_pre_taken_or_not_delay);
 
-    always_ff @(posedge clk) begin
-        inst_and_pc_o.is_exception <= is_exception;
-        inst_and_pc_o.exception_cause <= exception_cause;
+    always_comb begin
+        inst_and_pc_o.is_exception = is_exception;
+        inst_and_pc_o.exception_cause = exception_cause;
     end
 
     logic [1:0] fetch_en;

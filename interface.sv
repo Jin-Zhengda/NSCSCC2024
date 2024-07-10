@@ -83,52 +83,6 @@ interface pc_icache;
     );
 endinterface : pc_icache
 
-interface ex_tlb;
-    // tlbsrch, tlbwr, tlbrd, tlbfill, invtlb 指令
-    // tlbwr, tlbfill
-    logic tlbwr_en;
-    logic tlbfill_en;
-    logic [4:0] rand_index;
-    bus32_t tlbehi_in;
-    bus32_t tlbelo0_in;
-    bus32_t tlbelo1_in;
-    bus32_t tlbidx_in;
-    logic [5:0] ecode;
-
-    // tlbsrch
-    logic tlbsrch_en;
-    bus32_t asid_in;
-
-    // tlbrd
-    logic tlbrd_en;
-    bus32_t tlbehi_out;
-    bus32_t tlbelo0_out;
-    bus32_t tlbelo1_out;
-    bus32_t tlbidx_out;
-    bus32_t asid_out;
-
-    // invtlb
-    logic invtlb_en;
-    logic [9:0] invtlb_asid;
-    logic [18:0] invtlb_vpn;
-    logic [4:0] invtlb_op;
-
-    logic tlb_hit_valid;
-
-    modport master(
-        input tlbehi_out, tlbelo0_out, tlbelo1_out, tlbidx_out, asid_out, tlb_hit_valid,
-        output tlbwr_en, tlbfill_en, rand_index, tlbehi_in, tlbelo0_in, tlbelo1_in, tlbidx_in, ecode,
-                tlbsrch_en, asid_in, tlbrd_en, invtlb_en, invtlb_asid, invtlb_vpn, invtlb_op
-    );
-
-    modport slave(
-        output tlbehi_out, tlbelo0_out, tlbelo1_out, tlbidx_out, asid_out, tlb_hit_valid,
-        input tlbwr_en, tlbfill_en, rand_index, tlbehi_in, tlbelo0_in, tlbelo1_in, tlbidx_in, ecode,
-                tlbsrch_en, asid_in, tlbrd_en, invtlb_en, invtlb_asid, invtlb_vpn, invtlb_op
-    );
-
-endinterface : ex_tlb
-
 interface dispatch_regfile;
     logic [1: 0] reg_read_en[2];
     logic [1: 0][REG_ADDR_WIDTH-1:0] reg_read_addr[2];
@@ -210,23 +164,6 @@ interface ctrl_csr;
     );
 endinterface : ctrl_csr
 
-
-interface icache_transaddr;
-    logic                   inst_fetch;    //指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
-    logic [31:0]            inst_vaddr;    //虚拟地址
-    logic [31:0]            ret_inst_paddr;//物理地址
-
-    modport master(
-        input ret_inst_paddr,
-        output inst_fetch,inst_vaddr  
-    );
-
-    modport slave(
-        output ret_inst_paddr,
-        input inst_fetch,inst_vaddr
-    );
-endinterface : icache_transaddr
-
 interface dcache_transaddr;
     logic                   data_fetch;    //指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
     logic [31:0]            data_vaddr;    //虚拟地址
@@ -243,8 +180,6 @@ interface dcache_transaddr;
         input data_fetch,data_vaddr,cacop_op_mode_di
     );
 endinterface : dcache_transaddr
-
-
 
 interface ex_tlb;
     //TLBFILL和TLBWR指令

@@ -75,15 +75,20 @@ end
 
 always_ff @( posedge clk ) begin
     if(reset)current_state<=`IDLE;
-    else if(branch_flush)current_state<=`IDLE;
-    else if(pause_icache)current_state<=current_state;
     else current_state<=next_state;
+end
+logic pre_uncache_en;
+always_ff @( posedge clk ) begin : blockName
+    if(pc2icache.stall)pre_uncache_en<=pre_uncache_en;
+    else pre_uncache_en<=pc2icache.uncache_en;
 end
 always_comb begin
     if(reset)next_state=`IDLE;
+    else if(branch_flush)next_state=`IDLE;
+    else if(pause_icache)next_state=current_state;
     else if(current_state==`IDLE)begin
-        if(!pre_valid)next_state=`IDLE;
-        else if(pc2icache.uncache_en)next_state=`UNCACHE_RETURN;
+        if(pre_uncache_en)next_state=`UNCACHE_RETURN;
+        else if(!pre_valid)next_state=`IDLE;
         else if(a_hit_fail)next_state=`ASKMEM1;
         else if(b_hit_fail)next_state=`ASKMEM2;
         else next_state=`IDLE;
@@ -248,7 +253,7 @@ assign pc2icache.stall=(next_state!=`IDLE);
 assign pc2icache.inst[0]=(current_state==`UNCACHE_RETURN)?iucache_rdata_o:(a_hit_success?(a_hit_way0?way0_cachea[pre_vaddr_a[4:2]]:way1_cachea[pre_vaddr_a[4:2]]):32'b0);//uncache情况下用inst[0]返回
 assign pc2icache.inst[1]=b_hit_success?(b_hit_way0?way0_cacheb[pre_vaddr_b[4:2]]:way1_cacheb[pre_vaddr_b[4:2]]):32'b0;
 assign pc2icache.pc_for_bpu[0]=pre_vaddr_a;
-assign pc2icache.pc_for_bpu[1]=pre_vaddr_b;
+assign pc2icache.pc_for_bpu[1]=(current_state==`UNCACHE_RETURN)?(`DATA_SIZE'b0): pre_vaddr_b;
 
 
 logic[`ADDR_SIZE-1:0] record_uncache_pc;

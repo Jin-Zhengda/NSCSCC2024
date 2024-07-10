@@ -19,7 +19,7 @@ module testbench ();
 
     initial begin
         rst = 1'b1;
-        #195 rst = 1'b0;
+        #200 rst = 1'b0;
         #1000 $finish;
     end
 
