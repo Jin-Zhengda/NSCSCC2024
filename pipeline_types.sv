@@ -5,7 +5,7 @@ package pipeline_types;
 
     parameter REG_WIDTH = 32;
     parameter REG_ADDR_WIDTH = 5;
-    parameter CSR_ADDR_WIDTH = 12;
+    parameter CSR_ADDR_WIDTH = 14;
     parameter ALU_OP_WIDTH = 8;
     parameter ALU_SEL_WIDTH = 3;
 
@@ -14,9 +14,6 @@ package pipeline_types;
 
     parameter DECODER_WIDTH = 2;
     parameter ISSUE_WIDTH = 2;
-
-    parameter READ_PORTS = DECODER_WIDTH * 2;
-    parameter WRITE_PORTS = DECODER_WIDTH;
 
 
     typedef logic [REG_WIDTH - 1:0] bus32_t;

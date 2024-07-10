@@ -47,7 +47,7 @@ module ctrl
 
     // ertn inst
     logic is_ertn;
-    assign is_ertn = commit_ctrl_o[0].is_exception == 6'b0 && commit_ctrl_o[0].aluop == `ALU_ERTN;
+    assign is_ertn = (commit_ctrl_o[0].is_exception == 6'b0) && (commit_ctrl_o[0].aluop == `ALU_ERTN);
 
     // new target
     assign new_pc  = branch_flush ? branch_target : (is_ertn ? csr_master.era : csr_master.eentry);

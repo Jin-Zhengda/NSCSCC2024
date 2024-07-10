@@ -32,7 +32,7 @@ module deputy_ex
     assign ex_o.exception_cause = ex_i.exception_cause;
 
     assign ex_o.mem_addr = 32'b0;
-    assign ex_o.csr_addr = 32'b0;
+    assign ex_o.csr_addr = 14'b0;
     assign ex_o.csr_write_en = 1'b0;
     assign ex_o.csr_write_data = 32'b0;
     assign ex_o.is_llw_scw = 1'b0;
