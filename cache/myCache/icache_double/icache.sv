@@ -51,14 +51,16 @@ module icache
     input bus32_t iucache_rdata_o
 );
 
-logic real_ret_valid,drop_one_ret;
+logic real_ret_valid,drop_one_ret,real_uncache_ret_valid;
 always_ff @( posedge clk ) begin
     if(reset)drop_one_ret<=1'b0;
-    else if(branch_flush&&!ret_valid)drop_one_ret<=1'b1;
+    else if(branch_flush&&!ret_valid&&!iucache_rvalid_o)drop_one_ret<=1'b1;
     else if(ret_valid)drop_one_ret<=1'b0;
+    else if(iucache_rvalid_o)drop_one_ret<=1'b0;
     else drop_one_ret<=drop_one_ret;
 end
 
+assign real_uncache_ret_valid=(drop_one_ret||branch_flush)?1'b0:iucache_rvalid_o;
 assign real_ret_valid=(drop_one_ret||branch_flush)?1'b0:ret_valid;
 
 logic pre_valid;
@@ -132,7 +134,7 @@ always_comb begin
         next_state=`IDLE;
     end
     else if(current_state==`UNCACHE_RETURN)begin
-        if(iucache_rvalid_o)next_state=`IDLE;
+        if(real_uncache_ret_valid)next_state=`IDLE;
         else next_state=`UNCACHE_RETURN;
     end
     else next_state=`IDLE;
