@@ -1,75 +1,3 @@
-interface pc_icache;
-    bus32_t pc;  // 读 icache 的地址
-    logic [1:0] inst_en;  // 读 icache 使能
-    bus32_t [1:0] inst;
-    bus32_t [1:0] inst_for_buffer;  // 读 icache 的结果，即给出的指令
-    logic stall_for_buffer;
-    bus32_t [1:0] pc_for_bpu;
-    bus32_t [1:0] pc_for_buffer;
-    logic [5:0] front_is_exception;
-    logic [5:0][6:0] front_exception_cause;
-    logic [5:0] icache_is_exception;
-    logic [5:0][6:0] icache_exception_cause;
-    logic stall;
-
-    logic [1:0] front_fetch_inst_en;
-    logic [1:0] icache_fetch_inst_en;
-    logic [1:0] front_is_branch;
-    logic [1:0] front_pre_taken_or_not;
-    bus32_t front_pre_branch_addr;
-    logic [1:0] icache_is_branch;
-    logic [1:0] icache_pre_taken_or_not;
-    bus32_t icache_pre_branch_addr;
-
-    logic uncache_en;
-
-    modport master(
-        input inst, stall, icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
-                stall_for_buffer, inst_for_buffer, icache_fetch_inst_en, icache_is_branch, icache_pre_taken_or_not, 
-                icache_pre_branch_addr,
-        output pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_en, front_is_branch, 
-                front_pre_taken_or_not, front_pre_branch_addr, uncache_en   
-    );
-
-    modport slave(
-        output inst, stall,icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
-                stall_for_buffer, inst_for_buffer, icache_fetch_inst_en, icache_is_branch, icache_pre_taken_or_not, 
-                icache_pre_branch_addr,
-        input pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_en, front_is_branch, 
-                front_pre_taken_or_not, front_pre_branch_addr, uncache_en
-    );
-endinterface : pc_icache
-
-interface icache_transaddr;
-    logic                   inst_fetch;    //指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
-    logic [31:0]            inst_vaddr;    //虚拟地址
-    logic [31:0]            ret_inst_paddr;//物理地址
-
-    modport master(
-        input ret_inst_paddr,
-        output inst_fetch,inst_vaddr  
-    );
-
-    modport slave(
-        output ret_inst_paddr,
-        input inst_fetch,inst_vaddr
-    );
-endinterface : icache_transaddr
-
-
-
-typedef struct packed {
-        logic[7: 0] pause;
-        logic exception_flush;
-    } ctrl_t;
-typedef logic[31: 0] bus32_t;
-typedef logic[63: 0] bus64_t;
-typedef logic[255: 0] bus256_t;
-
-
-
-
-
 `timescale 1ns / 1ps
 `define ADDR_SIZE 32
 `define DATA_SIZE 32
@@ -97,7 +25,7 @@ typedef logic[255: 0] bus256_t;
 
 
 module icache 
-//import pipeline_types::*;
+    import pipeline_types::*;
 (
     input logic clk,
     input logic reset,
@@ -164,18 +92,23 @@ always_ff @( posedge clk ) begin
     else write_delay<=1'b0;
 end
 
+logic flush_delay;
+always_ff @( posedge clk ) begin
+    flush_delay<=branch_flush;
+end
+
 always_ff @( posedge clk ) begin
     if(reset)current_state<=`IDLE;
     else current_state<=next_state;
 end
 logic pre_uncache_en;
-always_ff @( posedge clk ) begin : blockName
+always_ff @( posedge clk ) begin
     if(pc2icache.stall)pre_uncache_en<=pre_uncache_en;
     else pre_uncache_en<=pc2icache.uncache_en;
 end
 always_comb begin
     if(reset)next_state=`IDLE;
-    else if(branch_flush)next_state=`IDLE;
+    else if(branch_flush||flush_delay)next_state=`IDLE;
     else if(pause_icache)next_state=current_state;
     else if(current_state==`IDLE)begin
         if(pre_uncache_en)next_state=`UNCACHE_RETURN;
@@ -365,11 +298,28 @@ always_ff @( posedge clk ) begin
     if(pc2icache.uncache_en&&(next_state==`IDLE))record_uncache_pc<=pc2icache.pc;
     else record_uncache_pc<=record_uncache_pc;
 end
-assign iucache_ren_i=((current_state==`IDLE)&&pc2icache.uncache_en)||(current_state==`UNCACHE_RETURN);
+assign iucache_ren_i=(!flush_delay)&&(!branch_flush)&&(((current_state==`IDLE)&&pc2icache.uncache_en)||(current_state==`UNCACHE_RETURN));
 assign iucache_addr_i=record_uncache_pc;//uncache模式直接用的虚拟地址，不知道对不对
 
 assign flush=branch_flush;
 
-
+always_ff @(posedge clk) begin
+    if (reset | branch_flush) begin
+        pc2icache.pc_for_buffer <= 0;
+        pc2icache.stall_for_buffer <= 0;
+        pc2icache.inst_for_buffer <= 0;
+        pc2icache.icache_is_exception <= 0;
+        pc2icache.icache_exception_cause <= 0;
+        pc2icache.icache_fetch_inst_en <= 0;
+    end
+    else begin
+        pc2icache.pc_for_buffer <= pc2icache.pc_for_bpu;
+        pc2icache.stall_for_buffer <= pc2icache.stall;
+        pc2icache.inst_for_buffer <= pc2icache.inst;
+        pc2icache.icache_is_exception <= {2{pc2icache.front_is_exception}};
+        pc2icache.icache_exception_cause <= {2{pc2icache.front_exception_cause}};
+        pc2icache.icache_fetch_inst_en <= pc2icache.front_fetch_inst_en;
+    end
+end
 
 endmodule
