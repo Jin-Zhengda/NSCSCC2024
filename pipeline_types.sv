@@ -91,6 +91,7 @@ package pipeline_types;
         alu_op_t  aluop;
         alu_sel_t alusel;
         bus32_t   imm;
+        logic[4: 0] inv_op;
 
         logic [1:0] reg_read_en;
         logic [1:0][REG_ADDR_WIDTH - 1:0] reg_read_addr;
@@ -147,6 +148,7 @@ package pipeline_types;
         csr_addr_t csr_addr;
 
         logic [4:0] cacop_code;
+        logic[4: 0] inv_op;
 
         logic   pre_is_branch;
         logic   pre_is_branch_taken;

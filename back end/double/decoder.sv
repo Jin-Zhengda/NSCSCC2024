@@ -93,7 +93,7 @@ module decoder
 
     generate
         for (genvar i = 0; i < DECODER_WIDTH; i++) begin
-            assign dispatch_i[i] = dqueue_data[i];
+            assign dispatch_i[i] = pause_decoder ? 32'b0: dqueue_data[i];
         end
     endgenerate
 

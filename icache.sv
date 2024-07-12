@@ -51,6 +51,18 @@ module icache
     input bus32_t iucache_rdata_o
 );
 
+logic real_ret_valid,drop_one_ret,real_uncache_ret_valid;
+always_ff @( posedge clk ) begin
+    if(reset)drop_one_ret<=1'b0;
+    else if(branch_flush&&!ret_valid&&!iucache_rvalid_o)drop_one_ret<=1'b1;
+    else if(ret_valid)drop_one_ret<=1'b0;
+    else if(iucache_rvalid_o)drop_one_ret<=1'b0;
+    else drop_one_ret<=drop_one_ret;
+end
+
+assign real_uncache_ret_valid=(drop_one_ret||branch_flush)?1'b0:iucache_rvalid_o;
+assign real_ret_valid=(drop_one_ret||branch_flush)?1'b0:ret_valid;
+
 logic pre_valid;
 always_ff @( posedge clk ) begin
     if(pc2icache.stall||pause_icache)pre_valid<=pre_valid;
@@ -65,7 +77,7 @@ logic same_way;
 logic paused_ret_valid;
 always_ff @( posedge clk ) begin
     if(!pause_icache)paused_ret_valid<=1'b0;
-    else if(ret_valid&&pause_icache)paused_ret_valid<=1'b1;
+    else if((real_ret_valid||real_uncache_ret_valid)&&pause_icache)paused_ret_valid<=1'b1;
     else paused_ret_valid<=paused_ret_valid;
 end
 
@@ -80,18 +92,23 @@ always_ff @( posedge clk ) begin
     else write_delay<=1'b0;
 end
 
+logic flush_delay;
+always_ff @( posedge clk ) begin
+    flush_delay<=branch_flush;
+end
+
 always_ff @( posedge clk ) begin
     if(reset)current_state<=`IDLE;
     else current_state<=next_state;
 end
 logic pre_uncache_en;
-always_ff @( posedge clk ) begin : blockName
+always_ff @( posedge clk ) begin
     if(pc2icache.stall)pre_uncache_en<=pre_uncache_en;
     else pre_uncache_en<=pc2icache.uncache_en;
 end
 always_comb begin
     if(reset)next_state=`IDLE;
-    else if(branch_flush)next_state=`IDLE;
+    else if(branch_flush||flush_delay)next_state=`IDLE;
     else if(pause_icache)next_state=current_state;
     else if(current_state==`IDLE)begin
         if(pre_uncache_en)next_state=`UNCACHE_RETURN;
@@ -101,14 +118,14 @@ always_comb begin
         else next_state=`IDLE;
     end
     else if(current_state==`ASKMEM1)begin
-        if(ret_valid||paused_ret_valid)begin
+        if(real_ret_valid||paused_ret_valid)begin
             if(record_b_hit_result||same_way)next_state=`RETURN;
             else next_state=`ASKMEM2;
         end
         else next_state=`ASKMEM1;
     end
     else if(current_state==`ASKMEM2)begin
-        if(ret_valid||paused_ret_valid)next_state=`RETURN;
+        if(real_ret_valid||paused_ret_valid)next_state=`RETURN;
         else next_state=`ASKMEM2;
     end
     else if(current_state==`RETURN)begin
@@ -117,7 +134,7 @@ always_comb begin
         next_state=`IDLE;
     end
     else if(current_state==`UNCACHE_RETURN)begin
-        if(iucache_rvalid_o)next_state=`IDLE;
+        if(real_uncache_ret_valid||paused_ret_valid)next_state=`IDLE;
         else next_state=`UNCACHE_RETURN;
     end
     else next_state=`IDLE;
@@ -178,8 +195,8 @@ logic[`DATA_SIZE-1:0]way1_cachea[`BANK_NUM-1:0];
 logic[`DATA_SIZE-1:0]way1_cacheb[`BANK_NUM-1:0];
 generate
     for (genvar i=0;i<`BANK_NUM;i=i+1)begin
-        assign data_to_write_way0[i]=ret_valid?ret_data[i*`DATA_SIZE+`DATA_SIZE-1:i*`DATA_SIZE]:32'b0;
-        assign data_to_write_way1[i]=ret_valid?ret_data[i*`DATA_SIZE+`DATA_SIZE-1:i*`DATA_SIZE]:32'b0;
+        assign data_to_write_way0[i]=real_ret_valid?ret_data[i*`DATA_SIZE+`DATA_SIZE-1:i*`DATA_SIZE]:32'b0;
+        assign data_to_write_way1[i]=real_ret_valid?ret_data[i*`DATA_SIZE+`DATA_SIZE-1:i*`DATA_SIZE]:32'b0;
     end
 endgenerate
 
@@ -189,10 +206,10 @@ assign wea_way0_b=((current_state==`ASKMEM2)||((current_state==`ASKMEM1)&&same_w
 assign wea_way1_a=(current_state==`ASKMEM1)?wea_way1:4'b0;
 assign wea_way1_b=((current_state==`ASKMEM2)||((current_state==`ASKMEM1)&&same_way))?wea_way1:4'b0;
 
-assign addr_way0a=(next_state!=`IDLE)?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC];
-assign addr_way0b=(next_state!=`IDLE)?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
-assign addr_way1a=(next_state!=`IDLE)?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC];
-assign addr_way1b=(next_state!=`IDLE)?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
+assign addr_way0a=((next_state!=`IDLE)||pause_icache)?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC];
+assign addr_way0b=((next_state!=`IDLE)||pause_icache)?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
+assign addr_way1a=((next_state!=`IDLE)||pause_icache)?pre_vaddr_a[`INDEX_LOC]:virtual_addra[`INDEX_LOC];
+assign addr_way1b=((next_state!=`IDLE)||pause_icache)?pre_vaddr_b[`INDEX_LOC]:virtual_addrb[`INDEX_LOC];
 
 
 
@@ -205,14 +222,14 @@ BRAM bank5_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_a),.dina(data_to_write_way0[5
 BRAM bank6_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_a),.dina(data_to_write_way0[6]),.addra(addr_way0a),.douta(way0_cachea[6]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way0[6]),.addrb(addr_way0b),.doutb(way0_cacheb[6]));
 BRAM bank7_way0(.clk(clk),.ena(1'b1),.wea(wea_way0_a),.dina(data_to_write_way0[7]),.addra(addr_way0a),.douta(way0_cachea[7]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way0[7]),.addrb(addr_way0b),.doutb(way0_cacheb[7]));
 
-BRAM bank0_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[0]),.addra(addr_way1a),.douta(way1_cachea[0]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[0]),.addrb(addr_way1b),.doutb(way1_cacheb[0]));
-BRAM bank1_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[1]),.addra(addr_way1a),.douta(way1_cachea[1]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[1]),.addrb(addr_way1b),.doutb(way1_cacheb[1]));
-BRAM bank2_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[2]),.addra(addr_way1a),.douta(way1_cachea[2]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[2]),.addrb(addr_way1b),.doutb(way1_cacheb[2]));
-BRAM bank3_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[3]),.addra(addr_way1a),.douta(way1_cachea[3]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[3]),.addrb(addr_way1b),.doutb(way1_cacheb[3]));
-BRAM bank4_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[4]),.addra(addr_way1a),.douta(way1_cachea[4]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[4]),.addrb(addr_way1b),.doutb(way1_cacheb[4]));
-BRAM bank5_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[5]),.addra(addr_way1a),.douta(way1_cachea[5]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[5]),.addrb(addr_way1b),.doutb(way1_cacheb[5]));
-BRAM bank6_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[6]),.addra(addr_way1a),.douta(way1_cachea[6]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[6]),.addrb(addr_way1b),.doutb(way1_cacheb[6]));
-BRAM bank7_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[7]),.addra(addr_way1a),.douta(way1_cachea[7]),.enb(1'b1),.web(wea_way0_b),.dinb(data_to_write_way1[7]),.addrb(addr_way1b),.doutb(way1_cacheb[7]));
+BRAM bank0_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[0]),.addra(addr_way1a),.douta(way1_cachea[0]),.enb(1'b1),.web(wea_way1_b),.dinb(data_to_write_way1[0]),.addrb(addr_way1b),.doutb(way1_cacheb[0]));
+BRAM bank1_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[1]),.addra(addr_way1a),.douta(way1_cachea[1]),.enb(1'b1),.web(wea_way1_b),.dinb(data_to_write_way1[1]),.addrb(addr_way1b),.doutb(way1_cacheb[1]));
+BRAM bank2_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[2]),.addra(addr_way1a),.douta(way1_cachea[2]),.enb(1'b1),.web(wea_way1_b),.dinb(data_to_write_way1[2]),.addrb(addr_way1b),.doutb(way1_cacheb[2]));
+BRAM bank3_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[3]),.addra(addr_way1a),.douta(way1_cachea[3]),.enb(1'b1),.web(wea_way1_b),.dinb(data_to_write_way1[3]),.addrb(addr_way1b),.doutb(way1_cacheb[3]));
+BRAM bank4_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[4]),.addra(addr_way1a),.douta(way1_cachea[4]),.enb(1'b1),.web(wea_way1_b),.dinb(data_to_write_way1[4]),.addrb(addr_way1b),.doutb(way1_cacheb[4]));
+BRAM bank5_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[5]),.addra(addr_way1a),.douta(way1_cachea[5]),.enb(1'b1),.web(wea_way1_b),.dinb(data_to_write_way1[5]),.addrb(addr_way1b),.doutb(way1_cacheb[5]));
+BRAM bank6_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[6]),.addra(addr_way1a),.douta(way1_cachea[6]),.enb(1'b1),.web(wea_way1_b),.dinb(data_to_write_way1[6]),.addrb(addr_way1b),.doutb(way1_cacheb[6]));
+BRAM bank7_way1(.clk(clk),.ena(1'b1),.wea(wea_way1_a),.dina(data_to_write_way1[7]),.addra(addr_way1a),.douta(way1_cachea[7]),.enb(1'b1),.web(wea_way1_b),.dinb(data_to_write_way1[7]),.addrb(addr_way1b),.doutb(way1_cacheb[7]));
 
 logic [`DATA_SIZE-1:0]data_to_write_tagv0,data_to_write_tagv1;
 logic [`TAG_SIZE-1:0]tag_to_write_tagv;
@@ -237,7 +254,7 @@ assign b_hit_fail=pre_valid&&(!b_hit_success);
 
 logic read_success;
 always_ff @( posedge clk ) begin
-    if(ret_valid)read_success<=1'b1;
+    if(real_ret_valid)read_success<=1'b1;
     else read_success<=1'b0;
 end
 //LRU
@@ -259,35 +276,37 @@ logic LRU_pick;
 assign LRU_pick=LRU[replace_index];
 
 
-assign wea_way0=(pre_valid&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
-assign wea_way1=(pre_valid&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
+assign wea_way0=(pre_valid&&real_ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000;
+assign wea_way1=(pre_valid&&real_ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
 
 
 
-assign rd_req=((current_state==`ASKMEM1)||(current_state==`ASKMEM2))&&!paused_ret_valid;
+assign rd_req=((current_state==`ASKMEM1)||(current_state==`ASKMEM2))&&!paused_ret_valid&&!ret_valid;
 assign rd_addr=(current_state==`ASKMEM1)?pre_physical_addr_a:pre_physical_addr_b;
 
 
 
-assign pc2icache.stall=(next_state!=`IDLE);
-assign pc2icache.inst[0]=(current_state==`UNCACHE_RETURN)?iucache_rdata_o:(a_hit_success?(a_hit_way0?way0_cachea[pre_vaddr_a[4:2]]:way1_cachea[pre_vaddr_a[4:2]]):32'b0);//uncache情况下用inst[0]返回
-assign pc2icache.inst[1]=b_hit_success?(b_hit_way0?way0_cacheb[pre_vaddr_b[4:2]]:way1_cacheb[pre_vaddr_b[4:2]]):32'b0;
-assign pc2icache.pc_for_bpu[0]=pre_vaddr_a;
-assign pc2icache.pc_for_bpu[1]=(current_state==`UNCACHE_RETURN)?(`DATA_SIZE'b0): pre_vaddr_b;
+assign pc2icache.stall=(next_state!=`IDLE)||pause_icache;
+assign pc2icache.inst[0]=(current_state==`UNCACHE_RETURN)?iucache_rdata_o:
+                            ((flush_delay||branch_flush)?32'b0:
+                                (a_hit_success?(a_hit_way0?way0_cachea[pre_vaddr_a[4:2]]:way1_cachea[pre_vaddr_a[4:2]]):32'b0));//uncache情况下用inst[0]返回
+assign pc2icache.inst[1]=(flush_delay||branch_flush)?32'b0:(b_hit_success?(b_hit_way0?way0_cacheb[pre_vaddr_b[4:2]]:way1_cacheb[pre_vaddr_b[4:2]]):32'b0);
+assign pc2icache.pc_for_bpu[0]=branch_flush?32'b0:pre_vaddr_a;
+assign pc2icache.pc_for_bpu[1]=branch_flush?32'b0:((current_state==`UNCACHE_RETURN)?(`DATA_SIZE'b0): pre_vaddr_b);
 
 
 logic[`ADDR_SIZE-1:0] record_uncache_pc;
 always_ff @( posedge clk ) begin
-    if(pc2icache.uncache_en)record_uncache_pc<=pc2icache.pc;
+    if(pc2icache.uncache_en&&(next_state==`IDLE))record_uncache_pc<=pc2icache.pc;
     else record_uncache_pc<=record_uncache_pc;
 end
-assign iucache_ren_i=((current_state==`IDLE)&&pc2icache.uncache_en)||(current_state==`UNCACHE_RETURN);
-assign iucache_addr_i=(current_state==`IDLE)?pc2icache.pc:record_uncache_pc;//uncache模式直接用的虚拟地址，不知道对不对
+assign iucache_ren_i=(!flush_delay)&&(!branch_flush)&&(((current_state==`IDLE)&&pc2icache.uncache_en)||(current_state==`UNCACHE_RETURN));
+assign iucache_addr_i=record_uncache_pc;//uncache模式直接用的虚拟地址，不知道对不对
 
 assign flush=branch_flush;
 
 always_ff @(posedge clk) begin
-    if (reset) begin
+    if (reset | branch_flush) begin
         pc2icache.pc_for_buffer <= 0;
         pc2icache.stall_for_buffer <= 0;
         pc2icache.inst_for_buffer <= 0;

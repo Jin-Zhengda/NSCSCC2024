@@ -102,6 +102,7 @@ module dispatch
             assign dispatch_o[id_idx].inst_valid = dispatch_i[id_idx].inst_valid;
             assign dispatch_o[id_idx].is_privilege = dispatch_i[id_idx].is_privilege;
             assign dispatch_o[id_idx].cacop_code = dispatch_i[id_idx].cacop_code;
+            assign dispatch_o[id_idx].inv_op = dispatch_i[id_idx].inv_op;
             assign dispatch_o[id_idx].is_exception = dispatch_i[id_idx].is_exception;
             assign dispatch_o[id_idx].exception_cause = dispatch_i[id_idx].exception_cause;
             assign dispatch_o[id_idx].aluop = dispatch_i[id_idx].aluop;
@@ -139,19 +140,19 @@ module dispatch
                     end
 
                     for (integer fw_idx = 0; fw_idx < ISSUE_WIDTH; fw_idx++) begin
-                        if (wb_reg_pf[fw_idx].reg_write_en && (wb_reg_pf[fw_idx].reg_write_addr == dispatch_i[id_idx].reg_read_addr[reg_idx])) begin
+                        if (dispatch_i[id_idx].reg_read_en[reg_idx] && wb_reg_pf[fw_idx].reg_write_en && (wb_reg_pf[fw_idx].reg_write_addr == dispatch_i[id_idx].reg_read_addr[reg_idx])) begin
                             dispatch_o[id_idx].reg_data[reg_idx] = wb_reg_pf[fw_idx].reg_write_data;
                         end
                     end
 
                     for (integer fw_idx = 0; fw_idx < ISSUE_WIDTH; fw_idx++) begin
-                        if (mem_reg_pf[fw_idx].reg_write_en && (mem_reg_pf[fw_idx].reg_write_addr == dispatch_i[id_idx].reg_read_addr[reg_idx])) begin
+                        if (dispatch_i[id_idx].reg_read_en[reg_idx] && mem_reg_pf[fw_idx].reg_write_en && (mem_reg_pf[fw_idx].reg_write_addr == dispatch_i[id_idx].reg_read_addr[reg_idx])) begin
                             dispatch_o[id_idx].reg_data[reg_idx] = mem_reg_pf[fw_idx].reg_write_data;
                         end
                     end
 
                     for (integer fw_idx = 0; fw_idx < ISSUE_WIDTH; fw_idx++) begin
-                        if (ex_reg_pf[fw_idx].reg_write_en && (ex_reg_pf[fw_idx].reg_write_addr == dispatch_i[id_idx].reg_read_addr[reg_idx])) begin
+                        if (dispatch_i[id_idx].reg_read_en[reg_idx] && ex_reg_pf[fw_idx].reg_write_en && (ex_reg_pf[fw_idx].reg_write_addr == dispatch_i[id_idx].reg_read_addr[reg_idx])) begin
                             dispatch_o[id_idx].reg_data[reg_idx] = ex_reg_pf[fw_idx].reg_write_data;
                         end
                     end
@@ -201,7 +202,7 @@ module dispatch
 
     // to ex
     always_ff @(posedge clk) begin
-        if (rst || flush) begin
+        if (rst || flush || pause_dispatch) begin
             ex_i <= '{default: 0};
         end else if (!pause) begin
             ex_i[0] <= issue_en[0] ? dispatch_o[0] : 0;
@@ -210,4 +211,5 @@ module dispatch
             ex_i <= ex_i;
         end
     end
+    
 endmodule

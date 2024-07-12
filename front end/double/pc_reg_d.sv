@@ -51,12 +51,6 @@ module pc_reg_d
     assign inst_en_1 = rst || uncache_en? 1'b0: 1'b1;
     assign inst_en_2 = rst || uncache_en? 1'b0: 1'b1;
 
-	// logic pause_pc;
-    // always_ff @(posedge clk) begin
-    //     pause_pc <= pause;
-    // end
-
-
    always_ff @(posedge clk) begin
        pc.is_exception <= {is_interrupt, {(pc.pc_o[1: 0] == 2'b00) ? 1'b0 : 1'b1}, 4'b0};
        pc.exception_cause <= {{is_interrupt ? `EXCEPTION_INT: `EXCEPTION_NOP}, 
@@ -74,12 +68,6 @@ module pc_reg_d
             pc.pc_o <= new_pc;
         end
         else if(pause) begin
-            // if (pause_pc) begin
-            //     pc.pc_o <= pc.pc_o;
-            // end
-            // else if (!stall)begin
-            //     pc.pc_o <= pc.pc_o + 4'h8;
-            // end
             pc.pc_o <= pc.pc_o;
         end
         else begin

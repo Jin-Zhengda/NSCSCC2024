@@ -30,9 +30,16 @@ module main_ex
     // to cache
     output cache_inst_t cache_inst,
 
+    // to tlb
+    ex_tlb tlb_master,
+
     // to mem
     output ex_mem_t ex_o
 );
+
+    assign ex_o.mem_data = dcache_master.wdata;
+    bus32_t mem_data;
+    assign mem_data = dcache_master.wdata;
 
     // basic assignmnet 
     assign ex_o.pc = ex_i.pc;
@@ -215,7 +222,7 @@ module main_ex
                 dcache_master.wstrb = 4'b1111;
             end
             `ALU_LDH, `ALU_LDHU: begin
-                ex_is_exception = ex_o.mem_addr[1: 0] == 2'b01 || ex_o.mem_addr[1: 0] == 2'b11;
+                ex_is_exception = (ex_o.mem_addr[1: 0] == 2'b01) || (ex_o.mem_addr[1: 0] == 2'b11);
                 ex_exception_cause = (ex_o.mem_addr[1: 0] == 2'b01 || ex_o.mem_addr[1: 0] == 2'b11) ? `EXCEPTION_ALE : 7'b0;
                 dcache_master.op = 1'b0;
                 mem_is_valid = 1'b1;
@@ -223,8 +230,8 @@ module main_ex
                 dcache_master.wstrb = 4'b1111;
             end
             `ALU_LDW, `ALU_LLW: begin
-                ex_is_exception = ex_o.mem_addr[1: 0] == 2'b00;
-                ex_exception_cause = (ex_o.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
+                ex_is_exception = (ex_o.mem_addr[1: 0] != 2'b00);
+                ex_exception_cause = (ex_o.mem_addr[1: 0] != 2'b00) ? 7'b0 : `EXCEPTION_ALE;
                 dcache_master.op = 1'b0;
                 mem_is_valid = 1'b1;
                 dcache_master.wdata = 32'b0;
@@ -339,7 +346,7 @@ module main_ex
         endcase
     end
 
-    // csr && privilege alu
+    // csr
     bus32_t csr_alu_res;
 
     always_comb begin
@@ -380,6 +387,35 @@ module main_ex
             end
             default: begin
                 csr_alu_res = 32'b0;
+            end
+        endcase
+    end
+
+    // tlb
+    always_comb begin
+        tlb_master.tlbfill_en = 1'b0;
+        tlb_master.tlbwr_en = 1'b0;
+        tlb_master.tlbsrch_en = 1'b0;
+        tlb_master.invtlb_en = 1'b0;
+        tlb_master.invtlb_asid = 10'b0;
+        tlb_master.invtlb_vpn = 20'b0;
+        tlb_master.invtlb_op = 5'b0;
+
+        case(ex_i.aluop)
+            `ALU_TLBFILL: begin
+                tlb_master.tlbfill_en = 1'b1;
+            end
+            `ALU_TLBWR: begin
+                tlb_master.tlbwr_en = 1'b1;
+            end
+            `ALU_TLBSRCH: begin
+                tlb_master.tlbsrch_en = 1'b1;
+            end
+            `ALU_INVTLB: begin
+                tlb_master.invtlb_en = 1'b1;
+                tlb_master.invtlb_asid = (ex_i.inv_op >= 4) ? ex_i.reg_data[0][9: 0]: 10'b0;
+                tlb_master.invtlb_vpn = (ex_i.inv_op >= 5) ? ex_i.reg_data[0][31: 13]: 20'b0;
+                tlb_master.invtlb_op = ex_i.inv_op;
             end
         endcase
     end

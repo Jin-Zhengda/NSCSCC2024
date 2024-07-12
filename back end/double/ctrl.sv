@@ -40,6 +40,9 @@ module ctrl
     input  diff_t [ISSUE_WIDTH - 1: 0] ctrl_diff_i,
     output diff_t [ISSUE_WIDTH - 1: 0] ctrl_diff_o
 );
+    bus32_t pc;
+    assign pc = commit_ctrl_o[0].pc;
+
     // interrupt
     logic [11:0] int_vec;
     assign int_vec = csr_master.crmd[2] ? csr_master.ecfg[12:11] & csr_master.estat[1:0] : 12'b0;
@@ -47,7 +50,7 @@ module ctrl
 
     // ertn inst
     logic is_ertn;
-    assign is_ertn = (commit_ctrl_o[0].is_exception == 6'b0) && (commit_ctrl_o[0].aluop == `ALU_ERTN);
+    assign is_ertn = commit_ctrl_o[0].is_exception == 6'b0 && commit_ctrl_o[0].aluop == `ALU_ERTN;
 
     // new target
     assign new_pc  = branch_flush ? branch_target : (is_ertn ? csr_master.era : csr_master.eentry);
@@ -79,21 +82,20 @@ module ctrl
     logic pc1_lt_pc2;
     assign pc1_lt_pc2 = commit_ctrl_o[0].pc < commit_ctrl_o[1].pc;
 
-    generate
-        for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign reg_write_addr[i] = wb_o[i].reg_write_addr;
-            assign reg_write_data[i] = wb_o[i].reg_write_data;
-        end
-    endgenerate
+    assign reg_write_addr[0] = wb_o[0].reg_write_addr;
+    assign reg_write_addr[1] = wb_o[1].reg_write_addr;
+
+    assign reg_write_data[0] = wb_o[0].reg_write_data;
+    assign reg_write_data[1] = wb_o[1].reg_write_data;
 
     logic [ISSUE_WIDTH - 1:0] reg_write_en_out;
     always_comb begin
         if (pc1_lt_pc2) begin
-            reg_write_en_out[0] = (is_exception[0] || pause[0]) ? 1'b0 : wb_o[0].reg_write_en;
-            reg_write_en_out[1] = (|is_exception || pause[0]) ? 1'b0 : wb_o[1].reg_write_en;
+            reg_write_en_out[0] = (is_exception[0] || pause[7]) ? 1'b0 : wb_o[0].reg_write_en;
+            reg_write_en_out[1] = (|is_exception || pause[7]) ? 1'b0 : wb_o[1].reg_write_en;
         end else begin
-            reg_write_en_out[0] = (|is_exception || pause[0]) ? 1'b0 : wb_o[0].reg_write_en;
-            reg_write_en_out[1] = (is_exception[1] || pause[0]) ? 1'b0 : wb_o[1].reg_write_en;
+            reg_write_en_out[0] = (|is_exception || pause[7]) ? 1'b0 : wb_o[0].reg_write_en;
+            reg_write_en_out[1] = (is_exception[1] || pause[7]) ? 1'b0 : wb_o[1].reg_write_en;
         end
     end
 
@@ -112,8 +114,8 @@ module ctrl
         end
     end
 
-    assign is_llw_scw = (!pc1_lt_pc2 && |is_exception) || (pc1_lt_pc2 && is_exception[0]) || pause[0] ? 1'b0 : wb_o[0].is_llw_scw;
-    assign csr_write_en = (!pc1_lt_pc2 && |is_exception) || (pc1_lt_pc2 && is_exception[0]) || pause[0] ? 1'b0 : wb_o[0].csr_write_en;
+    assign is_llw_scw = (!pc1_lt_pc2 && |is_exception) || (pc1_lt_pc2 && is_exception[0]) || pause[7] ? 1'b0 : wb_o[0].is_llw_scw;
+    assign csr_write_en = (!pc1_lt_pc2 && |is_exception) || (pc1_lt_pc2 && is_exception[0]) || pause[7] ? 1'b0 : wb_o[0].csr_write_en;
     assign csr_write_addr = wb_o[0].csr_write_addr;
     assign csr_write_data = wb_o[0].csr_write_data;
 
@@ -276,6 +278,7 @@ module ctrl
             assign ctrl_diff_o[i].inst_st_en = ctrl_diff_i[i].inst_st_en;
             assign ctrl_diff_o[i].st_paddr = ctrl_diff_i[i].st_paddr;
             assign ctrl_diff_o[i].st_vaddr = ctrl_diff_i[i].st_vaddr;
+            assign ctrl_diff_o[i].st_data = ctrl_diff_i[i].st_data;
 
             assign ctrl_diff_o[i].inst_ld_en = ctrl_diff_i[i].inst_ld_en;
             assign ctrl_diff_o[i].ld_paddr = ctrl_diff_i[i].ld_paddr;
@@ -288,6 +291,5 @@ module ctrl
 
     assign ctrl_diff_o[0].inst_valid = (pc1_lt_pc2 && is_exception[0]) || (!pc1_lt_pc2 && |is_exception) ? 1'b0 : ctrl_diff_i[0].inst_valid;
     assign ctrl_diff_o[1].inst_valid = (pc1_lt_pc2 && |is_exception) || (!pc1_lt_pc2 && is_exception[1]) ? 1'b0 : ctrl_diff_i[1].inst_valid;
-
 
 endmodule

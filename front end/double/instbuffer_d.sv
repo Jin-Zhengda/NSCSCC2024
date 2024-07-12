@@ -118,27 +118,16 @@ import pipeline_types::*;
             always_comb begin
                 if(rst) begin
                     push_en[i] = 0;
-                    push_data = 0;
+                    push_data[i] = 0;
                 end else if(pause | full[i]) begin
                     push_en[i] = 0;
-                    push_data = 0;
+                    push_data[i] = 0;
                 end else if(fetch_en[i]) begin
                     push_en[i] = 1;
-                    // push_data[i][31:0] <= pc[i];
-                    // push_data[i][63:32] <= inst[i];
-                    // push_data[i][64] <= is_branch[i];
-                    // push_data[i][65] <= pre_taken_or_not[i];
-                    // push_data[i][97:66] <= pre_branch_addr;
-                    // // valid标志位
-                    // if(valid_next) begin
-                    //     push_data[i][98] <= 1'b0;
-                    // end else begin
-                    //     push_data[i][98] <= 1'b1;
-                    // end
                     push_data[i] = {!valid_next, pre_branch_addr, pre_taken_or_not[i], is_branch[i], inst[i], pc[i]};
                 end else begin
                     push_en[i] = 0;
-                    push_data = 0;
+                    push_data[i] = 0;
                 end
             end
         end

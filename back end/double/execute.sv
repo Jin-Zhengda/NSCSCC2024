@@ -39,6 +39,9 @@ module execute
     output ex_mem_t [ISSUE_WIDTH - 1:0] mem_i
 );
 
+    bus32_t pc;
+    assign pc = ex_i[0].pc;
+
     logic [1:0] pause_alu;
     logic [1:0] branch_flush_alu;
     bus32_t [ISSUE_WIDTH - 1:0] branch_target_alu;
@@ -100,13 +103,13 @@ module execute
     logic pc1_lt_pc2;
     assign pc1_lt_pc2 = main_ex_i.pc < deputy_ex_i.pc;
     always_ff @(posedge clk) begin
-        if (rst || flush) begin
+        if (rst || flush || pause_ex) begin
             mem_i <= '{default: 0};
         end else if (!pause) begin
             if (branch_flush_alu[0] && pc1_lt_pc2) begin
                 mem_i[0] <= ex_o[0];
                 mem_i[1] <= 0;
-            end else if (branch_flush_alu[1] && pc1_lt_pc2) begin
+            end else if (branch_flush_alu[1] && !pc1_lt_pc2) begin
                 mem_i[0] <= 0;
                 mem_i[1] <= ex_o[1];
             end else begin

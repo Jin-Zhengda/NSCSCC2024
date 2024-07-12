@@ -217,6 +217,7 @@ module mem
                             mem_i[i].aluop == `ALU_STH, mem_i[i].aluop == `ALU_STB};
             assign diff_o[i].st_paddr = mem_i[i].mem_addr;
             assign diff_o[i].st_vaddr = mem_i[i].mem_addr;
+            assign diff_o[i].st_data = mem_i[i].mem_data;
 
             assign diff_o[i].inst_ld_en = {2'b0, mem_i[i].aluop == `ALU_LLW, mem_i[i].aluop == `ALU_LDW, mem_i[i].aluop == `ALU_LDHU,
                             mem_i[i].aluop == `ALU_LDH, mem_i[i].aluop == `ALU_LDBU, mem_i[i].aluop == `ALU_LDB};
