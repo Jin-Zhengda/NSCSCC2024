@@ -171,9 +171,10 @@ logic[`ADDR_SIZE-1:0] virtual_addra,virtual_addrb;
 assign virtual_addra=pc2icache.pc;
 assign virtual_addrb=virtual_addra+`ADDR_SIZE'd4;
 
-assign same_way=virtual_addra[`TAG_LOC]==virtual_addrb[`TAG_LOC]&&virtual_addra[`INDEX_LOC]==virtual_addrb[`INDEX_LOC];
-
 logic[`ADDR_SIZE-1:0] pre_vaddr_a,pre_vaddr_b;
+
+assign same_way=(pre_vaddr_a[`TAG_LOC]==pre_vaddr_b[`TAG_LOC])&&(pre_vaddr_a[`INDEX_LOC]==pre_vaddr_b[`INDEX_LOC]);
+
 always_ff @( posedge clk ) begin
     if((next_state==`IDLE)&&!pause_icache)begin
         pre_vaddr_a<=virtual_addra;
