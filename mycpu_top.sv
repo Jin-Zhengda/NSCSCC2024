@@ -220,7 +220,6 @@ module core_top (
     wire 	[31:0]  csr_pgdl_diff_0       ;
     wire 	[31:0]  csr_pgdh_diff_0       ;
 
-
     logic [7:0] flush;
     logic [7:0] pause;
     cache_inst_t cache_inst;
@@ -229,6 +228,7 @@ module core_top (
     pc_icache pc_icache_io ();
     frontend_backend frontend_backend_io ();
     icache_transaddr icache_transaddr_io ();
+    dcache_transaddr dcache_transaddr_io ();  
     dispatch_regfile dispatch_regfile_io ();
     logic [1:0] reg_write_en;
     logic [1:0][4:0] reg_write_addr;
@@ -321,11 +321,11 @@ module core_top (
     logic dcache_cacop;
     assign icache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2:0] == 3'b0);
     assign dcache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2:0] == 3'b1);
-    logic cache_flush;
 
     trans_addr u_trans_addr(
         .clk(aclk),
-        .icache2transaddr(icache_transaddr_io.slave)
+        .icache2transaddr(icache_transaddr_io.slave),
+        .dcache2transaddr(dcache_transaddr_io.slave)
     );
 
     icache u_icache (
@@ -333,7 +333,6 @@ module core_top (
         .reset(rst),
         .pause_icache(pause[1]),
         .branch_flush(flush[1]),
-        .flush(cache_flush),
 
         .pc2icache(pc_icache_io.slave),
         .icache2transaddr(icache_transaddr_io.master),
@@ -360,6 +359,7 @@ module core_top (
         .mem2dcache(mem_dcache_io.slave),
         .dcache_uncache(mem_dcache_io.uncache_en),
         .dcache_inst(cache_inst),
+        .dcache2transaddr(dcache_transaddr_io.master),
 
         .rd_req  (dcache_rd_req),
         .rd_type (dcache_rd_type),
@@ -389,6 +389,7 @@ module core_top (
     cache_axi u_cache_axi (
         .clk(aclk),      
         .rst(rst),      // 高有效
+        .flush(0),
 
         .cache_wsel_i(ducache_strb),
         
@@ -455,7 +456,7 @@ module core_top (
     axi_interface u_axi_interface (
         .clk(aclk),
         .resetn(aresetn),     // 低有效
-        .flush(cache_flush),         // 给定值0，忽略该信号
+        .flush(0),         // 给定值0，忽略该信号
         // input                   wire [5:0]             stall,
         // output                  wire                   stallreq, // Stall请求
 
@@ -544,7 +545,7 @@ module core_top (
             cmt0_inst_st_en  <= diff[0].inst_st_en;
             cmt0_st_paddr    <= diff[0].st_paddr;
             cmt0_st_vaddr    <= diff[0].st_vaddr;
-            cmt0_st_data     <= mem_dcache_io.wdata;
+            cmt0_st_data     <= diff[0].st_data;
             cmt0_csr_rstat_en<= diff[0].csr_rstat_en;
             cmt0_csr_data    <= diff[0].csr_data;
 
@@ -569,7 +570,7 @@ module core_top (
             cmt1_inst_st_en  <= diff[1].inst_st_en;
             cmt1_st_paddr    <= diff[1].st_paddr;
             cmt1_st_vaddr    <= diff[1].st_vaddr;
-            cmt1_st_data     <= mem_dcache_io.wdata;
+            cmt1_st_data     <= diff[1].st_data;
             cmt1_csr_rstat_en<= diff[1].csr_rstat_en;
             cmt1_csr_data    <= diff[1].csr_data;
 
@@ -611,49 +612,6 @@ module core_top (
             instrCnt        <= instrCnt;
         end
     end
-    
-
-    DifftestInstrCommit DifftestInstrCommit_0(
-        .clock              (aclk           ),
-        .coreid             (0              ),
-        .index              (0              ),
-        .valid              (cmt0_valid   ),
-        .pc                 (cmt0_pc      ),
-        .instr              (cmt0_inst    ),
-        .skip               (0              ),
-        // .is_TLBFILL         (cmt_tlbfill_en0),
-        .is_TLBFILL         (0),
-        // .TLBFILL_index      (cmt_rand_index ),
-        .TLBFILL_index      (0),
-        .is_CNTinst         (cmt0_cnt_inst),
-        .timer_64_value     (cmt0_timer_64),
-        .wen                (cmt0_wen     ),
-        .wdest              (cmt0_wdest   ),
-        .wdata              (cmt0_wdata   ),
-        .csr_rstat          (cmt0_csr_rstat_en),
-        .csr_data           (cmt0_csr_data)
-    );
-
-    DifftestInstrCommit DifftestInstrCommit_1(
-        .clock              (aclk           ),
-        .coreid             (0              ),
-        .index              (1              ),
-        .valid              (cmt1_valid   ),
-        .pc                 (cmt1_pc      ),
-        .instr              (cmt1_inst    ),
-        .skip               (0              ),
-        // .is_TLBFILL         (cmt_tlbfill_en1),
-        .is_TLBFILL         (0),
-        // .TLBFILL_index      (cmt_rand_index ),
-        .TLBFILL_index      (0),
-        .is_CNTinst         (cmt1_cnt_inst),
-        .timer_64_value     (cmt1_timer_64),
-        .wen                (cmt1_wen     ),
-        .wdest              (cmt1_wdest   ),
-        .wdata              (cmt1_wdata   ),
-        .csr_rstat          (cmt1_csr_rstat_en),
-        .csr_data           (cmt1_csr_data)
-    );
 
     logic pc1_lt_pc2;
     logic excp_flush;
@@ -684,6 +642,64 @@ module core_top (
             end
         end
     end
+
+    logic inst_index;
+    always_comb begin
+        if (pc1_lt_pc2) begin
+            if (cmt0_valid && cmt1_valid) inst_index = 1'b0;
+            else if (cmt0_valid) inst_index = 1'b0;
+            else if (cmt1_valid) inst_index = 1'b1;
+        end else begin
+            if (cmt0_valid && cmt1_valid) inst_index = 1'b1;
+            else if (cmt0_valid) inst_index = 1'b0;
+            else if (cmt1_valid) inst_index = 1'b1;
+        end
+    end
+    
+
+    DifftestInstrCommit DifftestInstrCommit_0(
+        .clock              (aclk           ),
+        .coreid             (0              ),
+        .index              (inst_index     ),
+        .valid              (cmt0_valid   ),
+        .pc                 (cmt0_pc      ),
+        .instr              (cmt0_inst    ),
+        .skip               (0              ),
+        // .is_TLBFILL         (cmt_tlbfill_en0),
+        .is_TLBFILL         (0),
+        // .TLBFILL_index      (cmt_rand_index ),
+        .TLBFILL_index      (0),
+        .is_CNTinst         (cmt0_cnt_inst),
+        .timer_64_value     (cmt0_timer_64),
+        .wen                (cmt0_wen     ),
+        .wdest              (cmt0_wdest   ),
+        .wdata              (cmt0_wdata   ),
+        .csr_rstat          (cmt0_csr_rstat_en),
+        .csr_data           (cmt0_csr_data)
+    );
+
+    DifftestInstrCommit DifftestInstrCommit_1(
+        .clock              (aclk           ),
+        .coreid             (0              ),
+        .index              (!inst_index    ),
+        .valid              (cmt1_valid   ),
+        .pc                 (cmt1_pc      ),
+        .instr              (cmt1_inst    ),
+        .skip               (0              ),
+        // .is_TLBFILL         (cmt_tlbfill_en1),
+        .is_TLBFILL         (0),
+        // .TLBFILL_index      (cmt_rand_index ),
+        .TLBFILL_index      (0),
+        .is_CNTinst         (cmt1_cnt_inst),
+        .timer_64_value     (cmt1_timer_64),
+        .wen                (cmt1_wen     ),
+        .wdest              (cmt1_wdest   ),
+        .wdata              (cmt1_wdata   ),
+        .csr_rstat          (cmt1_csr_rstat_en),
+        .csr_data           (cmt1_csr_data)
+    );
+
+
 
     DifftestExcpEvent DifftestExcpEvent(
         .clock              (aclk           ),

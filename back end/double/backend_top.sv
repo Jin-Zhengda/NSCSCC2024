@@ -218,6 +218,8 @@ module backend_top
         .clk,
         .rst,
 
+        .pause_mem(pause_request.pause_mem),
+
         .wb_i,
         .commit_ctrl_i,
 
