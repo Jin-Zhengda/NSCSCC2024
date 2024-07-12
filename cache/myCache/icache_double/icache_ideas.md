@@ -1,0 +1,32 @@
+# 为什么选择用状态机实现？
+- 最开始觉得状态机走状态会慢，故采用许多变量作为控制器，看似没用状态机很厉害，实则极大提高了代码的复杂程度，为代码的迭代带来极大的困难。最终使我放弃旧代码，选择使用状态机的问题是pause信号的实现。当需要暂停时，我很难再在原代码的基础上再做修改，使他能保持状态不变，同时，也想彻底推翻屎山代码，利用之前积累的经验写一份好基础的代码，或许能极大地方便后续的迭代开发。所以在需要改成双发射icache的时候，我选择使用状态机，明确每个状态下的工作，也能使思路更清晰。
+
+# 关于状态机：
+- IDLE，ASKMEM1，ASKMEM2，RETURN，UNCACHE_RETURN共 5 个状态
+- 会有以下情形：
+  - ### 读取两个都命中：
+    - P1:IDLE状态，传入pc=a
+    - P2:IDLE状态，从tagv的BRAM读取到结果，判断两个都命中，则从cache的BRAM返回读取到的指令(a),(a+4)。同时接收下一个pc=b
+  - ### 读取a命中，a+4不命中：
+    - P1:IDLE状态，传入pc=a
+    - P2:IDLE状态，从tagv的BRAM读取到结果，判断a命中，a+4未命中，则next_state=ASKMEM2
+    - P3:ASKMEM2状态，向主存发起读请求，维持
+    - Pn:ASKMEM2状态，接收到ret_valid，向BRAM给写信号，next_state=RETURN
+    - Pn+1:RETURN状态，返回取到的inst
+  - ### 读取a不命中，a+4命中：
+    - P1:IDLE状态，传入pc=a
+    - P2:IDLE状态，从tagv的BRAM读取到结果，判断a未命中，a+4命中，则next_state=ASKMEM1
+    - P3:ASKMEM1状态，向主存发起读请求，维持
+    - Pn:ASKMEM1状态，接收到ret_valid,向BRAM给写信号，由于record_b_hit_result为命中，故next_state=RETURN
+    - Pn+1:RETURN状态，返回取到的inst
+  - ### 读取两个都不命中：
+    - P1:IDLE状态，传入pc=a
+    - P2:IDLE状态，从tagv的BRAM读取到结果，判断两个都不命中，则next_state=ASKMEM1
+    - P3:ASKMEM1状态，向主存发起读请求，读pc=a，维持
+    - Pn:ASKMEM1状态，接收到ret_valid,向BRAM给写信号，由于record_b_hit_result为未命中，故next_state=ASKMEM2
+    - Pn+1:ASKMEM2状态，向主存发起读请求，读pc=a+4,维持
+    - Pm:ASKMEM2状态，接收到ret_valid,向BRAM给写信号，next_state=RETURN
+    - Pm+1:RETURN状态，返回取到的inst
+  - ### uncache读操作
+    - P1:IDLE状态，传入uncache_en,pc=a，next_state先按照上一个命令正常跳转，可能去ASKMEM
+    - P2:IDLE状态，由于pre_uncache_en，故next_state=
