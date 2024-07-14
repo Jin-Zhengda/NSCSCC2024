@@ -1,11 +1,12 @@
 `ifndef PIPELINE_TYPES_SV
 `define PIPELINE_TYPES_SV
+`define DIFF
 
 package pipeline_types;
 
     parameter REG_WIDTH = 32;
     parameter REG_ADDR_WIDTH = 5;
-    parameter CSR_ADDR_WIDTH = 12;
+    parameter CSR_ADDR_WIDTH = 14;
     parameter ALU_OP_WIDTH = 8;
     parameter ALU_SEL_WIDTH = 3;
 
@@ -14,9 +15,6 @@ package pipeline_types;
 
     parameter DECODER_WIDTH = 2;
     parameter ISSUE_WIDTH = 2;
-
-    parameter READ_PORTS = DECODER_WIDTH * 2;
-    parameter WRITE_PORTS = DECODER_WIDTH;
 
 
     typedef logic [REG_WIDTH - 1:0] bus32_t;
@@ -90,6 +88,7 @@ package pipeline_types;
         logic [5:0][EXC_CAUSE_WIDTH - 1:0] exception_cause;
         logic inst_valid;
         logic is_privilege;
+        logic is_cnt;
 
         alu_op_t  aluop;
         alu_sel_t alusel;
@@ -172,6 +171,7 @@ package pipeline_types;
         alu_op_t aluop;
 
         bus32_t mem_addr;
+        bus32_t mem_data;
 
         logic csr_write_en;
         csr_addr_t csr_addr;
@@ -231,6 +231,7 @@ package pipeline_types;
         logic [7:0] inst_st_en;
         bus32_t st_paddr;
         bus32_t st_vaddr;
+        bus32_t st_data;
 
         logic [7:0] inst_ld_en;
         bus32_t ld_paddr;
