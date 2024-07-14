@@ -370,6 +370,7 @@ module core_top (
 
     );
 
+    logic dcache_wr_rdy;
     dcache u_dcache (
         .clk(aclk),
         .reset(rst),
@@ -387,7 +388,7 @@ module core_top (
         .wr_data (dcache_wr_data),
 
         .wr_rdy(dcache_wr_rdy),
-        .rd_rdy(dcache_rd_rdy),
+        .rd_rdy(1'b1),
         .ret_data(dcache_ret_data),
         .ret_valid(dcache_ret_valid),
 
@@ -423,6 +424,7 @@ module core_top (
         .data_rdata_o(dcache_ret_data),     // dcache_ret_data
         
         // DCache: Write Channel
+        .wr_rdy(dcache_wr_rdy),
         .data_wen_i(dcache_wr_req),         // dcache_wr_req
         .data_wdata_i(dcache_wr_data),      // dcache_wr_data
         .data_awaddr_i(dcache_wr_addr),     // dcache_wr_addr

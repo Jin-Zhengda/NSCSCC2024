@@ -71,9 +71,10 @@ endinterface : dcache_transaddr
 `define TAGV_SIZE 21
 
 `define IDLE 5'b00001
-`define ASKMEM 5'b00010
-`define RETURN 5'b00100
-`define UNCACHE_RETURN 5'b01000
+`define WRITE_DIRTY 5'b00010
+`define ASKMEM 5'b00100
+`define RETURN 5'b01000
+`define UNCACHE_RETURN 5'b10000
 
 
 
@@ -99,6 +100,7 @@ module dcache (
     output bus256_t wr_data,//8个32位的数据为1路
 
     input logic       wr_rdy,//能接收写操作
+    input logic       data_bvalid_o,//写完成
     input logic       rd_rdy,//能接收读操作
     input logic       ret_valid,//返回数据信号有效
     input bus256_t ret_data,//返回的数据
@@ -111,7 +113,7 @@ module dcache (
     output logic ducache_wen_i,
     output bus32_t ducache_wdata_i,
     output bus32_t ducache_awaddr_i,
-    output wire[3:0]ducache_strb,//改了个名
+    output logic[3:0]ducache_strb,//改了个名
     input logic ducache_bvalid_o
 
 );
@@ -154,6 +156,7 @@ end
 
 
 logic hit_success,hit_fail;
+logic write_dirty;
 
 
 
@@ -166,8 +169,15 @@ always_comb begin
     else if(current_state==`IDLE)begin
         if(!pre_valid)next_state=`IDLE;
         else if(dcache_uncache)next_state=`UNCACHE_RETURN;
-        else if(hit_fail)next_state=`ASKMEM;
+        else if(hit_fail)begin
+            if(write_dirty&&!wr_rdy)next_state=`WRITE_DIRTY;
+            else next_state=`ASKMEM;
+        end
         else next_state=`IDLE;
+    end
+    else if(current_state==`WRITE_DIRTY)begin
+        if(wr_rdy)next_state=`ASKMEM;
+        else next_state=`WRITE_DIRTY;
     end
     else if(current_state==`ASKMEM)begin
         if(ret_valid)next_state=`RETURN;
@@ -183,6 +193,7 @@ always_comb begin
     end
 end
 
+//TLB
 assign dcache2transaddr.data_fetch=mem2dcache.valid;
 assign dcache2transaddr.data_vaddr=mem2dcache.virtual_addr;
 logic[`ADDR_SIZE-1:0] p_addr,pre_physical_addr,target_physical_addr;
@@ -263,18 +274,24 @@ BRAM Bank7_way1(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_a
 //Tag1'b1
 logic [`TAGV_SIZE-1:0]tagv_cache_w0;
 logic [`TAGV_SIZE-1:0]tagv_cache_w1;
+logic [`TAGV_SIZE-1:0]tagv_cache_w0_a;//改了！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+logic [`TAGV_SIZE-1:0]tagv_cache_w1_a;
+logic [`TAGV_SIZE-1:0]tagv_cache_w0_b;
+logic [`TAGV_SIZE-1:0]tagv_cache_w1_b;
+assign tagv_cache_w0=write_read_same?tagv_cache_w0_b:tagv_cache_w0_a;
+assign tagv_cache_w1=write_read_same?tagv_cache_w1_b:tagv_cache_w1_a;
 
 logic[`INDEX_SIZE-1:0] tagv_addr_write;
 assign tagv_addr_write=pre_vaddr[`INDEX_LOC];
 logic[`TAGV_SIZE-1:0]tagv_data_tagv;
-assign tagv_data_tagv={1'b1,target_physical_addr[`TAG_LOC]};
+assign tagv_data_tagv={1'b1,pre_vaddr[`TAG_LOC]};
 
 logic[`INDEX_SIZE-1:0]tagv0_addr,tagv1_addr;
 assign tagv0_addr=|wea_way0?tagv_addr_write:read_index_addr;
 assign tagv1_addr=|wea_way1?tagv_addr_write:read_index_addr;
 
-BRAM TagV0(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w0),.enb(1'b1),.web(wea_way0),.dinb(tagv_data_tagv),.addrb(tagv_addr_write));
-BRAM TagV1(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w1),.enb(1'b1),.web(wea_way1),.dinb(tagv_data_tagv),.addrb(tagv_addr_write));
+BRAM TagV0(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w0_a),.enb(1'b1),.web(wea_way0),.dinb(tagv_data_tagv),.addrb(tagv_addr_write),.doutb(tagv_cache_w0_b));
+BRAM TagV1(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w1_a),.enb(1'b1),.web(wea_way1),.dinb(tagv_data_tagv),.addrb(tagv_addr_write),.doutb(tagv_cache_w1_b));
 
 
 logic[31:0] write_mask;
@@ -295,17 +312,11 @@ always_comb begin
 	else if(hit_success&&pre_op==1'b1)begin
         if(hit_way0)cache_wdata=way0_cache;
         else if(hit_way1)cache_wdata=way1_cache;
+        else cache_wdata='{default:0};
         cache_wdata[pre_vaddr[4:2]]=(pre_wdata & write_mask)|(((hit_way0)?way0_cache[pre_vaddr[4:2]]:way1_cache[pre_vaddr[4:2]]) & ~write_mask);
 	end
     else begin
-        cache_wdata[0] = `DATA_SIZE'b0;
-        cache_wdata[1] = `DATA_SIZE'b0;
-        cache_wdata[2] = `DATA_SIZE'b0;
-        cache_wdata[3] = `DATA_SIZE'b0;
-        cache_wdata[4] = `DATA_SIZE'b0;
-        cache_wdata[5] = `DATA_SIZE'b0;
-        cache_wdata[6] = `DATA_SIZE'b0;
-        cache_wdata[7] = `DATA_SIZE'b0;
+        cache_wdata='{default:0};
     end
 end
 
@@ -338,7 +349,7 @@ assign wea_way1=(pre_valid&&hit_way1&&pre_op==1'b1)?pre_wstrb:((pre_valid&&ret_v
 
 //Dirty
     reg [`SET_SIZE*2-1:0] dirty;
-	wire write_dirty = dirty[{pre_vaddr[`INDEX_LOC],LRU_pick}]; 
+	assign write_dirty = dirty[{pre_vaddr[`INDEX_LOC],LRU_pick}]; 
     always@(posedge clk)begin
         if(reset)
             dirty<=0;
@@ -371,18 +382,35 @@ assign rd_req=(next_state==`ASKMEM)||(current_state==`ASKMEM);
 assign rd_type=3'b100;
 assign rd_addr=target_physical_addr;
 
-logic record_dirty;//表明脏数据写回是否完成
-always_ff @( posedge clk ) begin
-    if(reset)record_dirty<=1'b0;
-    else if(wr_rdy)record_dirty<=1'b0;
-    else if((current_state==`IDLE)&&(next_state==`ASKMEM))record_dirty<=write_dirty;
-    else record_dirty<=record_dirty;
-end
-assign wr_req=record_dirty;
-assign wr_addr={tagv_cache_w0[19:0],pre_vaddr[11:0]};
-assign wr_data=LRU_pick?{way1_cache[7],way1_cache[6],way1_cache[5],way1_cache[4],way1_cache[3],way1_cache[2],way1_cache[1],way1_cache[0]}:{way0_cache[7],way0_cache[6],way0_cache[5],way0_cache[4],way0_cache[3],way0_cache[2],way0_cache[1],way0_cache[0]};
-assign wr_wstrb=4'b1111;
 
+//写脏数据
+logic record_write_mem_en;
+always_ff @( posedge clk ) begin
+    if(reset)record_write_mem_en<=1'b0;
+    else if(data_bvalid_o)record_write_mem_en<=1'b0;
+    else if((current_state==`IDLE)&&hit_fail&&write_dirty)record_write_mem_en<=1'b1;
+    else record_write_mem_en<=record_write_mem_en;
+end
+logic[31:0] record_write_mem_addr;
+logic[255:0] record_write_mem_data;
+always_ff @( posedge clk ) begin
+    if(reset)begin
+        record_write_mem_addr<=32'b0;
+        record_write_mem_data<=256'b0;
+    end
+    else if((current_state==`IDLE)&&hit_fail&&write_dirty)begin
+        record_write_mem_addr<=p_addr;
+        record_write_mem_data<=LRU_pick?{way1_cache[7],way1_cache[6],way1_cache[5],way1_cache[4],way1_cache[3],way1_cache[2],way1_cache[1],way1_cache[0]}:{way0_cache[7],way0_cache[6],way0_cache[5],way0_cache[4],way0_cache[3],way0_cache[2],way0_cache[1],way0_cache[0]};
+    end
+    else begin
+        record_write_mem_addr<=record_write_mem_addr;
+        record_write_mem_data<=record_write_mem_data;
+    end
+end
+assign wr_req=record_write_mem_en&&!data_bvalid_o;
+assign wr_addr=record_write_mem_addr;
+assign wr_data=record_write_mem_data;
+assign wstrb=4'b1111;
 
 
 
@@ -394,6 +422,24 @@ assign ducache_awaddr_i=ducache_wen_i?pre_vaddr:32'b0;
 assign ducache_wdata_i=ducache_wen_i?pre_wdata:32'b0;
 assign ducache_strb=ducache_wen_i?pre_wstrb:4'b0;
 
+
+always_ff @( posedge clk ) begin
+    if(((current_state==`IDLE)&&(next_state==`UNCACHE_RETURN))&&mem2dcache.op==1'b1)begin
+        ducache_wen_i<=1'b1;
+        ducache_awaddr_i<=mem2dcache.virtual_addr;
+        ducache_wdata_i<=mem2dcache.wdata;
+        ducache_strb<=mem2dcache.wstrb;
+    end
+    else if((current_state==`UNCACHE_RETURN)&&(pre_op==1'b1)&&ducache_bvalid_o)begin
+        ducache_wen_i<=1'b0;
+    end
+    else begin
+        ducache_wen_i<=ducache_wen_i;
+        ducache_awaddr_i<=ducache_awaddr_i;
+        ducache_wdata_i<=ducache_wdata_i;
+        ducache_strb<=ducache_strb;
+    end
+end
 
 
 
