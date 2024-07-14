@@ -93,6 +93,7 @@ package pipeline_types;
         alu_op_t  aluop;
         alu_sel_t alusel;
         bus32_t   imm;
+        logic [4:0] invtlb_op;
 
         logic [1:0] reg_read_en;
         logic [1:0][REG_ADDR_WIDTH - 1:0] reg_read_addr;

@@ -85,14 +85,14 @@ module mem
 
     // mem 
     bus32_t cache_data;
-    assign cache_data = (!dcache_master.cache_miss && dcache_master.data_ok) ? dcache_master.rdata : 32'b0;
+    assign cache_data = (dcache_master.data_ok) ? dcache_master.rdata : 32'b0;
 
     logic pause_uncache;
 
     always_comb begin
         case (mem_i[0].aluop)
             `ALU_LDB: begin
-                if (!dcache_master.cache_miss && dcache_master.data_ok) begin
+                if (dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
                     case (mem_i[0].mem_addr[1:0])
                         2'b00: begin
@@ -118,7 +118,7 @@ module mem
 
             end
             `ALU_LDBU: begin
-                if (!dcache_master.cache_miss && dcache_master.data_ok) begin
+                if (dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
                     case (mem_i[0].mem_addr[1:0])
                         2'b00: begin
@@ -143,7 +143,7 @@ module mem
                 end
             end
             `ALU_LDH: begin
-                if (!dcache_master.cache_miss && dcache_master.data_ok) begin
+                if (dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
                     case (mem_i[0].mem_addr[1:0])
                         2'b00: begin
@@ -163,7 +163,7 @@ module mem
 
             end
             `ALU_LDHU: begin
-                if (!dcache_master.cache_miss && dcache_master.data_ok) begin
+                if (dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
                     case (mem_i[0].mem_addr[1:0])
                         2'b00: begin
@@ -182,7 +182,7 @@ module mem
                 end
             end
             `ALU_LDW: begin
-                if (!dcache_master.cache_miss && dcache_master.data_ok) begin
+                if (dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
                     mem_o[0].reg_write_data = cache_data;
                 end else begin
@@ -192,7 +192,7 @@ module mem
 
             end
             `ALU_LLW: begin
-                if (!dcache_master.cache_miss && dcache_master.data_ok) begin
+                if (dcache_master.data_ok) begin
                     pause_uncache = 1'b0;
                     mem_o[0].reg_write_data = cache_data;
                 end else begin

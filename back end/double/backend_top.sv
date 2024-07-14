@@ -35,6 +35,10 @@ module backend_top
     // to instbuffer
     output logic [1:0] send_inst_en,
 
+    // with tlb
+    ex_tlb ex_tlb_master,
+    csr_tlb csr_tlb_master,
+
     // with cache
     mem_dcache dcache_master,
     output cache_inst_t cache_inst,
@@ -201,6 +205,8 @@ module backend_top
         .ex_i,
         .cnt,
 
+        .tlb_master(ex_tlb_master),
+
         .dcache_master,
         .cache_inst,
 
@@ -323,19 +329,7 @@ module backend_top
         .clk,
         .rst,
 
-        .tlbsrch_en(1'b0),
-        .tlbrd_en(1'b0),
-        .is_tlbrd_valid(1'b0),
-        .tlbwr_en(1'b0),
-        .tlbfill_en(1'b0),
-        .tlbsrch_found(1'b0),
-        .tlbsrch_index(5'b0),
-
-        .tlb_line(32'b0),
-        .tlblo0_line(32'b0),
-        .tlblo1_line(32'b0),
-
-        .is_tlb_exception(1'b0),
+        .tlb_master(csr_tlb_master),
 
         .is_ipi(1'b0),
         .is_hwi,
@@ -346,6 +340,8 @@ module backend_top
         .csr_write_en,
         .csr_write_addr,
         .csr_write_data,
+
+        .cnt(cnt),
 
         .ctrl_slave(ctrl_csr_io.slave),
 
