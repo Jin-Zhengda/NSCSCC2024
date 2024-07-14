@@ -309,7 +309,7 @@ assign mem2dcache.cache_miss=hit_fail;
 
 
 
-assign rd_req=(next_state==`ASKMEM)||(current_state==`ASKMEM);
+assign rd_req=((next_state==`ASKMEM)||(current_state==`ASKMEM))&&!ret_valid;
 assign rd_type=3'b100;
 assign rd_addr=target_physical_addr;
 

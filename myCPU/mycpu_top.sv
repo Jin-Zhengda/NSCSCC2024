@@ -248,9 +248,9 @@ module core_top (
 
     generate
         for (genvar i = 0; i < 2; i++) begin
-            assign pre_is_branch[i] = frontend_backend_io.slave.branch_info[i].is_branch;
-            assign pre_is_branch_taken[i] = frontend_backend_io.slave.branch_info[i].pre_taken_or_not;
-            assign pre_branch_addr[i] = frontend_backend_io.slave.branch_info[i].pre_branch_addr;
+            assign pre_is_branch[i] = frontend_backend_io.branch_info[i].is_branch;
+            assign pre_is_branch_taken[i] = frontend_backend_io.branch_info[i].pre_taken_or_not;
+            assign pre_branch_addr[i] = frontend_backend_io.branch_info[i].pre_branch_addr;
         end
     endgenerate
 
@@ -260,23 +260,23 @@ module core_top (
 
         .is_hwi(intrpt),
 
-        .pc  (frontend_backend_io.slave.inst_and_pc_o.pc_o),
-        .inst(frontend_backend_io.slave.inst_and_pc_o.inst_o),
+        .pc  (frontend_backend_io.inst_and_pc_o.pc_o),
+        .inst(frontend_backend_io.inst_and_pc_o.inst_o),
 
         .pre_is_branch,
         .pre_is_branch_taken,
         .pre_branch_addr,
 
-        .is_exception(frontend_backend_io.slave.inst_and_pc_o.is_exception),
-        .exception_cause(frontend_backend_io.slave.inst_and_pc_o.exception_cause),
+        .is_exception(frontend_backend_io.inst_and_pc_o.is_exception),
+        .exception_cause(frontend_backend_io.inst_and_pc_o.exception_cause),
         .pause_buffer(buffer_full),
         .bpu_flush,
 
-        .is_interrupt(frontend_backend_io.slave.is_interrupt),
-        .new_pc(frontend_backend_io.slave.new_pc),
+        .is_interrupt(frontend_backend_io.is_interrupt),
+        .new_pc(frontend_backend_io.new_pc),
 
-        .update_info(frontend_backend_io.slave.update_info),
-        .send_inst_en(frontend_backend_io.slave.send_inst_en),
+        .update_info(frontend_backend_io.update_info),
+        .send_inst_en(frontend_backend_io.send_inst_en),
 
         .dcache_master(mem_dcache_io.master),
         .cache_inst(cache_inst),
@@ -321,8 +321,8 @@ module core_top (
         `endif 
     );
 
-    assign frontend_backend_io.slave.flush = {flush[2], flush[0]};
-    assign frontend_backend_io.slave.pause = {pause[2], pause[0]};
+    assign frontend_backend_io.flush = {flush[2], flush[0]};
+    assign frontend_backend_io.pause = {pause[2], pause[0]};
 
     frontend_top_d u_frontend_top_d (
         .clk(aclk),

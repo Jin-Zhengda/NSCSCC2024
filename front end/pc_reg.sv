@@ -51,18 +51,15 @@ module pc_reg_d
         else if(flush) begin
             pc.pc_o <= new_pc;
         end
+        else if(|taken_sure) begin
+            pc.pc_o <= pre_branch_addr;
+        end
         else if(pause) begin
             pc.pc_o <= pc.pc_o;
         end
         else begin
-            if(flush) begin
-                pc.pc_o <= branch_actual_addr;
-            end
-            else if (stall) begin
+            if (stall) begin
                 pc.pc_o <= pc.pc_o;
-            end
-            else if(taken_sure[0] | taken_sure[1]) begin
-                pc.pc_o <= pre_branch_addr;
             end
             else begin
                 if (uncache_en) pc.pc_o <= pc.pc_o + 4'h4;
