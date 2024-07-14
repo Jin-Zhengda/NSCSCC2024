@@ -60,85 +60,28 @@ interface pc_icache;
     logic stall_for_buffer;
     bus32_t [1:0] pc_for_bpu;
     bus32_t [1:0] pc_for_buffer;
-    logic [1:0][5:0] front_is_exception;
-    logic [1:0][5:0][6:0] front_exception_cause;
+    logic [5:0] front_is_exception;
+    logic [5:0][6:0] front_exception_cause;
     logic [1:0][5:0] icache_is_exception;
     logic [1:0][5:0][6:0] icache_exception_cause;
     logic stall;
 
     logic [1:0] front_fetch_inst_en;
     logic [1:0] icache_fetch_inst_en;
-    logic [1:0] front_is_branch;
-    logic [1:0] front_pre_taken_or_not;
-    bus32_t front_pre_branch_addr;
-    logic [1:0] icache_is_branch;
-    logic [1:0] icache_pre_taken_or_not;
-    bus32_t icache_pre_branch_addr;
-
     logic uncache_en;
 
     modport master(
         input inst, stall, icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
-                stall_for_buffer, inst_for_buffer, icache_fetch_inst_en, icache_is_branch, icache_pre_taken_or_not, 
-                icache_pre_branch_addr,
-        output pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_en, front_is_branch, 
-                front_pre_taken_or_not, front_pre_branch_addr, uncache_en
+                stall_for_buffer, inst_for_buffer, icache_fetch_inst_en,
+        output pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_en, uncache_en
     );
 
     modport slave(
         output inst, stall,icache_is_exception,icache_exception_cause,pc_for_bpu, pc_for_buffer, 
-                stall_for_buffer, inst_for_buffer, icache_fetch_inst_en, icache_is_branch, icache_pre_taken_or_not, 
-                icache_pre_branch_addr,
-        input pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_en, front_is_branch, 
-                front_pre_taken_or_not, front_pre_branch_addr, uncache_en
+                stall_for_buffer, inst_for_buffer, icache_fetch_inst_en,
+        input pc, inst_en,front_is_exception,front_exception_cause, front_fetch_inst_en, uncache_en
     );
 endinterface : pc_icache
-
-interface ex_tlb;
-    // tlbsrch, tlbwr, tlbrd, tlbfill, invtlb 指令
-    // tlbwr, tlbfill
-    logic tlbwr_en;
-    logic tlbfill_en;
-    logic [4:0] rand_index;
-    bus32_t tlbehi_in;
-    bus32_t tlbelo0_in;
-    bus32_t tlbelo1_in;
-    bus32_t tlbidx_in;
-    logic [5:0] ecode;
-
-    // tlbsrch
-    logic tlbsrch_en;
-    bus32_t asid_in;
-
-    // tlbrd
-    logic tlbrd_en;
-    bus32_t tlbehi_out;
-    bus32_t tlbelo0_out;
-    bus32_t tlbelo1_out;
-    bus32_t tlbidx_out;
-    bus32_t asid_out;
-
-    // invtlb
-    logic invtlb_en;
-    logic [9:0] invtlb_asid;
-    logic [18:0] invtlb_vpn;
-    logic [4:0] invtlb_op;
-
-    logic tlb_hit_valid;
-
-    modport master(
-        input tlbehi_out, tlbelo0_out, tlbelo1_out, tlbidx_out, asid_out, tlb_hit_valid,
-        output tlbwr_en, tlbfill_en, rand_index, tlbehi_in, tlbelo0_in, tlbelo1_in, tlbidx_in, ecode,
-                tlbsrch_en, asid_in, tlbrd_en, invtlb_en, invtlb_asid, invtlb_vpn, invtlb_op
-    );
-
-    modport slave(
-        output tlbehi_out, tlbelo0_out, tlbelo1_out, tlbidx_out, asid_out, tlb_hit_valid,
-        input tlbwr_en, tlbfill_en, rand_index, tlbehi_in, tlbelo0_in, tlbelo1_in, tlbidx_in, ecode,
-                tlbsrch_en, asid_in, tlbrd_en, invtlb_en, invtlb_asid, invtlb_vpn, invtlb_op
-    );
-
-endinterface : ex_tlb
 
 interface dispatch_regfile;
     logic [1: 0] reg_read_en[2];
@@ -152,9 +95,9 @@ interface dispatch_regfile;
 endinterface : dispatch_regfile
 
 interface dispatch_csr;
-    logic csr_read_en;
-    csr_addr_t csr_read_addr;
-    bus32_t csr_read_data;
+    logic csr_read_en[2];
+    csr_addr_t csr_read_addr[2];
+    bus32_t csr_read_data[2];
 
     modport master(input csr_read_data, output csr_read_en, csr_read_addr);
 
@@ -185,17 +128,6 @@ interface ex_div;
     
 endinterface : ex_div
 
-interface mem_csr;
-    bus32_t csr_read_data;
-    logic csr_read_en;
-    csr_addr_t csr_read_addr;
-
-    modport master(input csr_read_data, output csr_read_en, output csr_read_addr);
-
-    modport slave(output csr_read_data, input csr_read_en, input csr_read_addr);
-
-endinterface : mem_csr
-
 interface ctrl_csr;
     bus32_t eentry;
     bus32_t era;
@@ -209,17 +141,105 @@ interface ctrl_csr;
     logic [5:0] ecode;
     logic [8:0] esubcode;
     exception_cause_t exception_cause;
+    logic is_ertn;
 
     modport master(
         input eentry, era, ecfg, estat, crmd,
-        output is_exception, exception_pc, exception_addr, ecode, esubcode, exception_cause
+        output is_exception, exception_pc, exception_addr, ecode, esubcode, exception_cause, is_ertn
     );
 
     modport slave(
-        output eentry, era, ecfg, estat, crmd,
+        output eentry, era, ecfg, estat, crmd, is_ertn,
         input is_exception, exception_pc, exception_addr, ecode, esubcode, exception_cause
     );
 endinterface : ctrl_csr
+
+interface dcache_transaddr;
+    logic                   data_fetch;    //指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
+    logic [31:0]            data_vaddr;    //虚拟地址
+    logic [31:0]            ret_data_paddr;//物理地址
+    logic                   cacop_op_mode_di;//assign cacop_op_mode_di = ms_cacop && ((cacop_op_mode == 2'b0) || (cacop_op_mode == 2'b1));
+
+    modport master(
+        input ret_data_paddr,
+        output data_fetch,data_vaddr,cacop_op_mode_di
+    );
+
+    modport slave(
+        output ret_data_paddr,
+        input data_fetch,data_vaddr,cacop_op_mode_di
+    );
+endinterface : dcache_transaddr
+
+interface ex_tlb;
+    //TLBFILL和TLBWR指令
+    logic                  tlbfill_en         ;//TLBFILL指令的使能信号
+    logic                  tlbwr_en           ;//TLBWR指令的使能信号
+
+    //TLBSRCH指令
+    logic                  tlbsrch_en         ;//TLBSRCH指令使能信号
+
+    //TLBRD指令（输入的信号复用tlbidx_in），下一周期开始返回读取的结果
+    //默认read
+
+    //invtlb ——用于实现无效tlb的指令
+    logic                  invtlb_en          ;//使能
+    logic [ 9:0]           invtlb_asid        ;//asid
+    logic [18:0]           invtlb_vpn         ;//vpn
+    logic [ 4:0]           invtlb_op          ;//op
+
+
+    modport master(//ex
+        output tlbfill_en,tlbwr_en,tlbsrch_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op
+    );
+    modport slave(//tlb
+        input tlbfill_en,tlbwr_en,tlbsrch_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op
+    );
+endinterface //ex_tlb
+
+
+interface csr_tlb;
+    logic [31:0]           tlbidx             ;//7.5.1TLB索引寄存器，包含[4:0]为index,[29:24]为PS，[31]为NE
+    logic [31:0]           tlbehi             ;//7.5.2TLB表项高位，包含[31:13]为VPPN
+    logic [31:0]           tlbelo0,tlbelo1    ;//7.5.3TLB表项低位，包含写入TLB表项的内容
+    logic [ 9:0]           asid               ;//7.5.4ASID的低9位
+    //TLBFILL和TLBWR指令
+    logic [4:0]            rand_index         ;//TLBFILL指令的index
+    logic [5:0]            ecode           ;//7.5.1对于NE变量的描述中讲到，CSR.ESTAT.Ecode   (大概使能信号，若为111111则写使能，否则根据tlbindex_in.NE判断是否写使能？
+
+    //TLBSRCH指令
+    logic [31:0]           tlbsrch_ehi        ;//TLBSRCH指令的ehi信号
+    logic                  search_tlb_found   ;//TLBSRCH命中
+    logic [ 4:0]           search_tlb_index   ;//TLBSRCH所需返回的index信号
+
+    //TLBRD指令（输入的信号复用tlbidx_in），下一周期开始返回读取的结果
+    logic [31:0]           tlbehi_out         ;//{r_vppn, 13'b0}
+    logic [31:0]           tlbelo0_out        ;//{4'b0, ppn0, 1'b0, g, mat0, plv0, d0, v0}
+    logic [31:0]           tlbelo1_out        ;//{4'b0, ppn1, 1'b0, g, mat1, plv1, d1, v1}
+    logic [31:0]           tlbidx_out         ;//只有[29:24]为ps信号，其他位均为0
+    logic [ 9:0]           asid_out           ;//读出的asid
+
+    //CSR信号
+    logic [31:0]           csr_dmw0           ;//dmw0，有效位是[27:25]，可能会作为最后转换出来的地址的最高三位
+    logic [31:0]           csr_dmw1           ;//dmw1，有效位是[27:25]，可能会作为最后转换出来的地址的最高三位
+    logic                  csr_da             ;
+    logic                  csr_pg             ;   
+    logic [1:0]            csr_plv            ;
+
+    modport master(//csr
+        input search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,
+        output tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,tlbsrch_ehi,
+                csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv
+    );
+    modport slave(//tlb
+        input tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,tlbsrch_ehi,
+                csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv,
+        output search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out
+    );
+
+endinterface //csr_tlb
+
+
 
 interface icache_mem;
     logic rd_req, ret_valid;
