@@ -91,6 +91,7 @@ module dispatch
     assign data_relate_inst = pc1_lt_pc2 ? inst1_relate : inst2_relate;
     assign cnt_inst = dispatch_i[0].is_cnt || dispatch_i[1].is_cnt;
     assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst && !cnt_inst && (&inst_valid);
+    //assign issue_double_en = 2'b0;
 
     always_comb begin
         if (flush || rst || !(|inst_valid)) begin
