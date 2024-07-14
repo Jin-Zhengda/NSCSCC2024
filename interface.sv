@@ -181,6 +181,7 @@ interface ex_tlb;
 
     //TLBRD指令（输入的信号复用tlbidx_in），下一周期开始返回读取的结果
     //默认read
+    logic                  tlbrd_en           ;
 
     //invtlb ——用于实现无效tlb的指令
     logic                  invtlb_en          ;//使能
@@ -190,10 +191,10 @@ interface ex_tlb;
 
 
     modport master(//ex
-        output tlbfill_en,tlbwr_en,tlbsrch_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op
+        output tlbfill_en,tlbwr_en,tlbsrch_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op,tlbrd_en
     );
     modport slave(//tlb
-        input tlbfill_en,tlbwr_en,tlbsrch_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op
+        input tlbfill_en,tlbwr_en,tlbsrch_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op,tlbrd_en
     );
 endinterface //ex_tlb
 
@@ -226,15 +227,19 @@ interface csr_tlb;
     logic                  csr_pg             ;   
     logic [1:0]            csr_plv            ;
 
+
+    logic                  tlbrd_ret          ;
+    logic                  tlbsrch_ret        ;
+
     modport master(//csr
-        input search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,
+        input search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbrd_ret,tlbsrch_ret,
         output tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,tlbsrch_ehi,
                 csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv
     );
     modport slave(//tlb
         input tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,tlbsrch_ehi,
                 csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv,
-        output search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out
+        output search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbrd_ret,tlbsrch_ret
     );
 
 endinterface //csr_tlb
