@@ -171,9 +171,10 @@ logic[`ADDR_SIZE-1:0] virtual_addra,virtual_addrb;
 assign virtual_addra=pc2icache.pc;
 assign virtual_addrb=virtual_addra+`ADDR_SIZE'd4;
 
-assign same_way=virtual_addra[`TAG_LOC]==virtual_addrb[`TAG_LOC]&&virtual_addra[`INDEX_LOC]==virtual_addrb[`INDEX_LOC];
-
 logic[`ADDR_SIZE-1:0] pre_vaddr_a,pre_vaddr_b;
+
+assign same_way=(pre_vaddr_a[`TAG_LOC]==pre_vaddr_b[`TAG_LOC])&&(pre_vaddr_a[`INDEX_LOC]==pre_vaddr_b[`INDEX_LOC]);
+
 always_ff @( posedge clk ) begin
     if((next_state==`IDLE)&&!pause_icache)begin
         pre_vaddr_a<=virtual_addra;
@@ -281,13 +282,13 @@ assign wea_way1=(pre_valid&&real_ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000;
 
 
 
-assign rd_req=((current_state==`ASKMEM1)||(current_state==`ASKMEM2))&&!paused_ret_valid;//!!!!!!!!!!!!!!!flush??????????????????????????????
+assign rd_req=((current_state==`ASKMEM1)||(current_state==`ASKMEM2))&&!paused_ret_valid&&!ret_valid;
 assign rd_addr=(current_state==`ASKMEM1)?pre_physical_addr_a:pre_physical_addr_b;
 
 
 
 assign pc2icache.stall=(next_state!=`IDLE)||pause_icache;
-assign pc2icache.inst[0]=(current_state==`UNCACHE_RETURN)?iucache_rdata_o://万一被pause了好像rdata能够维持不变，current可以不影响
+assign pc2icache.inst[0]=(current_state==`UNCACHE_RETURN)?iucache_rdata_o:
                             ((flush_delay||branch_flush)?32'b0:
                                 (a_hit_success?(a_hit_way0?way0_cachea[pre_vaddr_a[4:2]]:way1_cachea[pre_vaddr_a[4:2]]):32'b0));//uncache情况下用inst[0]返回
 assign pc2icache.inst[1]=(flush_delay||branch_flush)?32'b0:(b_hit_success?(b_hit_way0?way0_cacheb[pre_vaddr_b[4:2]]:way1_cacheb[pre_vaddr_b[4:2]]):32'b0);

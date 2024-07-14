@@ -77,7 +77,10 @@ assign pc2icache.inst_en=reset?2'b0:(pc2icache.uncache_en?2'b0:2'b11);
 
 always_ff @( posedge clk ) begin
     if(reset)pc2icache.pc<=32'b0;
-    else if(!pc2icache.stall&&(pc2icache.inst_en||pc2icache.uncache_en))pc2icache.pc<=pc2icache.pc+32'd4;
+    else if(!pc2icache.stall&&(pc2icache.inst_en||pc2icache.uncache_en))begin
+        if(pc2icache.pc==32'h24)pc2icache.pc<=32'h00800000;
+        else pc2icache.pc<=pc2icache.pc+32'd4;
+    end
     else pc2icache.pc<=pc2icache.pc;
 end
 /*
