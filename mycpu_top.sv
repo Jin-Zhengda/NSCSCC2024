@@ -235,6 +235,8 @@ module core_top (
     icache_transaddr icache_transaddr_io ();
     dcache_transaddr dcache_transaddr_io ();  
     dispatch_regfile dispatch_regfile_io ();
+    ex_tlb ex_tlb_io();
+    csr_tlb csr_tlb_io();
     logic [1:0] reg_write_en;
     logic [1:0][4:0] reg_write_addr;
     logic [1:0][31:0] reg_write_data;
@@ -277,6 +279,9 @@ module core_top (
 
         .update_info(frontend_backend_io.slave.update_info),
         .send_inst_en(frontend_backend_io.slave.send_inst_en),
+
+        .ex_tlb_master(ex_tlb_io.master),
+        .csr_tlb_master(csr_tlb_io.master),
 
         .dcache_master(mem_dcache_io.master),
         .cache_inst(cache_inst),

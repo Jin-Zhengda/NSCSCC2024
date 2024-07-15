@@ -18,6 +18,9 @@ module execute
     // from stable counter
     input bus64_t cnt,
 
+    // with tlb
+    ex_tlb tlb_master,
+
     // with dcache
     mem_dcache dcache_master,
     output cache_inst_t cache_inst,
@@ -57,6 +60,7 @@ module execute
         .rst,
         .ex_i(main_ex_i),
         .cnt,
+        .tlb_master,
         .dcache_master,
         .update_info(update_info_alu[0]),
         .pause_alu(pause_alu[0]),
