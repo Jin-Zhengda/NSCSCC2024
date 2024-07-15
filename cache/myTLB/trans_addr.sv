@@ -44,15 +44,16 @@ interface dcache_transaddr;
     logic [31:0]            data_vaddr;    //虚拟地址
     logic [31:0]            ret_data_paddr;//物理地址
     logic                   cacop_op_mode_di;//assign cacop_op_mode_di = ms_cacop && ((cacop_op_mode == 2'b0) || (cacop_op_mode == 2'b1));
+    logic                   store;//当前为store操作
 
-    modport master(
+    modport master(//dcache
         input ret_data_paddr,
-        output data_fetch,data_vaddr,cacop_op_mode_di
+        output data_fetch,data_vaddr,cacop_op_mode_di,store
     );
 
     modport slave(
         output ret_data_paddr,
-        input data_fetch,data_vaddr,cacop_op_mode_di
+        input data_fetch,data_vaddr,cacop_op_mode_di,store
     );
 endinterface : dcache_transaddr
 
@@ -68,6 +69,7 @@ interface ex_tlb;
 
     //TLBRD指令（输入的信号复用tlbidx_in），下一周期开始返回读取的结果
     //默认read
+    logic                  tlbrd_en           ;//TLBRD指令的使能信号
 
     //invtlb ——用于实现无效tlb的指令
     logic                  invtlb_en          ;//使能
@@ -75,12 +77,23 @@ interface ex_tlb;
     logic [18:0]           invtlb_vpn         ;//vpn
     logic [ 4:0]           invtlb_op          ;//op
 
+    //例外
+    logic                  tlb_inst_exception      ;
+    logic [5:0]            tlb_inst_exception_ecode;
+    logic [8:0]            tlb_inst_exception_esubcode;
+    logic                  tlb_data_exception      ;
+    logic [5:0]            tlb_data_exception_ecode;
+    logic [8:0]            tlb_data_exception_esubcode;
+
+
 
     modport master(//ex
-        output tlbfill_en,tlbwr_en,tlbsrch_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op
+        input tlb_inst_exception,tlb_inst_exception_ecode,tlb_inst_exception_esubcode,tlb_data_exception,tlb_data_exception_ecode,tlb_data_exception_esubcode,
+        output tlbfill_en,tlbwr_en,tlbsrch_en,tlbrd_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op
     );
     modport slave(//tlb
-        input tlbfill_en,tlbwr_en,tlbsrch_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op
+        input tlbfill_en,tlbwr_en,tlbsrch_en,tlbrd_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op,
+        output tlb_inst_exception,tlb_inst_exception_ecode,tlb_inst_exception_esubcode,tlb_data_exception,tlb_data_exception_ecode,tlb_data_exception_esubcode
     );
 endinterface //ex_tlb
 
@@ -95,7 +108,6 @@ interface csr_tlb;
     logic [5:0]            ecode           ;//7.5.1对于NE变量的描述中讲到，CSR.ESTAT.Ecode   (大概使能信号，若为111111则写使能，否则根据tlbindex_in.NE判断是否写使能？
 
     //TLBSRCH指令
-    logic [31:0]           tlbsrch_ehi        ;//TLBSRCH指令的ehi信号
     logic                  search_tlb_found   ;//TLBSRCH命中
     logic [ 4:0]           search_tlb_index   ;//TLBSRCH所需返回的index信号
 
@@ -113,15 +125,19 @@ interface csr_tlb;
     logic                  csr_pg             ;   
     logic [1:0]            csr_plv            ;
 
+    //返回信号
+    logic                  tlbsrch_ret        ;
+    logic                  tlbrd_ret          ;
+
     modport master(//csr
-        input search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,
-        output tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,tlbsrch_ehi,
+        input search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbsrch_ret,tlbrd_ret,
+        output tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,
                 csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv
     );
     modport slave(//tlb
-        input tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,tlbsrch_ehi,
+        input tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,
                 csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv,
-        output search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out
+        output search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbsrch_ret,tlbrd_ret
     );
 
 endinterface //csr_tlb
@@ -192,7 +208,7 @@ assign s0_vppn     = icache2transaddr.inst_vaddr[31:13];//19位虚拟tag
 assign s0_odd_page = icache2transaddr.inst_vaddr[12];//奇偶
 
 //assign s1_vppn     = data_vaddr[31:13];
-assign s1_vppn     =ex2tlb.tlbsrch_en?csr2tlb.tlbsrch_ehi[`VPPN]:dcache2transaddr.data_vaddr[31:13];
+assign s1_vppn     =ex2tlb.tlbsrch_en?csr2tlb.tlbehi[`VPPN]:dcache2transaddr.data_vaddr[31:13];
 assign s1_odd_page =ex2tlb.tlbsrch_en?1'b0:dcache2transaddr.data_vaddr[12];//??????????????????????????????????????srch的时候真的不知道该怎么赋值！！！！！！！！！！！！！！！！！
 
 //srch指令
@@ -383,6 +399,46 @@ assign dcache2transaddr.ret_data_paddr={data_tag,data_index,data_offset};
 
 
 
+
+always_ff @( posedge clk ) begin
+    csr2tlb.tlbsrch_ret<=ex2tlb.tlbsrch_en;
+    csr2tlb.tlbrd_ret<=ex2tlb.tlbrd_en;
+end
+
+
+
+logic tlb_inst_refill,tlb_inst_pif,tlb_inst_ppi;
+assign tlb_inst_refill=((!inst_tlb_found)&&inst_addr_trans_en);
+assign tlb_inst_pif=icache2transaddr.inst_fetch&&!inst_tlb_v && inst_addr_trans_en;
+assign tlb_inst_ppi=((csr2tlb.csr_plv > inst_tlb_plv) && inst_addr_trans_en);
+
+assign ex2tlb.tlb_inst_exception_ecode=tlb_inst_refill?6'h3f:(
+    tlb_inst_pif?6'h3:(
+        tlb_inst_ppi?6'h7:6'h5
+    )
+);
+assign ex2tlb.tlb_inst_exception_esubcode=9'b0;
+assign ex2tlb.tlb_inst_exception=tlb_inst_refill||tlb_inst_pif||tlb_inst_ppi;
+
+
+logic tlb_data_refill,tlb_data_pif,tlb_data_pil,tlb_data_pis,tlb_data_ppi,tlb_data_pme;
+assign tlb_data_refill=((!data_tlb_found)&&data_addr_trans_en);
+assign tlb_data_pil=dcache2transaddr.data_fetch&&!dcache2transaddr.store &&!data_tlb_v && data_addr_trans_en;
+assign tlb_data_pis=dcache2transaddr.data_fetch&&dcache2transaddr.store && !data_tlb_v && data_addr_trans_en;
+assign tlb_data_ppi=(dcache2transaddr.data_fetch && data_tlb_v && (csr2tlb.csr_plv > data_tlb_plv) && data_addr_trans_en);
+assign tlb_data_pme=dcache2transaddr.store && data_tlb_v && (csr2tlb.csr_plv <= data_tlb_plv) && !data_tlb_d && data_addr_trans_en;
+
+assign ex2tlb.tlb_data_exception_ecode=tlb_data_refill?6'h3f:(
+        tlb_data_pil?6'h1:(
+            tlb_data_pis?6'h2:(
+                tlb_data_ppi?6'h7:(
+                    tlb_data_pme?6'h4:6'h5
+                )
+            )
+        )
+);
+assign ex2tlb.tlb_data_exception_esubcode=9'b0;
+assign ex2tlb.tlb_data_exception=tlb_data_refill||tlb_data_pil||tlb_data_pis||tlb_data_ppi||tlb_data_pme;
 
 
 endmodule

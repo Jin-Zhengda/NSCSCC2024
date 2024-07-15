@@ -9,30 +9,32 @@ typedef struct packed {
     bus32_t addr;
 }cache_inst_t;
 
-    interface mem_dcache;
-        logic valid;                // 请求有效
-        logic op;                   // 操作类型，读-0，写-1
-        logic[2:0] size;           // 数据大小，3'b000--字节，3'b001--半字，3'b010--字
-        logic[31:0] virtual_addr;   // 虚拟地址
-        logic tlb_excp_cancel_req;
-        logic[3:0]  wstrb;          //写使能，1表示对应的8位数据需要写
-        logic[31:0] wdata;          //需要写的数据
-        
-        logic addr_ok;              //该次请求的地址传输OK，读：地址被接收；写：地址和数据被接收
-        logic data_ok;              //该次请求的数据传输OK，读：数据返回；写：数据写入完成
-        logic[31:0] rdata;          //读DCache的结果
-        logic cache_miss;           //cache未命中
+interface mem_dcache;
+    logic valid;  // 请求有效
+    logic op;  // 操作类型，读-0，写-1
+    // logic[2:0] size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
+    bus32_t virtual_addr;  // 虚拟地址
+    bus32_t physical_addr;
+    logic tlb_excp_cancel_req;
+    logic [3:0] wstrb;  //写使能，1表示对应的8位数据需要写
+    bus32_t wdata;  //需要写的数据
 
-        modport master (
-            input addr_ok, data_ok, rdata, cache_miss,
-            output valid, op, size, virtual_addr, tlb_excp_cancel_req, wstrb, wdata
-        );
+    logic addr_ok;              //该次请求的地址传输OK，读：地址被接收；写：地址和数据被接收
+    logic data_ok;  //该次请求的数据传输OK，读：数据返回；写：数据写入完成
+    bus32_t rdata;  //读DCache的结果
 
-        modport slave (
-            output addr_ok, data_ok, rdata, cache_miss,
-            input valid, op, size, virtual_addr, tlb_excp_cancel_req, wstrb, wdata
-        );
-    endinterface: mem_dcache
+    logic uncache_en;
+
+    modport master(
+        input addr_ok, data_ok, rdata, 
+        output valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata, uncache_en
+    );
+
+    modport slave(
+        output addr_ok, data_ok, rdata, 
+        input valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata, uncache_en
+    );
+endinterface : mem_dcache
 
 
 
@@ -40,15 +42,17 @@ interface dcache_transaddr;
     logic                   data_fetch;    //指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
     logic [31:0]            data_vaddr;    //虚拟地址
     logic [31:0]            ret_data_paddr;//物理地址
+    logic                   cacop_op_mode_di;//assign cacop_op_mode_di = ms_cacop && ((cacop_op_mode == 2'b0) || (cacop_op_mode == 2'b1));
+    logic                   store;//当前为store操作
 
-    modport master(
+    modport master(//dcache
         input ret_data_paddr,
-        output data_fetch,data_vaddr  
+        output data_fetch,data_vaddr,cacop_op_mode_di,store
     );
 
     modport slave(
         output ret_data_paddr,
-        input data_fetch,data_vaddr
+        input data_fetch,data_vaddr,cacop_op_mode_di,store
     );
 endinterface : dcache_transaddr
 
@@ -373,7 +377,7 @@ assign mem2dcache.rdata=(current_state==`UNCACHE_RETURN)?ducache_rdata_o:
                                     (hit_way0?(write_read_same?way0_cache_b[pre_vaddr[4:2]]:way0_cache[pre_vaddr[4:2]]):
                                     (write_read_same?way1_cache_b[pre_vaddr[4:2]]:way1_cache[pre_vaddr[4:2]])):
                                             read_from_mem[pre_vaddr[4:2]]);
-assign mem2dcache.cache_miss=hit_fail;
+assign mem2dcache.physical_addr=target_physical_addr;
 
 
 
@@ -441,6 +445,9 @@ always_ff @( posedge clk ) begin
 end
 
 
+
+assign dcache2transaddr.cacop_op_mode_di=1'b0;
+assign dcache2transaddr.store=mem2dcache.op;
 
 
 endmodule
