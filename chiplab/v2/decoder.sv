@@ -92,7 +92,7 @@ module decoder
 
     generate
         for (genvar i = 0; i < DECODER_WIDTH; i++) begin
-            assign enqueue_en[i] = !((rst || full || id_o[i].pc == 32'b0) && !pause_buffer);
+            assign enqueue_en[i] = !(rst || full || id_o[i].pc == 32'b0);
         end
     endgenerate
 

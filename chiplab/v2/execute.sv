@@ -65,47 +65,30 @@ module execute
     assign dcache_master.wdata = valid[0] ? wdata[0] : wdata[1];
     assign dcache_master.wstrb = valid[0] ? wstrb[0] : wstrb[1];
 
-    main_ex u_main_ex1 (
-        .clk,
-        .rst,
-        .ex_i(ex_i[0]),
-        .cnt,
-        .valid(valid[0]),
-        .op(op[0]),
-        .uncache_en(uncache_en[0]),
-        .addr_ok,
-        .virtual_addr(virtual_addr[0]),
-        .wdata(wdata[0]),
-        .wstrb(wstrb[0]),
-        .update_info(update_info_alu[0]),
-        .pause_alu(pause_alu[0]),
-        .branch_flush(branch_flush_alu[0]),
-        .branch_target_alu(branch_target_alu[0]),
-        .pre_ex_aluop(pre_ex_aluop[0]),
-        .cache_inst(cache_inst_alu[0]),
-        .ex_o(ex_o[0])
-    );
-
-    main_ex u_main_ex2 (
-        .clk,
-        .rst,
-        .ex_i(ex_i[1]),
-        .cnt,
-        .valid(valid[1]),
-        .op(op[1]),
-        .uncache_en(uncache_en[1]),
-        .addr_ok,
-        .virtual_addr(virtual_addr[1]),
-        .wdata(wdata[1]),
-        .wstrb(wstrb[1]),
-        .update_info(update_info_alu[1]),
-        .pause_alu(pause_alu[1]),
-        .branch_flush(branch_flush_alu[1]),
-        .branch_target_alu(branch_target_alu[1]),
-        .pre_ex_aluop(pre_ex_aluop[1]),
-        .cache_inst(cache_inst_alu[1]),
-        .ex_o(ex_o[1])
-    );
+    generate
+        for (genvar i = 0; i < 2; i++) begin
+            alu u_alu (
+                .clk,
+                .rst,
+                .ex_i(ex_i[i]),
+                .cnt,
+                .valid(valid[i]),
+                .op(op[i]),
+                .uncache_en(uncache_en[i]),
+                .addr_ok,
+                .virtual_addr(virtual_addr[i]),
+                .wdata(wdata[i]),
+                .wstrb(wstrb[i]),
+                .update_info(update_info_alu[i]),
+                .pause_alu(pause_alu[i]),
+                .branch_flush(branch_flush_alu[i]),
+                .branch_target_alu(branch_target_alu[i]),
+                .pre_ex_aluop(pre_ex_aluop[i]),
+                .cache_inst(cache_inst_alu[i]),
+                .ex_o(ex_o[i])
+            );
+        end
+    endgenerate
 
     // ex push forward
     generate

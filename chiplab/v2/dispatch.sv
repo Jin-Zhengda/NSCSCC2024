@@ -14,7 +14,6 @@ module dispatch
 
     // from decoder
     input id_dispatch_t [DECODER_WIDTH - 1:0] dispatch_i,
-    input logic [DECODER_WIDTH - 1:0][AGE_WIDTH - 1:0] ages,
 
     // from ex and mem
     input pipeline_push_forward_t [ISSUE_WIDTH - 1:0] ex_reg_pf,

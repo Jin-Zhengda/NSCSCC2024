@@ -2,7 +2,7 @@
 `include "core_defines.sv"
 `include "csr_defines.sv"
 
-module main_ex
+module alu
     import pipeline_types::*;
 (
     input logic clk,
