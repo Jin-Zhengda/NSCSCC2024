@@ -465,7 +465,7 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             tlbrentry <= 32'b0;
-        end else if (eentry_wen) begin
+        end else if (tlbrentry_wen) begin
             tlbrentry[31:6] <= csr_write_data[31:6];  // PA
         end
     end

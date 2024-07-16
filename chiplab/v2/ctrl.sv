@@ -2,7 +2,7 @@
 `include "core_defines.sv"
 `include "csr_defines.sv"
 `include "pipeline_types.sv"
-`define DIFF 
+//`define DIFF 
 
 module ctrl
     import pipeline_types::*;
@@ -255,8 +255,6 @@ module ctrl
     always_comb begin
         if (pause_request.pause_buffer) begin
             pause_front = 3'b111;
-        end else if (pause_request.pause_decoder) begin
-            pause_front = 3'b100;
         end else if (pause_request.pause_icache) begin
             pause_front = 3'b011;
         end else if (pause_request.pause_if) begin

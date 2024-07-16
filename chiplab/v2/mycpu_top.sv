@@ -245,9 +245,10 @@ module core_top (
     bus32_t [1:0] pre_branch_addr;
 
     logic buffer_full;
+    logic pause_decoder;
 
     generate
-        for (genvar i = 0; i < 2; i++) begin
+        for (genvar i = 0; i < 2; i+=1) begin
             assign pre_is_branch[i] = frontend_backend_io.branch_info[i].is_branch;
             assign pre_is_branch_taken[i] = frontend_backend_io.branch_info[i].pre_taken_or_not;
             assign pre_branch_addr[i] = frontend_backend_io.branch_info[i].pre_branch_addr;
@@ -271,6 +272,7 @@ module core_top (
         .exception_cause(frontend_backend_io.inst_and_pc_o.exception_cause),
         .pause_buffer(buffer_full),
         .bpu_flush,
+        .pause_decoder,
 
         .is_interrupt(frontend_backend_io.is_interrupt),
         .new_pc(frontend_backend_io.new_pc),
@@ -331,7 +333,8 @@ module core_top (
         .pi_master(pc_icache_io.master),
         .fb_master(frontend_backend_io.master),
         .buffer_full(buffer_full),
-        .bpu_flush
+        .bpu_flush,
+        .pause_decoder
     );
 
     logic icache_cacop;

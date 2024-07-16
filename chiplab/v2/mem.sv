@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 `include "core_defines.sv"
 `include "csr_defines.sv"
-`define DIFF 
+//`define DIFF 
 
 module mem
     import pipeline_types::*;
@@ -59,8 +59,6 @@ module mem
             assign mem_o[i].csr_write_data = mem_i[i].csr_write_data;
         end
     endgenerate
-
-    assign mem_o[1].reg_write_data = mem_i[1].reg_write_data;
 
     // exception 
     logic [ISSUE_WIDTH - 1: 0] is_exception;
@@ -225,7 +223,7 @@ module mem
             assign diff_o[i].debug_wb_rf_wdata = 32'b0;
             assign diff_o[i].inst_valid = (mem_i[i].pc != 32'b0);
             assign diff_o[i].cnt_inst = (mem_i[i].aluop == `ALU_RDCNTID || mem_i[i].aluop == `ALU_RDCNTVLW || mem_i[i].aluop == `ALU_RDCNTVHW);
-            // estat 不进行比对
+            // estat 不进行比�?
             assign diff_o[i].csr_rstat_en = 1'b0;
             assign diff_o[i].csr_data = 32'b0;
 

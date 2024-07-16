@@ -3,7 +3,7 @@
 `include "interface.sv"
 `include "core_defines.sv"
 `include "csr_defines.sv"
-`define DIFF 
+//`define DIFF 
 
 module backend_top
     import pipeline_types::*;
@@ -25,6 +25,7 @@ module backend_top
 
     input logic pause_buffer,
     input logic bpu_flush,
+    output logic pause_decoder,
 
     // to pc
     output logic   is_interrupt,
@@ -82,8 +83,7 @@ module backend_top
 );
 
     assign pause_request.pause_buffer = pause_buffer;
-    assign pause_request.pasue_if = 1'b0;
-    assign pause_request.pause_icache = 1'b0;
+    assign pause_decoder = pause_request.pause_decoder;
 
     // regfile
     dispatch_regfile dispatch_regfile_io ();
@@ -115,7 +115,7 @@ module backend_top
     csr_push_forward_t ex_csr_pf;
     csr_push_forward_t mem_csr_pf;
     csr_push_forward_t wb_csr_pf;
-    alu_op_t pre_ex_aluop;
+    alu_op_t [ISSUE_WIDTH - 1:0] pre_ex_aluop;
     dispatch_ex_t [ISSUE_WIDTH - 1:0] ex_i;
     logic [ISSUE_WIDTH - 1:0] dqueue_en;
     logic [DECODER_WIDTH - 1:0] invalid_en;

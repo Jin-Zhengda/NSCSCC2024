@@ -17,6 +17,7 @@ module fifo #(
 
     input logic flush,
     output logic full,
+    output logic push_stall,
     output logic empty
 );
 
@@ -59,6 +60,7 @@ module fifo #(
 
     //判断是否空或者满
     assign full = read_index == PTR_WIDTH'(write_index + 2);
+    assign push_stall = read_index == PTR_WIDTH'(write_index + 1);
     assign empty = read_index == write_index;
 
 endmodule
