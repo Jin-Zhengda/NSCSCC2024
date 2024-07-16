@@ -1,8 +1,9 @@
 `timescale 1ns / 1ps
 `include "core_defines.sv"
 `include "csr_defines.sv"
+`include "pipeline_types.sv"
 
-module main_ex
+module alu
     import pipeline_types::*;
 (
     input logic clk,
@@ -17,7 +18,7 @@ module main_ex
     output logic valid,
     output logic op,
     output logic uncache_en,
-    output logic addr_ok,
+    input logic addr_ok,
     output bus32_t virtual_addr,
     output bus32_t wdata,
     output logic [3:0] wstrb,
@@ -195,8 +196,8 @@ module main_ex
 
     always_comb begin
         if (ex_o.is_exception == 6'b0) begin
-            if (ex_i.pc < 32'h1c000100) begin
-            //if (ex_i.pc < 32'h00000000) begin
+            //if (ex_i.pc < 32'h1c000100) begin
+            if (ex_i.pc < 32'h00000000) begin
                 uncache_en = mem_is_valid && !ex_is_exception;
                 valid = 1'b0;
             end 

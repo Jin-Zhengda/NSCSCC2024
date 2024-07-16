@@ -2,7 +2,7 @@
 `include "core_defines.sv"
 `include "csr_defines.sv"
 `include "pipeline_types.sv"
-`define DIFF 
+//`define DIFF 
 
 module ctrl
     import pipeline_types::*;
@@ -255,8 +255,6 @@ module ctrl
     always_comb begin
         if (pause_request.pause_buffer) begin
             pause_front = 3'b111;
-        end else if (pause_request.pause_decoder) begin
-            pause_front = 3'b100;
         end else if (pause_request.pause_icache) begin
             pause_front = 3'b011;
         end else if (pause_request.pause_if) begin
@@ -276,7 +274,7 @@ module ctrl
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
             assign ctrl_diff_o[i].debug_wb_pc = ctrl_diff_o[i].inst_valid ? ctrl_diff_i[i].debug_wb_pc: 32'b0;
             assign ctrl_diff_o[i].debug_wb_inst = ctrl_diff_i[i].debug_wb_inst;
-            assign ctrl_diff_o[i].debug_wb_rf_wen = reg_write_en_out[i];
+            assign ctrl_diff_o[i].debug_wb_rf_wen = {4{reg_write_en_out[i]}};
             assign ctrl_diff_o[i].debug_wb_rf_wnum = reg_write_addr[i];
             assign ctrl_diff_o[i].debug_wb_rf_wdata = reg_write_data[i];
 

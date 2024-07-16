@@ -68,6 +68,6 @@ module pc_reg_d
         end
     end
 
-    assign uncache_en = ((pc.pc_o <= 32'h1c000100 && pc.pc_o >= 32'h1c000000) && !rst) ? 1'b1: 1'b0;
-    //assign uncache_en = 1'b0;
+    //assign uncache_en = ((pc.pc_o <= 32'h1c000100 && pc.pc_o >= 32'h1c000000) && !rst) ? 1'b1: 1'b0;
+    assign uncache_en = 1'b0;
 endmodule

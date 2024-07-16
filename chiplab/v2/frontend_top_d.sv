@@ -8,6 +8,8 @@ import pipeline_types::*;
 
     //icache
     pc_icache pi_master,
+
+    input logic pause_decoder,
     
     //和后端的交互
     frontend_backend fb_master,
@@ -82,6 +84,7 @@ import pipeline_types::*;
         .flush(fb_master.flush[1]),
         .stall(pi_master.stall_for_buffer),
         .pause(fb_master.pause[1]),
+        .pause_decoder,
 
         .inst(pi_master.inst_for_buffer),
         .pc(pi_master.pc_for_buffer),
