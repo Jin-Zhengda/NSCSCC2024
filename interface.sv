@@ -9,6 +9,7 @@ interface mem_dcache;
     logic op;  // 操作类型，读-0，写-1
     // logic[2:0] size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
     bus32_t virtual_addr;  // 虚拟地址
+    bus32_t physical_addr;
     logic tlb_excp_cancel_req;
     logic [3:0] wstrb;  //写使能，1表示对应的8位数据需要写
     bus32_t wdata;  //需要写的数据
@@ -20,7 +21,11 @@ interface mem_dcache;
     logic uncache_en;
 
     modport master(
+<<<<<<< HEAD
+        input addr_ok, data_ok, rdata, 
+=======
         input addr_ok, data_ok, rdata,
+>>>>>>> upstream/master
         output valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata, uncache_en
     );
 
