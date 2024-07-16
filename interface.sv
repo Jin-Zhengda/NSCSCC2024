@@ -21,7 +21,11 @@ interface mem_dcache;
     logic uncache_en;
 
     modport master(
+<<<<<<< HEAD
         input addr_ok, data_ok, rdata, 
+=======
+        input addr_ok, data_ok, rdata,
+>>>>>>> upstream/master
         output valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata, uncache_en
     );
 
@@ -209,7 +213,6 @@ interface csr_tlb;
     logic [5:0]            ecode           ;//7.5.1对于NE变量的描述中讲到，CSR.ESTAT.Ecode   (大概使能信号，若为111111则写使能，否则根据tlbindex_in.NE判断是否写使能？
 
     //TLBSRCH指令
-    logic [31:0]           tlbsrch_ehi        ;//TLBSRCH指令的ehi信号
     logic                  search_tlb_found   ;//TLBSRCH命中
     logic [ 4:0]           search_tlb_index   ;//TLBSRCH所需返回的index信号
 
@@ -233,11 +236,11 @@ interface csr_tlb;
 
     modport master(//csr
         input search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbrd_ret,tlbsrch_ret,
-        output tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,tlbsrch_ehi,
+        output tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,
                 csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv
     );
     modport slave(//tlb
-        input tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,tlbsrch_ehi,
+        input tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,
                 csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv,
         output search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbrd_ret,tlbsrch_ret
     );

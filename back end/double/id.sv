@@ -104,6 +104,7 @@ module id
         id_exception_cause = `EXCEPTION_INE;
         id_o.cacop_code = 5'b0;
         id_o.is_cnt = 1'b0;
+        id_o.invtlb_op = 5'b0;
 
         case (opcode1)
             `SLTI_OPCODE: begin
@@ -494,9 +495,10 @@ module id
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_INVTLB;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.reg_read_en[0] = 1'b0;
-                id_o.reg_read_en[1] = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
+                id_o.reg_read_en[1] = 1'b1;
                 inst_valid = 1'b1;
+                id_o.invtlb_op = rd;
             end
             default: begin
             end

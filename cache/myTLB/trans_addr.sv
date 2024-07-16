@@ -77,6 +77,24 @@ interface ex_tlb;
     logic [18:0]           invtlb_vpn         ;//vpn
     logic [ 4:0]           invtlb_op          ;//op
 
+
+    //TLBSRCH指令
+    logic                  search_tlb_found   ;//TLBSRCH命中
+    logic [ 4:0]           search_tlb_index   ;//TLBSRCH所需返回的index信号
+
+    //TLBRD指令（输入的信号复用tlbidx_in），下一周期开始返回读取的结果
+    logic [31:0]           tlbehi_out         ;//{r_vppn, 13'b0}
+    logic [31:0]           tlbelo0_out        ;//{4'b0, ppn0, 1'b0, g, mat0, plv0, d0, v0}
+    logic [31:0]           tlbelo1_out        ;//{4'b0, ppn1, 1'b0, g, mat1, plv1, d1, v1}
+    logic [31:0]           tlbidx_out         ;//只有[29:24]为ps信号，其他位均为0
+    logic [ 9:0]           asid_out           ;//读出的asid
+
+    //返回信号
+    logic                  tlbsrch_ret        ;
+    logic                  tlbrd_ret          ;
+
+
+
     //例外
     logic                  tlb_inst_exception      ;
     logic [5:0]            tlb_inst_exception_ecode;
@@ -89,11 +107,13 @@ interface ex_tlb;
 
     modport master(//ex
         input tlb_inst_exception,tlb_inst_exception_ecode,tlb_inst_exception_esubcode,tlb_data_exception,tlb_data_exception_ecode,tlb_data_exception_esubcode,
+                search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbsrch_ret,tlbrd_ret,
         output tlbfill_en,tlbwr_en,tlbsrch_en,tlbrd_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op
     );
     modport slave(//tlb
         input tlbfill_en,tlbwr_en,tlbsrch_en,tlbrd_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op,
-        output tlb_inst_exception,tlb_inst_exception_ecode,tlb_inst_exception_esubcode,tlb_data_exception,tlb_data_exception_ecode,tlb_data_exception_esubcode
+        output tlb_inst_exception,tlb_inst_exception_ecode,tlb_inst_exception_esubcode,tlb_data_exception,tlb_data_exception_ecode,tlb_data_exception_esubcode,
+                search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbsrch_ret,tlbrd_ret
     );
 endinterface //ex_tlb
 
@@ -107,16 +127,7 @@ interface csr_tlb;
     logic [4:0]            rand_index         ;//TLBFILL指令的index
     logic [5:0]            ecode           ;//7.5.1对于NE变量的描述中讲到，CSR.ESTAT.Ecode   (大概使能信号，若为111111则写使能，否则根据tlbindex_in.NE判断是否写使能？
 
-    //TLBSRCH指令
-    logic                  search_tlb_found   ;//TLBSRCH命中
-    logic [ 4:0]           search_tlb_index   ;//TLBSRCH所需返回的index信号
-
-    //TLBRD指令（输入的信号复用tlbidx_in），下一周期开始返回读取的结果
-    logic [31:0]           tlbehi_out         ;//{r_vppn, 13'b0}
-    logic [31:0]           tlbelo0_out        ;//{4'b0, ppn0, 1'b0, g, mat0, plv0, d0, v0}
-    logic [31:0]           tlbelo1_out        ;//{4'b0, ppn1, 1'b0, g, mat1, plv1, d1, v1}
-    logic [31:0]           tlbidx_out         ;//只有[29:24]为ps信号，其他位均为0
-    logic [ 9:0]           asid_out           ;//读出的asid
+    
 
     //CSR信号
     logic [31:0]           csr_dmw0           ;//dmw0，有效位是[27:25]，可能会作为最后转换出来的地址的最高三位
@@ -125,19 +136,15 @@ interface csr_tlb;
     logic                  csr_pg             ;   
     logic [1:0]            csr_plv            ;
 
-    //返回信号
-    logic                  tlbsrch_ret        ;
-    logic                  tlbrd_ret          ;
+
 
     modport master(//csr
-        input search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbsrch_ret,tlbrd_ret,
         output tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,
                 csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv
     );
     modport slave(//tlb
         input tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,
-                csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv,
-        output search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbsrch_ret,tlbrd_ret
+                csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv
     );
 
 endinterface //csr_tlb
@@ -186,7 +193,7 @@ logic data_dmw0_en,data_dmw1_en;
 assign data_dmw0_en = ((csr2tlb.csr_dmw0[`PLV0] && csr2tlb.csr_plv == 2'd0) || (csr2tlb.csr_dmw0[`PLV3] && csr2tlb.csr_plv == 2'd3)) && (dcache2transaddr.data_vaddr[31:29] == csr2tlb.csr_dmw0[`VSEG]) && pg_mode;
 assign data_dmw1_en = ((csr2tlb.csr_dmw1[`PLV0] && csr2tlb.csr_plv == 2'd0) || (csr2tlb.csr_dmw1[`PLV3] && csr2tlb.csr_plv == 2'd3)) && (dcache2transaddr.data_vaddr[31:29] == csr2tlb.csr_dmw1[`VSEG]) && pg_mode;
 
-logic inst_addr_trans_en;
+logic inst_addr_trans_en,data_addr_trans_en;
 assign pg_mode = csr2tlb.csr_pg && !csr2tlb.csr_da;
 assign inst_addr_trans_en = pg_mode && !inst_dmw0_en && !inst_dmw1_en;
 assign data_addr_trans_en = pg_mode && !data_dmw0_en && !data_dmw1_en && !dcache2transaddr.cacop_op_mode_di;
@@ -212,8 +219,8 @@ assign s1_vppn     =ex2tlb.tlbsrch_en?csr2tlb.tlbehi[`VPPN]:dcache2transaddr.dat
 assign s1_odd_page =ex2tlb.tlbsrch_en?1'b0:dcache2transaddr.data_vaddr[12];//??????????????????????????????????????srch的时候真的不知道该怎么赋值！！！！！！！！！！！！！！！！！
 
 //srch指令
-assign csr2tlb.search_tlb_found=data_tlb_found;
-assign csr2tlb.search_tlb_index=data_tlb_index;
+assign ex2tlb.search_tlb_found=data_tlb_found;
+assign ex2tlb.search_tlb_index=data_tlb_index;
 
 
 
@@ -275,11 +282,11 @@ logic [19:0] r_ppn1      ;
 
 //将读tlb的结果转换成输出格式
 assign r_index      = csr2tlb.tlbidx[`INDEX];
-assign csr2tlb.tlbehi_out   = {r_vppn, 13'b0};
-assign csr2tlb.tlbelo0_out  = {4'b0, r_ppn0, 1'b0, r_g, r_mat0, r_plv0, r_d0, r_v0};
-assign csr2tlb.tlbelo1_out  = {4'b0, r_ppn1, 1'b0, r_g, r_mat1, r_plv1, r_d1, r_v1};
-assign csr2tlb.tlbidx_out   = {!r_e, 1'b0, r_ps, 24'b0}; //note do not write index
-assign csr2tlb.asid_out     = r_asid;
+assign ex2tlb.tlbehi_out   = {r_vppn, 13'b0};
+assign ex2tlb.tlbelo0_out  = {4'b0, r_ppn0, 1'b0, r_g, r_mat0, r_plv0, r_d0, r_v0};
+assign ex2tlb.tlbelo1_out  = {4'b0, r_ppn1, 1'b0, r_g, r_mat1, r_plv1, r_d1, r_v1};
+assign ex2tlb.tlbidx_out   = {!r_e, 1'b0, r_ps, 24'b0}; //note do not write index
+assign ex2tlb.asid_out     = r_asid;
 
 
 
@@ -376,12 +383,16 @@ tlb u_tlb(
 assign pg_mode = !csr2tlb.csr_da &&  csr2tlb.csr_pg;//地址翻译模式为分页模式
 assign da_mode =  csr2tlb.csr_da && !csr2tlb.csr_pg;
 
+
+logic [4:0]inst_offset,data_offset;
+logic [6:0]inst_index,data_index;
+logic [19:0]inst_tag,data_tag;
 //指令物理地址
 assign inst_paddr = (pg_mode && inst_dmw0_en) ? {csr2tlb.csr_dmw0[`PSEG], inst_vaddr_buffer[28:0]} :
                     (pg_mode && inst_dmw1_en) ? {csr2tlb.csr_dmw1[`PSEG], inst_vaddr_buffer[28:0]} : inst_vaddr_buffer;
 
-assign inst_offset = icache2transaddr.inst_vaddr[3:0];
-assign inst_index  = icache2transaddr.inst_vaddr[11:4];
+assign inst_offset = icache2transaddr.inst_vaddr[4:0];
+assign inst_index  = icache2transaddr.inst_vaddr[11:5];
 assign inst_tag    = inst_addr_trans_en ? ((s0_ps == 6'd12) ? s0_ppn : {s0_ppn[19:10], inst_paddr[21:12]}) : inst_paddr[31:12];
 
 
@@ -389,8 +400,8 @@ assign inst_tag    = inst_addr_trans_en ? ((s0_ps == 6'd12) ? s0_ppn : {s0_ppn[1
 assign data_paddr = (pg_mode && data_dmw0_en && !dcache2transaddr.cacop_op_mode_di) ? {csr2tlb.csr_dmw0[`PSEG], data_vaddr_buffer[28:0]} : 
                     (pg_mode && data_dmw1_en && !dcache2transaddr.cacop_op_mode_di) ? {csr2tlb.csr_dmw1[`PSEG], data_vaddr_buffer[28:0]} : data_vaddr_buffer;
 
-assign data_offset = dcache2transaddr.data_vaddr[3:0];
-assign data_index  = dcache2transaddr.data_vaddr[11:4];
+assign data_offset = dcache2transaddr.data_vaddr[4:0];
+assign data_index  = dcache2transaddr.data_vaddr[11:5];
 assign data_tag    = data_addr_trans_en ? ((s1_ps == 6'd12) ? s1_ppn : {s1_ppn[19:10], data_paddr[21:12]}) : data_paddr[31:12];
 
 
@@ -401,8 +412,8 @@ assign dcache2transaddr.ret_data_paddr={data_tag,data_index,data_offset};
 
 
 always_ff @( posedge clk ) begin
-    csr2tlb.tlbsrch_ret<=ex2tlb.tlbsrch_en;
-    csr2tlb.tlbrd_ret<=ex2tlb.tlbrd_en;
+    ex2tlb.tlbsrch_ret<=ex2tlb.tlbsrch_en;
+    ex2tlb.tlbrd_ret<=ex2tlb.tlbrd_en;
 end
 
 

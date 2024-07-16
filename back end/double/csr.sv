@@ -11,52 +11,19 @@ module csr
     // with disptch (raed ports)
     dispatch_csr dispatch_slave,
 
+    // with tlb
+    csr_tlb tlb_master,
+
     // from wb (write ports)
     input logic is_llw_scw,
     input logic csr_write_en,
     input csr_addr_t csr_write_addr,
     input bus32_t csr_write_data,
 
-    // from inst
-    input logic        tlbsrch_en    ,
-    input logic        tlbsrch_found ,
-    input logic [ 4:0] tlbsrch_index ,
-    input logic        excp_tlbrefill,
-    input logic        excp_tlb     ,
-    input logic [18:0] excp_tlb_vppn,
-
-    input logic is_tlbrd_valid,
-    input logic tlbwr_en,
-    input logic tlbfill_en,
-
-
-    input bus32_t tlb_line,
-    input bus32_t tlblo0_line,
-    input bus32_t tlblo1_line,
-
     input logic is_tlb_exception,
 
-    //to addr trans
-    output logic [ 9:0] asid_out,
-    output logic [ 4:0] rand_index,
-    output logic [31:0] tlbehi_out,
-    output logic [31:0] tlbelo0_out,
-    output logic [31:0] tlbelo1_out,
-    output logic [31:0] tlbidx_out,
-    output logic pg_out,
-    output logic da_out,
-    output logic [31:0] dmw0_out,
-    output logic [31:0] dmw1_out,
-    output logic [ 1:0] datf_out,
-    output logic [ 1:0] datm_out,
-    output logic [ 5:0] ecode_out,
-    //from addr trans 
-    input logic tlbrd_en,
-    input logic [31:0] tlbehi_in,
-    input logic [31:0] tlbelo0_in,
-    input logic [31:0] tlbelo1_in,
-    input logic [31:0] tlbidx_in,
-    input logic [ 9:0] asid_in,
+    // from stable counter
+    bus64_t cnt,
 
     // from outer
     input logic is_ipi,
@@ -221,6 +188,19 @@ module csr
     assign ctrl_slave.ecfg = ecfg;
     assign ctrl_slave.estat = estat;
 
+    assign tlb_master.tlbidx = tlbidx;
+    assign tlb_master.tlbehi = tlbehi;
+    assign tlb_master.tlbelo0 = tlbelo0;
+    assign tlb_master.tlbelo1 = tlbelo1;
+    assign tlb_master.asid = asid[9:0];
+    assign tlb_master.rand_index = cnt[4:0];
+    assign tlb_master.ecode = estat[21:16];
+    assign tlb_master.csr_dmw0 = dmw0;
+    assign tlb_master.csr_dmw1 = dmw1;
+    assign tlb_master.csr_da = crmd[3];
+    assign tlb_master.csr_pg = crmd[4];
+    assign tlb_master.csr_plv = crmd[1:0];
+
     logic timer_en;
     logic eret_tlbrefill_excp;
     assign eret_tlbrefill_excp = (estat[21:16] == 6'h3f);
@@ -348,57 +328,60 @@ module csr
             tlbidx[4:0] <= csr_write_data[4:0];  // index
             tlbidx[29:24] <= csr_write_data[29:24];  // ps
             tlbidx[31] <= csr_write_data[31];  // ne
-        end else if (tlbsrch_en) begin
-            if (tlbsrch_found) begin
-                tlbidx[4:0] <= tlbsrch_index;
+        end else if (tlb_master.tlbsrch_ret) begin
+            if (tlb_master.search_tlb_found) begin
+                tlbidx[4:0] <= tlb_master.search_tlb_index;
                 tlbidx[31]  <= 1'b0;
             end else begin
                 tlbidx[31] <= 1'b1;
             end
-        end else if (tlbrd_en) begin
-            if (is_tlbrd_valid) begin
-                tlbidx[29:24] <= tlb_line[17:12];
-                tlbidx[31] <= ~tlb_line[0];
+        end else if (tlb_master.tlbrd_ret) begin
+            if (tlb_master.search_tlb_found) begin
+                tlbidx[29:24] <= tlb_master.tlbidx_out[29:24];
+                tlbidx[31] <= tlb_master.tlbidx_out[31];
             end else begin
                 tlbidx[29:24] <= 6'b0;
                 tlbidx[31] <= 1'b1;
             end
-        end  else begin
-            tlbidx <= tlbidx;
-        end
+        end 
     end
 
     // TLBEHI write
     always_ff @(posedge clk) begin
         if (rst) begin
             tlbehi <= 32'b0;
-        end else if (tlbrd_en) begin
-            if (is_tlbrd_valid) begin
-                tlbehi[31:13] <= tlb_line;
+        end else if (tlbehi_wen) begin
+            tlbehi[31:13] <= csr_write_data[31:13];  // vppn
+        end else if (tlb_master.tlbrd_ret) begin
+            if (tlb_master.search_tlb_found) begin
+                tlbehi[31:13] <= tlb_master.tlbehi_out[31:13];
             end else begin
                 tlbehi[31:13] <= 19'b0;
             end
         end else if (is_tlb_exception) begin
-            tlbehi[31:13] <= ctrl_slave.exception_pc[31:13];
-        end else if (csr_write_en && csr_write_addr == `CSR_TLBEHI) begin
-            tlbehi[31:13] <= csr_write_data[31:13];  // vppn
-        end else begin
-            tlbehi <= tlbehi;
-        end
+            tlbehi[31:13] <= ctrl_slave.exception_addr[31:13];
+        end 
     end
 
     // TLBELO0 write
     always_ff @(posedge clk) begin
         if (rst) begin
             tlbelo0 <= 32'b0;
-        end else if (tlbrd_en) begin
-            if (is_tlbrd_valid) begin
-                tlbelo0[0] <= tlblo0_line[0];
-                tlbelo0[1] <= tlblo0_line[1];
-                tlbelo0[3:2] <= tlblo0_line[3:2];
-                tlbelo0[5:4] <= tlblo0_line[5:4];
-                tlbelo0[6] <= tlblo0_line[6];
-                tlbelo0[31:8] <= tlblo0_line[31:8];
+        end else if (tlbelo0_wen) begin
+            tlbelo0[0] <= csr_write_data[0];  // V
+            tlbelo0[1] <= csr_write_data[1];  // D
+            tlbelo0[3:2] <= csr_write_data[3:2];  // PLV
+            tlbelo0[5:4] <= csr_write_data[5:4];  // MAT
+            tlbelo0[6] <= csr_write_data[6];  // G
+            tlbelo0[31:8] <= csr_write_data[31:8];  // PPN
+        end else if (tlb_master.tlbrd_ret) begin
+            if (tlb_master.search_tlb_found) begin
+                tlbelo0[0] <= tlb_master.tlbelo0_out[0];
+                tlbelo0[1] <= tlb_master.tlbelo0_out[1];
+                tlbelo0[3:2] <= tlb_master.tlbelo0_out[3:2];
+                tlbelo0[5:4] <= tlb_master.tlbelo0_out[5:4];
+                tlbelo0[6] <= tlb_master.tlbelo0_out[6];
+                tlbelo0[31:8] <= tlb_master.tlbelo0_out[31:8];
             end else begin
                 tlbelo0[0] <= 1'b0;
                 tlbelo0[1] <= 1'b0;
@@ -407,30 +390,28 @@ module csr
                 tlbelo0[6] <= 1'b0;
                 tlbelo0[31:8] <= 24'b0;
             end
-        end else if (csr_write_en && csr_write_addr == `CSR_TLBELO0) begin
-            tlbelo0[0] <= csr_write_data[0];  // V
-            tlbelo0[1] <= csr_write_data[1];  // D
-            tlbelo0[3:2] <= csr_write_data[3:2];  // PLV
-            tlbelo0[5:4] <= csr_write_data[5:4];  // MAT
-            tlbelo0[6] <= csr_write_data[6];  // G
-            tlbelo0[31:8] <= csr_write_data[31:8];  // PPN
-        end else begin
-            tlbelo0 <= tlbelo0;
-        end
+        end 
     end
 
     // TLBELO1 write
     always_ff @(posedge clk) begin
         if (rst) begin
             tlbelo1 <= 32'b0;
-        end else if (tlbrd_en) begin
-            if (is_tlbrd_valid) begin
-                tlbelo1[0] <= tlblo1_line[0];
-                tlbelo1[1] <= tlblo1_line[1];
-                tlbelo1[3:2] <= tlblo1_line[3:2];
-                tlbelo1[5:4] <= tlblo1_line[5:4];
-                tlbelo1[6] <= tlblo1_line[6];
-                tlbelo1[31:8] <= tlblo1_line[31:8];
+        end else if (tlbelo1_wen) begin
+            tlbelo1[0] <= csr_write_data[0];  // V
+            tlbelo1[1] <= csr_write_data[1];  // D
+            tlbelo1[3:2] <= csr_write_data[3:2];  // PLV
+            tlbelo1[5:4] <= csr_write_data[5:4];  // MAT
+            tlbelo1[6] <= csr_write_data[6];  // G
+            tlbelo1[31:8] <= csr_write_data[31:8];  // PPN
+        end else if (tlb_master.tlbrd_ret) begin
+            if (tlb_master.search_tlb_found) begin
+                tlbelo1[0] <= tlb_master.tlbelo1_out[0];
+                tlbelo1[1] <= tlb_master.tlbelo1_out[1];
+                tlbelo1[3:2] <= tlb_master.tlbelo1_out[3:2];
+                tlbelo1[5:4] <= tlb_master.tlbelo1_out[5:4];
+                tlbelo1[6] <= tlb_master.tlbelo1_out[6];
+                tlbelo1[31:8] <= tlb_master.tlbelo1_out[31:8];
             end else begin
                 tlbelo1[0] <= 1'b0;
                 tlbelo1[1] <= 1'b0;
@@ -439,16 +420,7 @@ module csr
                 tlbelo1[6] <= 1'b0;
                 tlbelo1[31:8] <= 24'b0;
             end
-        end else if (csr_write_en && csr_write_addr == `CSR_TLBELO1) begin
-            tlbelo1[0] <= csr_write_data[0];  // V
-            tlbelo1[1] <= csr_write_data[1];  // D
-            tlbelo1[3:2] <= csr_write_data[3:2];  // PLV
-            tlbelo1[5:4] <= csr_write_data[5:4];  // MAT
-            tlbelo1[6] <= csr_write_data[6];  // G
-            tlbelo1[31:8] <= csr_write_data[31:8];  // PPN
-        end else begin
-            tlbelo1 <= tlbelo1;
-        end
+        end 
     end
 
     // ASID write
@@ -457,27 +429,23 @@ module csr
             asid[15:0]  <= 16'b0;
             asid[23:16] <= 8'd10;
             asid[31:24] <= 7'b0;
-        end else if (tlbrd_en) begin
-            if (is_tlbrd_valid) begin
-                asid[9:0] <= tlb_line[9:0];
+        end else if (asid_wen) begin
+            asid[9:0] <= csr_write_data[9:0];
+        end else if (tlb_master.tlbrd_ret) begin
+            if (tlb_master.search_tlb_found) begin
+                asid[9:0] <= tlb_master.asid_out;
             end else begin
                 asid[9:0] <= 10'b0;
             end
-        end else if (csr_write_en && csr_write_addr == `CSR_ASID) begin
-            asid[9:0] <= csr_write_data[9:0];
-        end else begin
-            asid <= asid;
-        end
+        end 
     end
 
     // PGDL write
     always_ff @(posedge clk) begin
         if (rst) begin
             pgdl <= 32'b0;
-        end else if (csr_write_en && csr_write_addr == `CSR_PGDL) begin
+        end else if (pgdl_wen) begin
             pgdl[31:12] <= csr_write_data[31:12];  // BASE
-        end else begin
-            pgdl <= pgdl;
         end
     end
 
@@ -485,30 +453,20 @@ module csr
     always_ff @(posedge clk) begin
         if (rst) begin
             pgdh <= 32'b0;
-        end else if (csr_write_en && csr_write_addr == `CSR_PGDH) begin
+        end else if (pgdh_wen) begin
             pgdh[31:12] <= csr_write_data[31:12];  // BASE
-        end else begin
-            pgdh <= pgdh;
         end
     end
 
     // PGD write
-    always_ff @(posedge clk) begin
-        if (rst) begin
-            pgd <= 32'b0;
-        end else begin
-            pgd <= pgd;
-        end
-    end
+    assign pgd = badv[31] ? pgdh : pgdl;
 
     // TLBRENTRY write
     always_ff @(posedge clk) begin
         if (rst) begin
             tlbrentry <= 32'b0;
-        end else if (csr_write_en && csr_write_addr == `CSR_TLBRENTRY) begin
+        end else if (eentry_wen) begin
             tlbrentry[31:6] <= csr_write_data[31:6];  // PA
-        end else begin
-            tlbrentry <= tlbrentry;
         end
     end
 

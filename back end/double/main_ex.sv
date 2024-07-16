@@ -13,6 +13,9 @@ module main_ex
     // from stable counter
     input bus64_t cnt,
 
+    // with tlb
+    ex_tlb tlb_master,
+
     // with dcache
     mem_dcache dcache_master,
 
@@ -391,6 +394,41 @@ module main_ex
             end
             default: begin
                 csr_alu_res = 32'b0;
+            end
+        endcase
+    end
+
+    // tlb 
+    logic [4:0] invtlb_op;
+    assign invtlb_op = ex_i.invtlb_op;
+    always_comb begin
+        tlb_master.tlbrd_en = 1'b0;
+        tlb_master.tlbsrch_en = 1'b0;
+        tlb_master.tlbfill_en = 1'b0;
+        tlb_master.tlbwr_en = 1'b0;
+        tlb_master.invtlb_en = 1'b0;
+        tlb_master.invtlb_asid = 10'b0;
+        tlb_master.invtlb_vpn = 19'b0;
+        tlb_master.invtlb_op = 5'b0;
+
+        case(ex_i.aluop)
+            `ALU_TLBRD: begin
+                tlb_master.tlbrd_en = 1'b1;
+            end
+            `ALU_TLBSRCH: begin
+                tlb_master.tlbsrch_en = 1'b1;
+            end
+            `ALU_TLBFILL: begin
+                tlb_master.tlbfill_en = 1'b1;
+            end
+            `ALU_TLBWR: begin
+                tlb_master.tlbwr_en = 1'b1;
+            end
+            `ALU_INVTLB: begin
+                tlb_master.invtlb_en = 1'b1;
+                tlb_master.invtlb_asid = (invtlb_op < 5'h4)? 10'b0: ex_i.reg_data[0][9:0];
+                tlb_master.invtlb_vpn = (invtlb_op < 5'h5)? 19'b0: ex_i.reg_data[1][31:13];
+                tlb_master.invtlb_op = invtlb_op;
             end
         endcase
     end

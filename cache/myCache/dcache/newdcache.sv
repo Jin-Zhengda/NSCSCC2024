@@ -56,6 +56,8 @@ interface dcache_transaddr;
     );
 endinterface : dcache_transaddr
 
+
+
 `timescale 1ns / 1ps
 
 `define ADDR_SIZE 32
@@ -75,14 +77,17 @@ endinterface : dcache_transaddr
 `define TAGV_SIZE 21
 
 `define IDLE 5'b00001
-`define WRITE_DIRTY 5'b00010
-`define ASKMEM 5'b00100
-`define RETURN 5'b01000
-`define UNCACHE_RETURN 5'b10000
+`define ASKMEM 5'b00010
+`define RETURN 5'b00100
+`define UNCACHE_RETURN 5'b01000
+`define WRITE_DIRTY 5'b10000
 
 
 
-module dcache (
+
+module dcache 
+    import pipeline_types::*;
+(
     input logic clk,
     input logic reset,
     //to cpu
@@ -103,10 +108,10 @@ module dcache (
     output bus256_t wr_data,//8个32位的数据为1路
 
     input logic       wr_rdy,//能接收写操作
-    input logic       data_bvalid_o,//写完成
     input logic       rd_rdy,//能接收读操作
     input logic       ret_valid,//返回数据信号有效
     input bus256_t ret_data,//返回的数据
+    input logic       data_bvalid_o,
     //uncache
     output logic ducache_ren_i,
     output bus32_t ducache_araddr_i,
@@ -116,7 +121,7 @@ module dcache (
     output logic ducache_wen_i,
     output bus32_t ducache_wdata_i,
     output bus32_t ducache_awaddr_i,
-    output logic[3:0]ducache_strb,//改了个名
+    output wire[3:0]ducache_strb,//改了个名
     input logic ducache_bvalid_o
 
 );
@@ -160,7 +165,7 @@ end
 
 logic hit_success,hit_fail;
 logic write_dirty;
-
+logic record_dirty;//表明脏数据写回是否完成
 
 
 always_ff @( posedge clk ) begin
@@ -173,13 +178,13 @@ always_comb begin
         if(!pre_valid)next_state=`IDLE;
         else if(dcache_uncache)next_state=`UNCACHE_RETURN;
         else if(hit_fail)begin
-            if(write_dirty&&!wr_rdy)next_state=`WRITE_DIRTY;
+            if(write_dirty&&record_dirty)next_state=`WRITE_DIRTY;
             else next_state=`ASKMEM;
         end
         else next_state=`IDLE;
     end
     else if(current_state==`WRITE_DIRTY)begin
-        if(wr_rdy)next_state=`ASKMEM;
+        if(!record_dirty)next_state=`ASKMEM;
         else next_state=`WRITE_DIRTY;
     end
     else if(current_state==`ASKMEM)begin
@@ -196,7 +201,6 @@ always_comb begin
     end
 end
 
-//TLB
 assign dcache2transaddr.data_fetch=mem2dcache.valid;
 assign dcache2transaddr.data_vaddr=mem2dcache.virtual_addr;
 logic[`ADDR_SIZE-1:0] p_addr,pre_physical_addr,target_physical_addr;
@@ -277,15 +281,9 @@ BRAM Bank7_way1(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_a
 //Tag1'b1
 logic [`TAGV_SIZE-1:0]tagv_cache_w0;
 logic [`TAGV_SIZE-1:0]tagv_cache_w1;
-logic [`TAGV_SIZE-1:0]tagv_cache_w0_a;//改了！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
-logic [`TAGV_SIZE-1:0]tagv_cache_w1_a;
-logic [`TAGV_SIZE-1:0]tagv_cache_w0_b;
-logic [`TAGV_SIZE-1:0]tagv_cache_w1_b;
-assign tagv_cache_w0=write_read_same?tagv_cache_w0_b:tagv_cache_w0_a;
-assign tagv_cache_w1=write_read_same?tagv_cache_w1_b:tagv_cache_w1_a;
 
 logic[`INDEX_SIZE-1:0] tagv_addr_write;
-assign tagv_addr_write=pre_valid?pre_vaddr[`INDEX_LOC]:read_index_addr;
+assign tagv_addr_write=pre_vaddr[`INDEX_LOC];
 logic[`TAGV_SIZE-1:0]tagv_data_tagv;
 assign tagv_data_tagv={1'b1,pre_vaddr[`TAG_LOC]};
 
@@ -293,8 +291,8 @@ logic[`INDEX_SIZE-1:0]tagv0_addr,tagv1_addr;
 assign tagv0_addr=|wea_way0?tagv_addr_write:read_index_addr;
 assign tagv1_addr=|wea_way1?tagv_addr_write:read_index_addr;
 
-BRAM TagV0(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w0_a),.enb(1'b1),.web(wea_way0),.dinb(tagv_data_tagv),.addrb(tagv_addr_write),.doutb(tagv_cache_w0_b));
-BRAM TagV1(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w1_a),.enb(1'b1),.web(wea_way1),.dinb(tagv_data_tagv),.addrb(tagv_addr_write),.doutb(tagv_cache_w1_b));
+BRAM TagV0(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w0),.enb(1'b1),.web(wea_way0),.dinb(tagv_data_tagv),.addrb(tagv_addr_write));
+BRAM TagV1(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w1),.enb(1'b1),.web(wea_way1),.dinb(tagv_data_tagv),.addrb(tagv_addr_write));
 
 
 logic[31:0] write_mask;
@@ -371,77 +369,55 @@ assign wea_way1=(pre_valid&&hit_way1&&pre_op==1'b1)?pre_wstrb:((pre_valid&&ret_v
 
 
 assign mem2dcache.addr_ok=mem2dcache.valid&&((next_state==`IDLE)||((current_state==`IDLE)&&(next_state==`UNCACHE_RETURN)));
-assign mem2dcache.data_ok=((next_state==`IDLE)||((current_state==`UNCACHE_RETURN)&&(next_state==`IDLE)))&&pre_valid&&pre_op==1'b0;
+assign mem2dcache.data_ok=((next_state==`IDLE)||(current_state==`IDLE)&&(next_state==`UNCACHE_RETURN))&&pre_valid&&pre_op==1'b0;
 assign mem2dcache.rdata=(current_state==`UNCACHE_RETURN)?ducache_rdata_o:
                             (hit_success?
                                     (hit_way0?(write_read_same?way0_cache_b[pre_vaddr[4:2]]:way0_cache[pre_vaddr[4:2]]):
                                     (write_read_same?way1_cache_b[pre_vaddr[4:2]]:way1_cache[pre_vaddr[4:2]])):
                                             read_from_mem[pre_vaddr[4:2]]);
-assign mem2dcache.physical_addr=target_physical_addr;
+assign mem2dcache.cache_miss=hit_fail;
 
 
 
-assign rd_req=(next_state==`ASKMEM)||(current_state==`ASKMEM);
+assign rd_req=((next_state==`ASKMEM)||(current_state==`ASKMEM))&&!ret_valid;
 assign rd_type=3'b100;
 assign rd_addr=target_physical_addr;
 
 
-//写脏数据
-logic record_write_mem_en;
+logic [31:0]record_write_mem_addr;
+logic [255:0]record_write_mem_data;
 always_ff @( posedge clk ) begin
-    if(reset)record_write_mem_en<=1'b0;
-    else if(data_bvalid_o)record_write_mem_en<=1'b0;
-    else if((current_state==`IDLE)&&hit_fail&&write_dirty)record_write_mem_en<=1'b1;
-    else record_write_mem_en<=record_write_mem_en;
-end
-logic[31:0] record_write_mem_addr;
-logic[255:0] record_write_mem_data;
-always_ff @( posedge clk ) begin
-    if(reset)begin
-        record_write_mem_addr<=32'b0;
-        record_write_mem_data<=256'b0;
-    end
-    else if((current_state==`IDLE)&&hit_fail&&write_dirty)begin
-        record_write_mem_addr<=p_addr;
+    if(reset)record_dirty<=1'b0;
+    else if(data_bvalid_o)record_dirty<=1'b0;
+    else if(next_state==`ASKMEM)begin
+        record_dirty<=write_dirty;
+        record_write_mem_addr<={(LRU_pick?tagv_cache_w1[19:0]:tagv_cache_w0[19:0]),target_physical_addr[11:0]};
         record_write_mem_data<=LRU_pick?{way1_cache[7],way1_cache[6],way1_cache[5],way1_cache[4],way1_cache[3],way1_cache[2],way1_cache[1],way1_cache[0]}:{way0_cache[7],way0_cache[6],way0_cache[5],way0_cache[4],way0_cache[3],way0_cache[2],way0_cache[1],way0_cache[0]};
     end
     else begin
+        record_dirty<=record_dirty;
         record_write_mem_addr<=record_write_mem_addr;
         record_write_mem_data<=record_write_mem_data;
-    end
+    end 
 end
-assign wr_req=record_write_mem_en&&!data_bvalid_o;
+assign wr_req=record_dirty;
 assign wr_addr=record_write_mem_addr;
 assign wr_data=record_write_mem_data;
-assign wstrb=4'b1111;
+assign wr_wstrb=4'b1111;
 
 
 
 
 
-
-always_ff @( posedge clk ) begin
-    if(((current_state==`IDLE)&&(next_state==`UNCACHE_RETURN))&&mem2dcache.op==1'b1)begin
-        ducache_wen_i<=1'b1;
-        ducache_awaddr_i<=mem2dcache.virtual_addr;
-        ducache_wdata_i<=mem2dcache.wdata;
-        ducache_strb<=mem2dcache.wstrb;
-    end
-    else if((current_state==`UNCACHE_RETURN)&&(pre_op==1'b1)&&ducache_bvalid_o)begin
-        ducache_wen_i<=1'b0;
-    end
-    else begin
-        ducache_wen_i<=ducache_wen_i;
-        ducache_awaddr_i<=ducache_awaddr_i;
-        ducache_wdata_i<=ducache_wdata_i;
-        ducache_strb<=ducache_strb;
-    end
-end
+assign ducache_ren_i=(current_state==`UNCACHE_RETURN)&&pre_op==1'b0;
+assign ducache_wen_i=(current_state==`UNCACHE_RETURN)&&pre_op==1'b1;
+assign ducache_araddr_i=ducache_ren_i?pre_vaddr:32'b0;
+assign ducache_awaddr_i=ducache_wen_i?pre_vaddr:32'b0;
+assign ducache_wdata_i=ducache_wen_i?pre_wdata:32'b0;
+assign ducache_strb=ducache_wen_i?pre_wstrb:4'b0;
 
 
 
-assign dcache2transaddr.cacop_op_mode_di=1'b0;
-assign dcache2transaddr.store=mem2dcache.op;
 
 
 endmodule
