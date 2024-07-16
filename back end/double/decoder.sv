@@ -64,29 +64,25 @@ module decoder
     id_dispatch_t [DECODER_WIDTH - 1:0] enqueue_data;
 
     id_dispatch_t [ISSUE_WIDTH - 1:0] dqueue_data;
-    logic [ISSUE_WIDTH - 1:0] full;
+    logic full;
     logic reset;
     assign reset = rst || flush;
 
-    generate
-        for (genvar i = 0; i < DECODER_WIDTH; i++) begin : issue_queue
-            dram_fifo #(
-                .DATA_WIDTH($size(id_dispatch_t))
-            ) u_issue_queue (
-                .clk,
-                .reset,
+    dram_fifo #(
+        .DATA_WIDTH($size(id_dispatch_t))
+    ) u_issue_queue (
+        .clk,
+        .reset,
 
-                .enqueue_en(enqueue_en[i]),
-                .enqueue_data(enqueue_data[i]),
-                .dqueue_en(dqueue_en[i]),
-                .dqueue_data(dqueue_data[i]),
+        .enqueue_en(enqueue_en),
+        .enqueue_data(enqueue_data),
+        .dqueue_en(dqueue_en),
+        .dqueue_data(dqueue_data),
 
-                .invalid_en(invalid_en[i]),
+        .invalid_en(invalid_en),
 
-                .full(full[i])
-            );
-        end
-    endgenerate
+        .full(full)
+    );
 
     generate
         for (genvar i = 0; i < DECODER_WIDTH; i++) begin
@@ -96,7 +92,7 @@ module decoder
 
     generate
         for (genvar i = 0; i < DECODER_WIDTH; i++) begin
-            assign enqueue_en[i] = !((rst || full[i] || id_o[i].pc == 32'b0 || pause) && !pause_buffer);
+            assign enqueue_en[i] = !(rst || full || id_o[i].pc == 32'b0);
         end
     endgenerate
 

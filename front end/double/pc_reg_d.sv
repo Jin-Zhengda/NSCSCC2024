@@ -1,23 +1,4 @@
 `timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 2024/05/28 23:26:02
-// Design Name: 
-// Module Name: pc_reg_d
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
 `define InstAddrWidth 31:0
 `include "csr_defines.sv"
 
@@ -29,7 +10,7 @@ module pc_reg_d
     input logic stall,
 
     input logic [`InstAddrWidth] pre_branch_addr,
-    input logic taken_sure,
+    input logic [1:0] taken_sure,
 
     //后端给的分支真实情况
     input logic [`InstAddrWidth] branch_actual_addr,
@@ -51,12 +32,15 @@ module pc_reg_d
     assign inst_en_1 = rst || uncache_en? 1'b0: 1'b1;
     assign inst_en_2 = rst || uncache_en? 1'b0: 1'b1;
 
-   always_ff @(posedge clk) begin
-       pc.is_exception <= {is_interrupt, {(pc.pc_o[1: 0] == 2'b00) ? 1'b0 : 1'b1}, 4'b0};
-       pc.exception_cause <= {{is_interrupt ? `EXCEPTION_INT: `EXCEPTION_NOP}, 
-                       {(pc.pc_o[1: 0] == 2'b00) ?  `EXCEPTION_NOP: `EXCEPTION_ADEF},
-                       {4{`EXCEPTION_NOP}}};
-   end
+    logic pc_excp;
+    assign pc_excp = (pc.pc_o[1: 0] != 2'b00);
+
+    always_ff @(posedge clk) begin
+        pc.is_exception <= {1'b0, pc_excp, 4'b0};
+        pc.exception_cause <= {`EXCEPTION_NOP, 
+                        (pc_excp ?  `EXCEPTION_ADEF: `EXCEPTION_NOP),
+                        {4{`EXCEPTION_NOP}}};
+    end
 
 
     always_ff @(posedge clk) begin
@@ -67,18 +51,15 @@ module pc_reg_d
         else if(flush) begin
             pc.pc_o <= new_pc;
         end
+        else if(|taken_sure) begin
+            pc.pc_o <= pre_branch_addr;
+        end
         else if(pause) begin
             pc.pc_o <= pc.pc_o;
         end
         else begin
-            if(flush) begin
-                pc.pc_o <= branch_actual_addr;
-            end
-            else if (stall) begin
+            if (stall) begin
                 pc.pc_o <= pc.pc_o;
-            end
-            else if(taken_sure) begin
-                pc.pc_o <= pre_branch_addr;
             end
             else begin
                 if (uncache_en) pc.pc_o <= pc.pc_o + 4'h4;
@@ -87,6 +68,6 @@ module pc_reg_d
         end
     end
 
-    assign uncache_en = (pc.pc_o <= 32'h1c000100 && !rst) ? 1'b1: 1'b0;
-    //assign uncache_en = 1'b0;
+    //assign uncache_en = ((pc.pc_o <= 32'h1c000100 && pc.pc_o >= 32'h1c000000) && !rst) ? 1'b1: 1'b0;
+    assign uncache_en = 1'b0;
 endmodule

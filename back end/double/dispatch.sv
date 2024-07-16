@@ -25,7 +25,7 @@ module dispatch
     input csr_push_forward_t wb_csr_pf,
 
     // from ex
-    input alu_op_t pre_ex_aluop,
+    input alu_op_t [ISSUE_WIDTH - 1:0] pre_ex_aluop,
     input logic pause_ex,
 
     // with regfile
@@ -53,9 +53,6 @@ module dispatch
 
     logic [1:0] inst_valid;
     assign inst_valid = {dispatch_i[1].pc != 32'b0, dispatch_i[0].pc != 32'b0};
-
-    logic pc1_lt_pc2;
-    assign pc1_lt_pc2 = dispatch_i[0].pc < dispatch_i[1].pc;
 
     bus32_t pc1_i;
     bus32_t pc2_i;
@@ -88,21 +85,16 @@ module dispatch
     assign inst2_relate = (dispatch_i[1].reg_write_en && dispatch_i[1].reg_write_addr != 5'b0) 
                             && ((dispatch_i[1].reg_write_addr == dispatch_i[0].reg_read_addr[0] && dispatch_i[0].reg_read_en[0]) 
                             || (dispatch_i[1].reg_write_addr == dispatch_i[0].reg_read_addr[1] && dispatch_i[0].reg_read_en[1]));
-    assign data_relate_inst = pc1_lt_pc2 ? inst1_relate : inst2_relate;
+    assign data_relate_inst = inst1_relate;
     assign cnt_inst = dispatch_i[0].is_cnt || dispatch_i[1].is_cnt;
-    assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst && !cnt_inst && (&inst_valid);
+    //assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst && !cnt_inst && (&inst_valid);
+    assign issue_double_en = 2'b0;
 
     always_comb begin
         if (flush || rst || !(|inst_valid)) begin
             issue_en = 2'b00;
         end else if (issue_double_en) begin
             issue_en = 2'b11;
-        end else if (&inst_valid) begin
-            if (pc1_lt_pc2) begin
-                issue_en = 2'b01;
-            end else begin
-                issue_en = 2'b10;
-            end
         end else if (inst_valid[0]) begin
             issue_en = 2'b01;
         end else begin
@@ -226,9 +218,11 @@ module dispatch
     logic [DECODER_WIDTH - 1:0] reg1_load_relate;
     logic [DECODER_WIDTH - 1:0] reg2_load_relate;
 
-    assign load_pre = (pre_ex_aluop == `ALU_LDB) || (pre_ex_aluop == `ALU_LDH) || (pre_ex_aluop == `ALU_LDW) 
-                    || (pre_ex_aluop == `ALU_LDBU) || (pre_ex_aluop == `ALU_LDHU) || (pre_ex_aluop == `ALU_LLW)
-                    || (pre_ex_aluop == `ALU_SCW);
+    assign load_pre = (pre_ex_aluop[0] == `ALU_LDB) || (pre_ex_aluop[0] == `ALU_LDH) || (pre_ex_aluop[0] == `ALU_LDW) 
+                    || (pre_ex_aluop[0] == `ALU_LDBU) || (pre_ex_aluop[0] == `ALU_LDHU) || (pre_ex_aluop[0] == `ALU_LLW)
+                    || (pre_ex_aluop[0] == `ALU_SCW) || (pre_ex_aluop[1] == `ALU_LDB) || (pre_ex_aluop[1] == `ALU_LDH) 
+                    || (pre_ex_aluop[1] == `ALU_LDW) || (pre_ex_aluop[1] == `ALU_LDBU) || (pre_ex_aluop[1] == `ALU_LDHU) 
+                    || (pre_ex_aluop[1] == `ALU_LLW) || (pre_ex_aluop[1] == `ALU_SCW);;
 
     generate
         for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
@@ -240,14 +234,17 @@ module dispatch
     // pause request
     assign pause_dispatch = |(reg1_load_relate | reg2_load_relate);
 
+    dispatch_ex_t [DECODER_WIDTH - 1:0] ex_temp;
+    assign ex_temp[0] = issue_en[0] ? dispatch_o[0] : 0;
+    assign ex_temp[1] = issue_en[1] ? dispatch_o[1] : 0;
+
 
     // to ex
     always_ff @(posedge clk) begin
         if (rst || flush || (pause_dispatch && !pause_ex)) begin
             ex_i <= '{default: 0};
         end else if (!pause) begin
-            ex_i[0] <= issue_en[0] ? dispatch_o[0] : 0;
-            ex_i[1] <= issue_en[1] ? dispatch_o[1] : 0;
+            ex_i <= ex_temp;
         end else begin
             ex_i <= ex_i;
         end

@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 `include "core_defines.sv"
 `include "csr_defines.sv"
+//`define DIFF 
 
 module mem
     import pipeline_types::*;
@@ -42,9 +43,9 @@ module mem
         end
     endgenerate
 
-    assign mem_csr_pf.csr_write_en = mem_o[0].csr_write_en;
-    assign mem_csr_pf.csr_write_addr = mem_o[0].csr_write_addr;
-    assign mem_csr_pf.csr_write_data = mem_o[0].csr_write_data;
+    assign mem_csr_pf.csr_write_en = mem_o[0].csr_write_en || mem_o[1].csr_write_en;
+    assign mem_csr_pf.csr_write_addr = mem_o[0].csr_write_en ? mem_o[0].csr_write_addr : mem_o[1].csr_write_addr;
+    assign mem_csr_pf.csr_write_data = mem_o[0].csr_write_en ? mem_o[0].csr_write_data : mem_o[1].csr_write_data;
 
     // wb signal assignment
     generate
@@ -58,8 +59,6 @@ module mem
             assign mem_o[i].csr_write_data = mem_i[i].csr_write_data;
         end
     endgenerate
-
-    assign mem_o[1].reg_write_data = mem_i[1].reg_write_data;
 
     // exception 
     logic [ISSUE_WIDTH - 1: 0] is_exception;
@@ -87,128 +86,131 @@ module mem
     bus32_t cache_data;
     assign cache_data = (dcache_master.data_ok) ? dcache_master.rdata : 32'b0;
 
-    logic pause_uncache;
+    logic[1:0] pause_uncache;
 
-    always_comb begin
-        case (mem_i[0].aluop)
-            `ALU_LDB: begin
-                if (dcache_master.data_ok) begin
-                    pause_uncache = 1'b0;
-                    case (mem_i[0].mem_addr[1:0])
-                        2'b00: begin
-                            mem_o[0].reg_write_data = {{24{cache_data[7]}}, cache_data[7:0]};
+    generate
+        for (genvar i = 0; i < 2; i++) begin
+            always_comb begin
+                case (mem_i[i].aluop)
+                    `ALU_LDB: begin
+                        if (dcache_master.data_ok) begin
+                            pause_uncache[i] = 1'b0;
+                            case (mem_i[i].mem_addr[1:0])
+                                2'b00: begin
+                                    mem_o[i].reg_write_data = {{24{cache_data[7]}}, cache_data[7:0]};
+                                end
+                                2'b01: begin
+                                    mem_o[i].reg_write_data = {{24{cache_data[15]}}, cache_data[15:8]};
+                                end
+                                2'b10: begin
+                                    mem_o[i].reg_write_data = {{24{cache_data[23]}}, cache_data[23:16]};
+                                end
+                                2'b11: begin
+                                    mem_o[i].reg_write_data = {{24{cache_data[31]}}, cache_data[31:24]};
+                                end
+                                default: begin
+                                    mem_o[i].reg_write_data = 32'b0;
+                                end
+                            endcase
+                        end else begin
+                            pause_uncache[i] = 1'b1;
+                            mem_o[i].reg_write_data = 32'b0;
                         end
-                        2'b01: begin
-                            mem_o[0].reg_write_data = {{24{cache_data[15]}}, cache_data[15:8]};
-                        end
-                        2'b10: begin
-                            mem_o[0].reg_write_data = {{24{cache_data[23]}}, cache_data[23:16]};
-                        end
-                        2'b11: begin
-                            mem_o[0].reg_write_data = {{24{cache_data[31]}}, cache_data[31:24]};
-                        end
-                        default: begin
-                            mem_o[0].reg_write_data = 32'b0;
-                        end
-                    endcase
-                end else begin
-                    pause_uncache = 1'b1;
-                    mem_o[0].reg_write_data = 32'b0;
-                end
 
-            end
-            `ALU_LDBU: begin
-                if (dcache_master.data_ok) begin
-                    pause_uncache = 1'b0;
-                    case (mem_i[0].mem_addr[1:0])
-                        2'b00: begin
-                            mem_o[0].reg_write_data = {{24{1'b0}}, cache_data[7:0]};
+                    end
+                    `ALU_LDBU: begin
+                        if (dcache_master.data_ok) begin
+                            pause_uncache[i] = 1'b0;
+                            case (mem_i[i].mem_addr[1:0])
+                                2'b00: begin
+                                    mem_o[i].reg_write_data = {{24{1'b0}}, cache_data[7:0]};
+                                end
+                                2'b01: begin
+                                    mem_o[i].reg_write_data = {{24{1'b0}}, cache_data[15:8]};
+                                end
+                                2'b10: begin
+                                    mem_o[i].reg_write_data = {{24{1'b0}}, cache_data[23:16]};
+                                end
+                                2'b11: begin
+                                    mem_o[i].reg_write_data = {{24{1'b0}}, cache_data[31:24]};
+                                end
+                                default: begin
+                                    mem_o[i].reg_write_data = 32'b0;
+                                end
+                            endcase
+                        end else begin
+                            pause_uncache[i] = 1'b1;
+                            mem_o[i].reg_write_data = 32'b0;
                         end
-                        2'b01: begin
-                            mem_o[0].reg_write_data = {{24{1'b0}}, cache_data[15:8]};
+                    end
+                    `ALU_LDH: begin
+                        if (dcache_master.data_ok) begin
+                            pause_uncache[i] = 1'b0;
+                            case (mem_i[i].mem_addr[1:0])
+                                2'b00: begin
+                                    mem_o[i].reg_write_data = {{16{cache_data[15]}}, cache_data[15:0]};
+                                end
+                                2'b10: begin
+                                    mem_o[i].reg_write_data = {{16{cache_data[31]}}, cache_data[31:16]};
+                                end
+                                default: begin
+                                    mem_o[i].reg_write_data = 32'b0;
+                                end
+                            endcase
+                        end else begin
+                            pause_uncache[i] = 1'b1;
+                            mem_o[i].reg_write_data = 32'b0;
                         end
-                        2'b10: begin
-                            mem_o[0].reg_write_data = {{24{1'b0}}, cache_data[23:16]};
-                        end
-                        2'b11: begin
-                            mem_o[0].reg_write_data = {{24{1'b0}}, cache_data[31:24]};
-                        end
-                        default: begin
-                            mem_o[0].reg_write_data = 32'b0;
-                        end
-                    endcase
-                end else begin
-                    pause_uncache = 1'b1;
-                    mem_o[0].reg_write_data = 32'b0;
-                end
-            end
-            `ALU_LDH: begin
-                if (dcache_master.data_ok) begin
-                    pause_uncache = 1'b0;
-                    case (mem_i[0].mem_addr[1:0])
-                        2'b00: begin
-                            mem_o[0].reg_write_data = {{16{cache_data[15]}}, cache_data[15:0]};
-                        end
-                        2'b10: begin
-                            mem_o[0].reg_write_data = {{16{cache_data[31]}}, cache_data[31:16]};
-                        end
-                        default: begin
-                            mem_o[0].reg_write_data = 32'b0;
-                        end
-                    endcase
-                end else begin
-                    pause_uncache = 1'b1;
-                    mem_o[0].reg_write_data = 32'b0;
-                end
 
-            end
-            `ALU_LDHU: begin
-                if (dcache_master.data_ok) begin
-                    pause_uncache = 1'b0;
-                    case (mem_i[0].mem_addr[1:0])
-                        2'b00: begin
-                            mem_o[0].reg_write_data = {{16{1'b0}}, cache_data[15:0]};
+                    end
+                    `ALU_LDHU: begin
+                        if (dcache_master.data_ok) begin
+                            pause_uncache[i] = 1'b0;
+                            case (mem_i[i].mem_addr[1:0])
+                                2'b00: begin
+                                    mem_o[i].reg_write_data = {{16{1'b0}}, cache_data[15:0]};
+                                end
+                                2'b10: begin
+                                    mem_o[i].reg_write_data = {{16{1'b0}}, cache_data[31:16]};
+                                end
+                                default: begin
+                                    mem_o[i].reg_write_data = 32'b0;
+                                end
+                            endcase
+                        end else begin
+                            pause_uncache[i] = 1'b1;
+                            mem_o[i].reg_write_data = 32'b0;
                         end
-                        2'b10: begin
-                            mem_o[0].reg_write_data = {{16{1'b0}}, cache_data[31:16]};
+                    end
+                    `ALU_LDW: begin
+                        if (dcache_master.data_ok) begin
+                            pause_uncache[i] = 1'b0;
+                            mem_o[i].reg_write_data = cache_data;
+                        end else begin
+                            pause_uncache[i] = 1'b1;
+                            mem_o[i].reg_write_data = 32'b0;
                         end
-                        default: begin
-                            mem_o[0].reg_write_data = 32'b0;
-                        end
-                    endcase
-                end else begin
-                    pause_uncache = 1'b1;
-                    mem_o[0].reg_write_data = 32'b0;
-                end
-            end
-            `ALU_LDW: begin
-                if (dcache_master.data_ok) begin
-                    pause_uncache = 1'b0;
-                    mem_o[0].reg_write_data = cache_data;
-                end else begin
-                    pause_uncache = 1'b1;
-                    mem_o[0].reg_write_data = 32'b0;
-                end
 
+                    end
+                    `ALU_LLW: begin
+                        if (dcache_master.data_ok) begin
+                            pause_uncache[i] = 1'b0;
+                            mem_o[i].reg_write_data = cache_data;
+                        end else begin
+                            pause_uncache[i] = 1'b1;
+                            mem_o[i].reg_write_data = 32'b0;
+                        end
+                    end
+                    default: begin
+                        pause_uncache[i] = 1'b0;
+                        mem_o[i].reg_write_data = mem_i[i].reg_write_data;
+                    end
+                endcase
             end
-            `ALU_LLW: begin
-                if (dcache_master.data_ok) begin
-                    pause_uncache = 1'b0;
-                    mem_o[0].reg_write_data = cache_data;
-                end else begin
-                    pause_uncache = 1'b1;
-                    mem_o[0].reg_write_data = 32'b0;
-                end
-            end
-            default: begin
-                pause_uncache = 1'b0;
-                mem_o[0].reg_write_data = mem_i[0].reg_write_data;
-            end
-        endcase
-    end
-
+        end
+    endgenerate 
     // pause
-    assign pause_mem = pause_uncache && !mem_i[0].is_exception[1];
+    assign pause_mem = (pause_uncache[0] || pause_uncache[1]) && !mem_i[0].is_exception[1] && !mem_i[1].is_exception[1];
 
     `ifdef DIFF
     // diff_o
@@ -221,7 +223,7 @@ module mem
             assign diff_o[i].debug_wb_rf_wdata = 32'b0;
             assign diff_o[i].inst_valid = (mem_i[i].pc != 32'b0);
             assign diff_o[i].cnt_inst = (mem_i[i].aluop == `ALU_RDCNTID || mem_i[i].aluop == `ALU_RDCNTVLW || mem_i[i].aluop == `ALU_RDCNTVHW);
-            // estat 不进行比对
+            // estat 不进行比�?
             assign diff_o[i].csr_rstat_en = 1'b0;
             assign diff_o[i].csr_data = 32'b0;
 

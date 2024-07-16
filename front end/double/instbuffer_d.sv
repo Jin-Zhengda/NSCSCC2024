@@ -12,6 +12,7 @@ import pipeline_types::*;
     input logic flush,
     input logic stall,
     input logic pause,
+    input logic pause_decoder,
 
     //icache传来的信号
     input logic [1:0][31:0] inst,
@@ -100,6 +101,7 @@ import pipeline_types::*;
     logic [1:0][98:0] pop_data;
     logic [1:0] full;
     logic [1:0] empty;
+    logic [1:0] push_stall;
 
     assign buffer_full = full[0] | full[1];
 
@@ -109,7 +111,7 @@ import pipeline_types::*;
                 if(rst) begin
                     push_en[i] = 0;
                     push_data[i] = 0;
-                end else if(stall || full[i]) begin
+                end else if(stall || push_stall[i]) begin
                     push_en[i] = 0;
                     push_data[i] = 0;
                 end else if(fetch_en[i]) begin
@@ -131,7 +133,7 @@ import pipeline_types::*;
                     inst_and_pc_o.inst_o[i] = 0;
                     inst_and_pc_o.pc_o[i] = 0;
                     branch_info[i] = 0;
-                end else if((pause | stall | empty[i]) && !buffer_full) begin
+                end else if(((pause | empty[i]) && !buffer_full) | pause_decoder) begin
                     pop_en[i] = 0;
                     inst_and_pc_o.inst_o[i] = 0;
                     inst_and_pc_o.pc_o[i] = 0;

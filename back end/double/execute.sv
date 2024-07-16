@@ -18,9 +18,6 @@ module execute
     // from stable counter
     input bus64_t cnt,
 
-    // with tlb
-    ex_tlb tlb_master,
-
     // with dcache
     mem_dcache dcache_master,
     output cache_inst_t cache_inst,
@@ -29,7 +26,7 @@ module execute
     output branch_update update_info,
 
     // to dispatch
-    output alu_op_t pre_ex_aluop,
+    output alu_op_t [ISSUE_WIDTH - 1: 0] pre_ex_aluop,
     output pipeline_push_forward_t [ISSUE_WIDTH - 1:0] ex_reg_pf,
     output csr_push_forward_t ex_csr_pf,
 
@@ -47,40 +44,51 @@ module execute
     logic [1:0] branch_flush_alu;
     bus32_t [ISSUE_WIDTH - 1:0] branch_target_alu;
     branch_update [1:0] update_info_alu;
+    cache_inst_t [ISSUE_WIDTH - 1: 0] cache_inst_alu;
+    logic [1:0] valid;
+    logic [1:0] op;
+    logic [1:0] uncache_en;
+    logic addr_ok;
+    bus32_t [1:0] virtual_addr;
+    bus32_t [1:0] wdata;
+    logic [1:0][3:0] wstrb;
 
     ex_mem_t [ISSUE_WIDTH - 1:0] ex_o;
 
-    dispatch_ex_t main_ex_i;
-    dispatch_ex_t deputy_ex_i;
-    assign main_ex_i = (ex_i[1].is_privilege || ex_i[1].alusel == `ALU_SEL_LOAD_STORE || ex_i[1].alusel == `ALU_SEL_CSR)? ex_i[1]: ex_i[0];
-    assign deputy_ex_i = (ex_i[1].is_privilege || ex_i[1].alusel == `ALU_SEL_LOAD_STORE || ex_i[1].alusel == `ALU_SEL_CSR)? ex_i[0]: ex_i[1];
+    assign cache_inst = cache_inst_alu[0] | cache_inst_alu[1];
 
-    main_ex u_main_ex (
-        .clk,
-        .rst,
-        .ex_i(main_ex_i),
-        .cnt,
-        .tlb_master,
-        .dcache_master,
-        .update_info(update_info_alu[0]),
-        .pause_alu(pause_alu[0]),
-        .branch_flush(branch_flush_alu[0]),
-        .branch_target_alu(branch_target_alu[0]),
-        .pre_ex_aluop,
-        .cache_inst,
-        .ex_o(ex_o[0])
-    );
+    assign dcache_master.valid = |valid;
+    assign dcache_master.op = valid[0] ? op[0] : op[1];
+    assign dcache_master.uncache_en = |uncache_en;
+    assign addr_ok = dcache_master.addr_ok;
+    assign dcache_master.virtual_addr = valid[0] ? virtual_addr[0] : virtual_addr[1];
+    assign dcache_master.wdata = valid[0] ? wdata[0] : wdata[1];
+    assign dcache_master.wstrb = valid[0] ? wstrb[0] : wstrb[1];
 
-    deputy_ex u_deputy_ex (
-        .clk,
-        .rst,
-        .ex_i(deputy_ex_i),
-        .update_info(update_info_alu[1]),
-        .pause_alu(pause_alu[1]),
-        .branch_flush(branch_flush_alu[1]),
-        .branch_target_alu(branch_target_alu[1]),
-        .ex_o(ex_o[1])
-    );
+    generate
+        for (genvar i = 0; i < 2; i++) begin
+            alu u_alu (
+                .clk,
+                .rst,
+                .ex_i(ex_i[i]),
+                .cnt,
+                .valid(valid[i]),
+                .op(op[i]),
+                .uncache_en(uncache_en[i]),
+                .addr_ok,
+                .virtual_addr(virtual_addr[i]),
+                .wdata(wdata[i]),
+                .wstrb(wstrb[i]),
+                .update_info(update_info_alu[i]),
+                .pause_alu(pause_alu[i]),
+                .branch_flush(branch_flush_alu[i]),
+                .branch_target_alu(branch_target_alu[i]),
+                .pre_ex_aluop(pre_ex_aluop[i]),
+                .cache_inst(cache_inst_alu[i]),
+                .ex_o(ex_o[i])
+            );
+        end
+    endgenerate
 
     // ex push forward
     generate
@@ -91,26 +99,16 @@ module execute
         end
     endgenerate
 
-    assign ex_csr_pf.csr_write_en = ex_o[0].csr_write_en;
-    assign ex_csr_pf.csr_write_addr = ex_o[0].csr_addr;
-    assign ex_csr_pf.csr_write_data = ex_o[0].csr_write_data;
+    assign ex_csr_pf.csr_write_en = ex_o[0].csr_write_en || ex_o[1].csr_write_en;
+    assign ex_csr_pf.csr_write_addr = ex_o[0].csr_write_en ? ex_o[0].csr_addr : ex_o[1].csr_addr;
+    assign ex_csr_pf.csr_write_data = ex_o[0].csr_write_en ? ex_o[0].csr_write_data : ex_o[1].csr_write_data;
 
-
+   
     // to ctrl
-    logic pc1_lt_pc2;
-    assign pc1_lt_pc2 = main_ex_i.pc < deputy_ex_i.pc;
     assign pause_ex = |pause_alu;
     assign branch_flush = |branch_flush_alu && !pause_ex;
     always_comb begin
-        if (&branch_flush_alu) begin
-            if (pc1_lt_pc2) begin
-                branch_target = branch_target_alu[0];
-                update_info = update_info_alu[0];
-            end else begin
-                branch_target = branch_target_alu[1];
-                update_info = update_info_alu[1];
-            end
-        end else if (branch_flush_alu[0]) begin
+        if (branch_flush_alu[0]) begin
             branch_target = branch_target_alu[0];
             update_info = update_info_alu[0];
         end else if (branch_flush_alu[1]) begin
@@ -122,19 +120,16 @@ module execute
         end
     end
 
-    assign ex_excp_flush = (ex_o[0].is_exception != 6'b0 || ex_o[1].is_exception != 6'b0 || ex_o[0].aluop == `ALU_ERTN) && !pause_ex;
+    assign ex_excp_flush = (ex_o[0].is_exception != 6'b0 || ex_o[1].is_exception != 6'b0 || ex_o[0].aluop == `ALU_ERTN || ex_o[1].aluop == `ALU_ERTN) && !pause_ex;
 
     // to mem
     always_ff @(posedge clk) begin
         if (rst || flush || pause_ex) begin
             mem_i <= '{default: 0};
         end else if (!pause) begin
-            if (branch_flush_alu[0] && pc1_lt_pc2) begin
+            if (branch_flush_alu[0]) begin
                 mem_i[0] <= ex_o[0];
                 mem_i[1] <= 0;
-            end else if (branch_flush_alu[1] && !pc1_lt_pc2) begin
-                mem_i[0] <= 0;
-                mem_i[1] <= ex_o[1];
             end else begin
                 mem_i <= ex_o;
             end
