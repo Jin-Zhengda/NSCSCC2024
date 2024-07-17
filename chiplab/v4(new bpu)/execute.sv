@@ -22,9 +22,6 @@ module execute
     mem_dcache dcache_master,
     output cache_inst_t cache_inst,
 
-    // tlb
-    ex_tlb tlb_master,
-
     // to bpu
     output branch_update update_info,
 
@@ -55,14 +52,6 @@ module execute
     bus32_t [1:0] virtual_addr;
     bus32_t [1:0] wdata;
     logic [1:0][3:0] wstrb;
-    logic [1:0] tlbrd_en;
-    logic [1:0] tlbsrch_en;
-    logic [1:0] tlbfill_en; 
-    logic [1:0] tlbwr_en;
-    logic [1:0] invtlb_en;
-    logic [1:0] [9:0] invtlb_asid;
-    logic [1:0] [18:0] invtlb_vpn;
-    logic [1:0] [4:0] invtlb_op;
 
     ex_mem_t [ISSUE_WIDTH - 1:0] ex_o;
 
@@ -76,15 +65,6 @@ module execute
     assign dcache_master.wdata = valid[0] ? wdata[0] : wdata[1];
     assign dcache_master.wstrb = valid[0] ? wstrb[0] : wstrb[1];
 
-    assign tlb_master.tlbrd_en = tlbrd_en[0] | tlbrd_en[1];
-    assign tlb_master.tlbsrch_en = tlbsrch_en[0] | tlbsrch_en[1];
-    assign tlb_master.tlbfill_en = tlbfill_en[0] | tlbfill_en[1];
-    assign tlb_master.tlbwr_en = tlbwr_en[0] | tlbwr_en[1];
-    assign tlb_master.invtlb_en = invtlb_en[0] | invtlb_en[1];
-    assign tlb_master.invtlb_asid = invtlb_asid[0] | invtlb_asid[1];
-    assign tlb_master.invtlb_vpn = invtlb_vpn[0] | invtlb_vpn[1];
-    assign tlb_master.invtlb_op = invtlb_op[0] | invtlb_op[1];
-
     generate
         for (genvar i = 0; i < 2; i++) begin
             alu u_alu (
@@ -92,14 +72,6 @@ module execute
                 .rst,
                 .ex_i(ex_i[i]),
                 .cnt,
-                .tlbrd_en(tlbrd_en[i]),
-                .tlbsrch_en(tlbsrch_en[i]),
-                .tlbfill_en(tlbfill_en[i]), 
-                .tlbwr_en(tlbwr_en[i]), 
-                .invtlb_en(invtlb_en[i]),
-                .invtlb_asid(invtlb_asid[i]),
-                .invtlb_vpn(invtlb_vpn[i]),
-                .invtlb_op(invtlb_op[i]),
                 .valid(valid[i]),
                 .op(op[i]),
                 .uncache_en(uncache_en[i]),
