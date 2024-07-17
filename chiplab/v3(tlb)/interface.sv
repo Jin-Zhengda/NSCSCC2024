@@ -1,6 +1,7 @@
 `ifndef INTERFACE_SV
 `define INTERFACE_SV
 `timescale 1ns / 1ps
+`include "pipeline_types.sv"
 
 import pipeline_types::*;
 
@@ -155,22 +156,6 @@ interface ctrl_csr;
     );
 endinterface : ctrl_csr
 
-interface dcache_transaddr;
-    logic                   data_fetch;    //指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
-    logic [31:0]            data_vaddr;    //虚拟地址
-    logic [31:0]            ret_data_paddr;//物理地址
-    logic                   cacop_op_mode_di;//assign cacop_op_mode_di = ms_cacop && ((cacop_op_mode == 2'b0) || (cacop_op_mode == 2'b1));
-
-    modport master(
-        input ret_data_paddr,
-        output data_fetch,data_vaddr,cacop_op_mode_di
-    );
-
-    modport slave(
-        output ret_data_paddr,
-        input data_fetch,data_vaddr,cacop_op_mode_di
-    );
-endinterface : dcache_transaddr
 
 interface ex_tlb;
     //TLBFILL和TLBWR指令
@@ -270,20 +255,40 @@ interface icache_mem;
     modport slave(input rd_req, rd_addr, output ret_valid, ret_data);
 endinterface  //icache_mem
 
+
 interface icache_transaddr;
     logic                   inst_fetch;    //指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
-    logic [31:0]            inst_vaddr;    //虚拟地址
-    logic [31:0]            ret_inst_paddr;//物理地址
+    logic [31:0]            inst_vaddr_a;    //虚拟地址pc
+    logic [31:0]            inst_vaddr_b;
+    logic [31:0]            ret_inst_paddr_a;//物理地址pc
+    logic [31:0]            ret_inst_paddr_b;//pc+4
 
     modport master(
-        input ret_inst_paddr,
-        output inst_fetch,inst_vaddr  
+        input ret_inst_paddr_a,ret_inst_paddr_b,
+        output inst_fetch,inst_vaddr_a,inst_vaddr_b
     );
 
     modport slave(
-        output ret_inst_paddr,
-        input inst_fetch,inst_vaddr
+        output ret_inst_paddr_a,ret_inst_paddr_b,
+        input inst_fetch,inst_vaddr_a,inst_vaddr_b
     );
 endinterface : icache_transaddr
 
+interface dcache_transaddr;
+    logic                   data_fetch;    //指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
+    logic [31:0]            data_vaddr;    //虚拟地址
+    logic [31:0]            ret_data_paddr;//物理地址
+    logic                   cacop_op_mode_di;//assign cacop_op_mode_di = ms_cacop && ((cacop_op_mode == 2'b0) || (cacop_op_mode == 2'b1));
+    logic                   store;//当前为store操作
+
+    modport master(//dcache
+        input ret_data_paddr,
+        output data_fetch,data_vaddr,cacop_op_mode_di,store
+    );
+
+    modport slave(
+        output ret_data_paddr,
+        input data_fetch,data_vaddr,cacop_op_mode_di,store
+    );
+endinterface : dcache_transaddr
 `endif

@@ -60,8 +60,15 @@ module alu
     assign ex_o.is_privilege = ex_i.is_privilege;
     assign ex_o.aluop = ex_i.aluop;
 
+    logic ex_mem_is_exception;
+    exception_cause_t ex_mem_exception_cause;
+    logic branch_target_exception;
+    ex_exception_cause_t branch_target_exception_cause;
+
     logic ex_is_exception;
     exception_cause_t ex_exception_cause;
+    assign ex_is_exception = ex_mem_is_exception || branch_target_exception;
+    assign ex_exception_cause = ex_mem_is_exception ? ex_mem_exception_cause: branch_target_exception;
 
     assign ex_o.is_exception = {ex_i.is_exception[5: 2], ex_is_exception, ex_i.is_exception[0]};
     assign ex_o.exception_cause = {ex_i.exception_cause[5: 2], ex_exception_cause, ex_i.exception_cause[0]};
@@ -145,7 +152,7 @@ module alu
 
     // branch alu
     bus32_t branch_alu_res;
-
+    
     branch_alu u_branch_alu(
         .pc(ex_i.pc),
         .inst(ex_i.inst),
@@ -159,7 +166,10 @@ module alu
 
         .update_info(update_info),
         .branch_flush(branch_flush),
-        .branch_alu_res(branch_alu_res)
+        .branch_alu_res(branch_alu_res),
+        .branch_target_exception(branch_target_exception),
+        .branch_target_exception_cause(branch_target_exception_cause),
+        .branch_excp_pc(ex_o.branch_excp_pc)
     );
     assign branch_target_alu = update_info.branch_actual_addr;
 
@@ -207,12 +217,12 @@ module alu
     always_comb begin
         if (ex_o.is_exception == 6'b0) begin
             if (virtual_addr[31: 16] == 16'hbfaf) begin
-                uncache_en = mem_is_valid && !ex_is_exception;
+                uncache_en = mem_is_valid && !ex_mem_is_exception;
                 valid = uncache_en;
             end 
             else begin
                 uncache_en = 1'b0;
-                valid = mem_is_valid && !ex_is_exception;
+                valid = mem_is_valid && !ex_mem_is_exception;
             end
         end
         else begin
@@ -224,32 +234,32 @@ module alu
     always_comb begin: to_dcache
         case (ex_i.aluop) 
             `ALU_LDB, `ALU_LDBU: begin
-                ex_is_exception = 1'b0;
-                ex_exception_cause = 7'b0;
+                ex_mem_is_exception = 1'b0;
+                ex_mem_exception_cause = 7'b0;
                 op = 1'b0;
                 mem_is_valid = 1'b1;
                 wdata = 32'b0;
                 wstrb = 4'b1111;
             end
             `ALU_LDH, `ALU_LDHU: begin
-                ex_is_exception = (ex_o.mem_addr[1: 0] == 2'b01) || (ex_o.mem_addr[1: 0] == 2'b11);
-                ex_exception_cause = (ex_o.mem_addr[1: 0] == 2'b01 || ex_o.mem_addr[1: 0] == 2'b11) ? `EXCEPTION_ALE : 7'b0;
+                ex_mem_is_exception = (ex_o.mem_addr[1: 0] == 2'b01) || (ex_o.mem_addr[1: 0] == 2'b11);
+                ex_mem_exception_cause = (ex_o.mem_addr[1: 0] == 2'b01 || ex_o.mem_addr[1: 0] == 2'b11) ? `EXCEPTION_ALE : 7'b0;
                 op = 1'b0;
                 mem_is_valid = 1'b1;
                 wdata = 32'b0;
                 wstrb = 4'b1111;
             end
             `ALU_LDW, `ALU_LLW: begin
-                ex_is_exception = (ex_o.mem_addr[1: 0] != 2'b00);
-                ex_exception_cause = (ex_o.mem_addr[1: 0] != 2'b00) ? `EXCEPTION_ALE: 7'b0;
+                ex_mem_is_exception = (ex_o.mem_addr[1: 0] != 2'b00);
+                ex_mem_exception_cause = (ex_o.mem_addr[1: 0] != 2'b00) ? `EXCEPTION_ALE: 7'b0;
                 op = 1'b0;
                 mem_is_valid = 1'b1;
                 wdata = 32'b0;
                 wstrb = 4'b1111;
             end
             `ALU_STB: begin
-                ex_is_exception = 1'b0;
-                ex_exception_cause = 7'b0;
+                ex_mem_is_exception = 1'b0;
+                ex_mem_exception_cause = 7'b0;
                 op = 1'b1;
                 mem_is_valid = 1'b1;
                 case (ex_o.mem_addr[1: 0])
@@ -281,38 +291,38 @@ module alu
                     2'b00: begin
                         wstrb = 4'b0011;
                         wdata = {16'b0, ex_i.reg_data[1][15: 0]};
-                        ex_is_exception = 1'b0;
-                        ex_exception_cause = 7'b0;
+                        ex_mem_is_exception = 1'b0;
+                        ex_mem_exception_cause = 7'b0;
                     end 
                     2'b10: begin
                         wstrb = 4'b1100;
                         wdata = {ex_i.reg_data[1][15: 0], 16'b0};
-                        ex_is_exception = 1'b0;
-                        ex_exception_cause = 7'b0;
+                        ex_mem_is_exception = 1'b0;
+                        ex_mem_exception_cause = 7'b0;
                     end
                     2'b01, 2'b11: begin
                         wstrb = 4'b0000;
-                        ex_is_exception = 1'b1;
-                        ex_exception_cause = `EXCEPTION_ALE;
+                        ex_mem_is_exception = 1'b1;
+                        ex_mem_exception_cause = `EXCEPTION_ALE;
                     end
                     default: begin
                         wstrb = 4'b0000;    
-                        ex_is_exception = 1'b0;
-                        ex_exception_cause = 7'b0;                    
+                        ex_mem_is_exception = 1'b0;
+                        ex_mem_exception_cause = 7'b0;                    
                     end
                 endcase
             end
             `ALU_STW: begin
-                ex_is_exception = (ex_o.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
-                ex_exception_cause = (ex_o.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
+                ex_mem_is_exception = (ex_o.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
+                ex_mem_exception_cause = (ex_o.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
                 op = 1'b1;
                 wdata = ex_i.reg_data[1];
                 mem_is_valid = 1'b1;
                 wstrb = 4'b1111;
             end
             `ALU_SCW: begin
-                ex_is_exception = (ex_o.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
-                ex_exception_cause = (ex_o.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
+                ex_mem_is_exception = (ex_o.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
+                ex_mem_exception_cause = (ex_o.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
                 if (LLbit) begin
                     op = 1'b1;
                     wdata = ex_i.reg_data[1];
@@ -331,8 +341,8 @@ module alu
                 wdata = 32'b0;
                 op = 1'b0;
                 wstrb = 4'b1111;
-                ex_is_exception = 1'b0;
-                ex_exception_cause = 7'b0;
+                ex_mem_is_exception = 1'b0;
+                ex_mem_exception_cause = 7'b0;
             end
         endcase
     end

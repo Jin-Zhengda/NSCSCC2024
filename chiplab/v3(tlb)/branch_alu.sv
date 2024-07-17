@@ -1,5 +1,6 @@
 `timescale 1ns / 1ps
 `include "core_defines.sv"
+`include "csr_defines.sv"
 
 module branch_alu
     import pipeline_types::*;
@@ -17,7 +18,10 @@ module branch_alu
 
     output branch_update update_info,
     output logic branch_flush,
-    output bus32_t branch_alu_res
+    output bus32_t branch_alu_res,
+    output logic branch_target_exception,
+    output exception_cause_t branch_target_exception_cause,
+    output bus32_t branch_excp_pc
 );
 
     logic reg1_eq_reg2;
@@ -161,5 +165,8 @@ module branch_alu
     assign update_info.pc_dispatch = pc;
 
     assign branch_flush = update_info.branch_flush;
+    assign branch_target_exception = is_branch_taken && (branch_target_addr[1:0] != 2'b00);
+    assign branch_target_exception_cause = `EXCEPTION_ADEF;
+    assign branch_excp_pc = branch_target_addr;
 
 endmodule
