@@ -161,6 +161,8 @@ package pipeline_types;
         bus32_t pc;
         bus32_t inst;
 
+        bus32_t branch_excp_pc;
+
         logic [5:0] is_exception;
         logic [5:0][6:0] exception_cause;
         logic inst_valid;
@@ -199,6 +201,7 @@ package pipeline_types;
         logic [5:0][EXC_CAUSE_WIDTH - 1:0] exception_cause;
 
         bus32_t pc;
+        bus32_t branch_excp_pc;
         bus32_t mem_addr;
 
         alu_op_t aluop;

@@ -121,7 +121,24 @@ module ctrl
     assign tlb_inst = (|is_exception) ? 0: tlb_inst_o;
 
     // exception addr
-    assign csr_master.exception_pc = is_exception[0] ? commit_ctrl_o[0].pc: commit_ctrl_o[1].pc;
+    always_comb begin
+        if (is_exception[0]) begin
+            if (commit_ctrl_o[0].is_exception[1] && commit_ctrl_o[0].exception_cause[1] == `EXCEPTION_ADEF) begin
+                csr_master.exception_pc = commit_ctrl_o[0].branch_excp_pc;
+            end else begin
+                csr_master.exception_pc = commit_ctrl_o[0].pc;
+            end
+        end else if (is_exception[1]) begin
+            if (commit_ctrl_o[1].is_exception[1] && commit_ctrl_o[1].exception_cause[1] == `EXCEPTION_ADEF) begin
+                csr_master.exception_pc = commit_ctrl_o[1].branch_excp_pc;
+            end else begin
+                csr_master.exception_pc = commit_ctrl_o[1].pc;
+            end
+        end else begin
+            csr_master.exception_pc = 32'b0;
+        end
+    end
+
     assign csr_master.exception_addr = is_exception[0] ? commit_ctrl_o[0].mem_addr: commit_ctrl_o[1].mem_addr;
 
     // exception cause
