@@ -84,7 +84,7 @@ module mem
             assign commit_ctrl_i[i].is_exception = mem_i[i].is_exception;
             assign commit_ctrl_i[i].exception_cause = mem_i[i].exception_cause;
             assign commit_ctrl_i[i].pc = mem_i[i].pc;
-            assign commit_ctrl_i[i].branch_excp_pc = mem_[i].branch_excp_pc;
+            assign commit_ctrl_i[i].branch_excp_pc = mem_i[i].branch_excp_pc;
             assign commit_ctrl_i[i].mem_addr = mem_i[i].mem_addr;
             assign commit_ctrl_i[i].aluop = mem_i[i].aluop;
             assign commit_ctrl_i[i].is_privilege = mem_i[i].is_privilege;

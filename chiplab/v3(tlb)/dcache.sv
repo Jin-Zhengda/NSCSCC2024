@@ -320,7 +320,6 @@ assign mem2dcache.rdata=(current_state==`UNCACHE_RETURN)?ducache_rdata_o:
 
 
 
-
 assign rd_req=((next_state==`ASKMEM)||(current_state==`ASKMEM))&&!ret_valid;
 assign rd_type=3'b100;
 assign rd_addr=target_physical_addr;

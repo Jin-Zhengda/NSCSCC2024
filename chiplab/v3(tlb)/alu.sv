@@ -63,7 +63,7 @@ module alu
     logic ex_mem_is_exception;
     exception_cause_t ex_mem_exception_cause;
     logic branch_target_exception;
-    ex_exception_cause_t branch_target_exception_cause;
+    exception_cause_t branch_target_exception_cause;
 
     logic ex_is_exception;
     exception_cause_t ex_exception_cause;
