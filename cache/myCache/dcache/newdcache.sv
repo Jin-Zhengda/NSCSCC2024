@@ -199,6 +199,7 @@ always_comb begin
         else if(pre_op==1'b0&&ducache_rvalid_o)next_state=`IDLE;
         else next_state=`UNCACHE_RETURN;
     end
+    else next_state=`IDLE;
 end
 
 assign dcache2transaddr.data_fetch=mem2dcache.valid;
@@ -400,7 +401,7 @@ always_ff @( posedge clk ) begin
         record_write_mem_data<=record_write_mem_data;
     end 
 end
-assign wr_req=record_dirty;
+assign wr_req=record_dirty&&!data_bvalid_o;
 assign wr_addr=record_write_mem_addr;
 assign wr_data=record_write_mem_data;
 assign wr_wstrb=4'b1111;
