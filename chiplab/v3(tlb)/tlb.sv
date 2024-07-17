@@ -10,7 +10,7 @@ module tlb
     input                        s0_odd_page_a ,//表示查奇页表还是偶页表
     input   [ 9:0]               s0_asid     ,//地址空间标识(ASID)即Address Space Identifier，用于区分不同进程中相同的虚地址
     output                       s0_found_a    ,//输出信号，表示s0中命中了
-    output  [ 4:0]               s0_index_a    ,//不懂！！！！！！！！！！！！！！！！！！！！！！
+    output  [ 4:0]               s0_index    ,//不懂！！！！！！！！！！！！！！！！！！！！！！
     output  [ 5:0]               s0_ps_a       ,//页大小(PS)，6 比特。仅在 MTLB 中出现。用于指定该页表项中存放的页大小。数值是页大小的 2的幂指数。龙芯架构 32 位精简版只支持 4KB 和 4MB 两种页大小,对应的 PS 值分别是 12 和 22。
     output  [19:0]               s0_ppn_a      ,//物理页号(PPN)
     output                       s0_v_a        ,//有效位(V)，1比特。为1表明该页表项是有效的且被访问过的。
@@ -21,7 +21,7 @@ module tlb
     input   [18:0]               s0_vppn_b     ,
     input                        s0_odd_page_b ,
     output                       s0_found_b    ,
-    output  [ 4:0]               s0_index_b    ,
+
     output  [ 5:0]               s0_ps_b       ,
     output  [19:0]               s0_ppn_b      ,
     output                       s0_v_b        ,
