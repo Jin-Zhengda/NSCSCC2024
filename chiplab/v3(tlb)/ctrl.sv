@@ -2,6 +2,7 @@
 `include "core_defines.sv"
 `include "csr_defines.sv"
 `include "pipeline_types.sv"
+//`define DIFF 
 
 module ctrl
     import pipeline_types::*;
@@ -16,7 +17,6 @@ module ctrl
     // from wb
     input mem_wb_t [ISSUE_WIDTH - 1:0] wb_o,
     input commit_ctrl_t [ISSUE_WIDTH - 1:0] commit_ctrl_o,
-    input tlb_inst_t tlb_inst_o,
 
     // with csr
     ctrl_csr csr_master,
@@ -37,8 +37,7 @@ module ctrl
     output logic is_llw_scw,
     output logic csr_write_en,
     output csr_addr_t csr_write_addr,
-    output bus32_t csr_write_data,
-    output tlb_inst_t csr_tlb_inst
+    output bus32_t csr_write_data
     
     `ifdef DIFF
     ,
@@ -60,7 +59,8 @@ module ctrl
 
     // ertn inst
     logic is_ertn;
-    assign is_ertn = commit_ctrl_o[0].is_exception == 6'b0 && commit_ctrl_o[0].aluop == `ALU_ERTN;
+    assign is_ertn = (commit_ctrl_o[0].is_exception == 6'b0 && commit_ctrl_o[0].aluop == `ALU_ERTN)
+                        || (commit_ctrl_o[1].is_exception == 6'b0 && commit_ctrl_o[1].aluop == `ALU_ERTN);
     assign csr_master.is_ertn = is_ertn;
 
     // new target
@@ -90,8 +90,6 @@ module ctrl
     };
 
     // commit
-    logic pc1_lt_pc2;
-    assign pc1_lt_pc2 = commit_ctrl_o[0].pc < commit_ctrl_o[1].pc;
 
     generate
         for (genvar i = 0; i < 2; i++) begin
@@ -101,48 +99,27 @@ module ctrl
     endgenerate
 
     logic [ISSUE_WIDTH - 1:0] reg_write_en_out;
-    always_comb begin
-        if (pc1_lt_pc2) begin
-            reg_write_en_out[0] = (is_exception[0] || pause[7]) ? 1'b0 : wb_o[0].reg_write_en;
-            reg_write_en_out[1] = (|is_exception || pause[7]) ? 1'b0 : wb_o[1].reg_write_en;
-        end else begin
-            reg_write_en_out[0] = (|is_exception || pause[7]) ? 1'b0 : wb_o[0].reg_write_en;
-            reg_write_en_out[1] = (is_exception[1] || pause[7]) ? 1'b0 : wb_o[1].reg_write_en;
-        end
-    end
+    assign reg_write_en_out[0] = (is_exception[0] || pause[7]) ? 1'b0 : wb_o[0].reg_write_en;
+    assign reg_write_en_out[1] = (|is_exception || pause[7]) ? 1'b0 : wb_o[1].reg_write_en;
 
     // handle same addr write
     always_comb begin
         if (wb_o[0].reg_write_addr == wb_o[1].reg_write_addr) begin
-            if (pc1_lt_pc2) begin
-                reg_write_en[0] = 1'b0;
-                reg_write_en[1] = reg_write_en_out[1];
-            end else begin
-                reg_write_en[0] = reg_write_en_out[0];
-                reg_write_en[1] = 1'b0;
-            end
+            reg_write_en[0] = 1'b0;
+            reg_write_en[1] = reg_write_en_out[1];
         end else begin
             reg_write_en = reg_write_en_out;
         end
     end
 
-    assign is_llw_scw = (!pc1_lt_pc2 && |is_exception) || (pc1_lt_pc2 && is_exception[0]) || pause[7] ? 1'b0 : wb_o[0].is_llw_scw;
-    assign csr_write_en = (!pc1_lt_pc2 && |is_exception) || (pc1_lt_pc2 && is_exception[0]) || pause[7] ? 1'b0 : wb_o[0].csr_write_en;
-    assign csr_write_addr = wb_o[0].csr_write_addr;
-    assign csr_write_data = wb_o[0].csr_write_data;
-
-    logic[1:0] is_tlb_inst;
-    generate
-        for (genvar i = 0; i < 2; i++) begin
-            assign is_tlb_inst[i] = commit_ctrl_o[i].aluop == `ALU_TLBRD || commit_ctrl_o[i].aluop == `ALU_TLBSRCH;
-        end
-    endgenerate
-
-    assign csr_tlb_inst = (|is_tlb_inst && !(|is_exception)) ? tlb_inst_o: 0;
+    assign is_llw_scw = wb_o[0].is_llw_scw | wb_o[1].is_llw_scw;
+    assign csr_write_en = wb_o[0].csr_write_en | wb_o[1].csr_write_en;
+    assign csr_write_addr = wb_o[0].csr_write_en ? wb_o[0].csr_write_addr: wb_o[1].csr_write_addr;
+    assign csr_write_data = wb_o[0].csr_write_en ? wb_o[0].csr_write_data: wb_o[1].csr_write_data;
 
     // exception addr
-    assign csr_master.exception_pc = is_exception[0] ? commit_ctrl_o[0].pc : commit_ctrl_o[1].pc;
-    assign csr_master.exception_addr = commit_ctrl_o[0].mem_addr;
+    assign csr_master.exception_pc = is_exception[0] ? commit_ctrl_o[0].pc: commit_ctrl_o[1].pc;
+    assign csr_master.exception_addr = is_exception[0] ? commit_ctrl_o[0].mem_addr: commit_ctrl_o[1].mem_addr;
 
     // exception cause
     exception_cause_t [ISSUE_WIDTH - 1: 0] exception_cause;
@@ -255,29 +232,39 @@ module ctrl
 
     // pause assignment
     logic pause_idle;
-    assign pause_idle = (commit_ctrl_o[0].aluop == `ALU_IDLE) && !is_interrupt;
+    assign pause_idle = (commit_ctrl_o[0].aluop == `ALU_IDLE || commit_ctrl_o[1].aluop == `ALU_IDLE) && !is_interrupt;
 
     // pause[0] PC, pause[1] icache, pause[2] instbuffer, pause[3] id
     // pause[4] dispatch, pause[5] ex, pause[6] mem, pause[7] wb
-    always_comb begin : pause_ctrl
+    logic[4:0] pause_back;
+    logic[2:0] pause_front;
+    always_comb begin
         if (pause_request.pause_mem || pause_idle) begin
-            pause = 8'b01111111;
+            pause_back = 5'b01111;
         end else if (pause_request.pause_execute) begin
-            pause = 8'b00111111;
+            pause_back = 5'b00111;
         end else if (pause_request.pause_dispatch) begin
-            pause = 8'b00011111;
+            pause_back = 5'b00011;
         end else if (pause_request.pause_decoder) begin
-            pause = 8'b00001111;
-        end else if (pause_request.pause_buffer) begin
-            pause = 8'b00000111;
-        end else if (pause_request.pause_icache) begin
-            pause = 8'b00000011;
-        end else if (pause_request.pause_if) begin
-            pause = 8'b00000001;
+            pause_back = 5'b00001;
         end else begin
-            pause = 8'b00000000;
+            pause_back = 5'b00000;
         end
     end
+
+    always_comb begin
+        if (pause_request.pause_buffer) begin
+            pause_front = 3'b111;
+        end else if (pause_request.pause_icache) begin
+            pause_front = 3'b011;
+        end else if (pause_request.pause_if) begin
+            pause_front = 3'b001;
+        end else begin
+            pause_front = 3'b000;
+        end
+    end
+
+    assign pause = {pause_back, pause_front};
 
     assign send_inst_en = 2'b11;
 
@@ -287,7 +274,7 @@ module ctrl
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
             assign ctrl_diff_o[i].debug_wb_pc = ctrl_diff_o[i].inst_valid ? ctrl_diff_i[i].debug_wb_pc: 32'b0;
             assign ctrl_diff_o[i].debug_wb_inst = ctrl_diff_i[i].debug_wb_inst;
-            assign ctrl_diff_o[i].debug_wb_rf_wen = reg_write_en_out[i];
+            assign ctrl_diff_o[i].debug_wb_rf_wen = {4{reg_write_en_out[i]}};
             assign ctrl_diff_o[i].debug_wb_rf_wnum = reg_write_addr[i];
             assign ctrl_diff_o[i].debug_wb_rf_wdata = reg_write_data[i];
 
@@ -310,11 +297,11 @@ module ctrl
         end
     endgenerate
 
-    assign ctrl_diff_o[0].ertn_flush = is_ertn;
-    assign ctrl_diff_o[1].ertn_flush = 1'b0;
+    assign ctrl_diff_o[0].ertn_flush = (commit_ctrl_o[0].is_exception == 6'b0 && commit_ctrl_o[0].aluop == `ALU_ERTN);
+    assign ctrl_diff_o[1].ertn_flush = (commit_ctrl_o[1].is_exception == 6'b0 && commit_ctrl_o[1].aluop == `ALU_ERTN);
 
-    assign ctrl_diff_o[0].inst_valid = (pc1_lt_pc2 && is_exception[0]) || (!pc1_lt_pc2 && |is_exception) ? 1'b0 : ctrl_diff_i[0].inst_valid;
-    assign ctrl_diff_o[1].inst_valid = (pc1_lt_pc2 && |is_exception) || (!pc1_lt_pc2 && is_exception[1]) ? 1'b0 : ctrl_diff_i[1].inst_valid;
+    assign ctrl_diff_o[0].inst_valid = is_exception[0]? 1'b0 : ctrl_diff_i[0].inst_valid;
+    assign ctrl_diff_o[1].inst_valid = |is_exception? 1'b0 : ctrl_diff_i[1].inst_valid;
     `endif
 
 endmodule

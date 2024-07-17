@@ -19,6 +19,7 @@ module wb
     // to dispatch
     output pipeline_push_forward_t [ISSUE_WIDTH - 1:0] wb_reg_pf,
     output csr_push_forward_t wb_csr_pf,
+    output alu_op_t [ISSUE_WIDTH - 1:0] pre_wb_aluop,
 
     // to ctrl
     output mem_wb_t [ISSUE_WIDTH - 1:0] wb_o,
@@ -59,9 +60,13 @@ module wb
         end
     endgenerate
 
-    assign wb_csr_pf.csr_write_en   = wb_o[0].csr_write_en;
-    assign wb_csr_pf.csr_write_addr = wb_o[0].csr_write_addr;
-    assign wb_csr_pf.csr_write_data = wb_o[0].csr_write_data;
+
+    assign wb_csr_pf.csr_write_en   = wb_o[0].csr_write_en || wb_o[1].csr_write_en;
+    assign wb_csr_pf.csr_write_addr = wb_o[0].csr_write_en? wb_o[0].csr_write_addr: wb_o[1].csr_write_addr;
+    assign wb_csr_pf.csr_write_data = wb_o[0].csr_write_en? wb_o[0].csr_write_data: wb_o[1].csr_write_data;
+
+    // pre_wb_aluop
+    assign pre_wb_aluop = {commit_ctrl_o[1].aluop, commit_ctrl_o[0].aluop};
 
     `ifdef DIFF
     // diff

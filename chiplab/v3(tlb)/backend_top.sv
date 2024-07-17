@@ -121,6 +121,8 @@ module backend_top
     csr_push_forward_t mem_csr_pf;
     csr_push_forward_t wb_csr_pf;
     alu_op_t [ISSUE_WIDTH - 1:0] pre_ex_aluop;
+    alu_op_t [ISSUE_WIDTH - 1:0] pre_mem_aluop;
+    alu_op_t [ISSUE_WIDTH - 1:0] pre_wb_aluop;
     dispatch_ex_t [ISSUE_WIDTH - 1:0] ex_i;
     logic [ISSUE_WIDTH - 1:0] dqueue_en;
     logic [DECODER_WIDTH - 1:0] invalid_en;
@@ -188,6 +190,8 @@ module backend_top
         .wb_csr_pf,
 
         .pre_ex_aluop,
+        .pre_mem_aluop,
+        .pre_wb_aluop,
         .pause_ex(pause_request.pause_execute),
 
         .regfile_master(dispatch_regfile_io.master),
@@ -238,6 +242,7 @@ module backend_top
 
         .mem_reg_pf,
         .mem_csr_pf,
+        .pre_mem_aluop,
 
         .pause_mem(pause_request.pause_mem),
 
@@ -267,6 +272,7 @@ module backend_top
 
         .wb_reg_pf,
         .wb_csr_pf,
+        .pre_wb_aluop,
 
         .wb_o,
         .commit_ctrl_o,
