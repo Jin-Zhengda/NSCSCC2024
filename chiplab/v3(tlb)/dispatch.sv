@@ -26,6 +26,8 @@ module dispatch
 
     // from ex
     input alu_op_t [ISSUE_WIDTH - 1:0] pre_ex_aluop,
+    input alu_op_t [ISSUE_WIDTH - 1:0] pre_mem_aluop,
+    input alu_op_t [ISSUE_WIDTH - 1:0] pre_wb_aluop,
     input logic pause_ex,
 
     // with regfile
@@ -73,22 +75,15 @@ module dispatch
     logic data_relate_inst;
     logic cnt_inst;
 
-    logic inst1_relate;
-    logic inst2_relate;
-
     assign privilege_inst = dispatch_i[0].is_privilege || dispatch_i[1].is_privilege;
     assign mem_inst = dispatch_i[0].alusel == `ALU_SEL_LOAD_STORE || dispatch_i[1].alusel == `ALU_SEL_LOAD_STORE;
 
-    assign inst1_relate = (dispatch_i[0].reg_write_en && dispatch_i[0].reg_write_addr != 5'b0) 
+    assign data_relate_inst = (dispatch_i[0].reg_write_en && dispatch_i[0].reg_write_addr != 5'b0) 
                             && ((dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[0] && dispatch_i[1].reg_read_en[0]) 
                             || (dispatch_i[0].reg_write_addr == dispatch_i[1].reg_read_addr[1] && dispatch_i[1].reg_read_en[1]));
-    assign inst2_relate = (dispatch_i[1].reg_write_en && dispatch_i[1].reg_write_addr != 5'b0) 
-                            && ((dispatch_i[1].reg_write_addr == dispatch_i[0].reg_read_addr[0] && dispatch_i[0].reg_read_en[0]) 
-                            || (dispatch_i[1].reg_write_addr == dispatch_i[0].reg_read_addr[1] && dispatch_i[0].reg_read_en[1]));
-    assign data_relate_inst = inst1_relate;
     assign cnt_inst = dispatch_i[0].is_cnt || dispatch_i[1].is_cnt;
-    //assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst && !cnt_inst && (&inst_valid);
-    assign issue_double_en = 2'b0;
+    assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst && !cnt_inst && (&inst_valid);
+    //assign issue_double_en = 2'b0;
 
     always_comb begin
         if (flush || rst || !(|inst_valid)) begin
@@ -231,8 +226,14 @@ module dispatch
         end
     endgenerate
 
+    // handle tlb use inst
+    logic pre_is_tlb;
+    assign pre_is_tlb = (pre_ex_aluop[0] == `ALU_TLBSRCH) || (pre_ex_aluop[0] == `ALU_TLBRD) || (pre_ex_aluop[1] == `ALU_TLBSRCH) || (pre_ex_aluop[1] == `ALU_TLBRD)
+                        || (pre_mem_aluop[0] == `ALU_TLBSRCH) || (pre_mem_aluop[0] == `ALU_TLBRD) || (pre_mem_aluop[1] == `ALU_TLBSRCH) || (pre_mem_aluop[1] == `ALU_TLBRD)
+                        || (pre_wb_aluop[0] == `ALU_TLBSRCH) || (pre_wb_aluop[0] == `ALU_TLBRD) || (pre_wb_aluop[1] == `ALU_TLBSRCH) || (pre_wb_aluop[1] == `ALU_TLBRD) ;
+
     // pause request
-    assign pause_dispatch = |(reg1_load_relate | reg2_load_relate);
+    assign pause_dispatch = |(reg1_load_relate | reg2_load_relate) || pre_is_tlb;
 
     dispatch_ex_t [DECODER_WIDTH - 1:0] ex_temp;
     assign ex_temp[0] = issue_en[0] ? dispatch_o[0] : 0;

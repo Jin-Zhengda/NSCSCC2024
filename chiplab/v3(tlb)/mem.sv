@@ -19,6 +19,7 @@ module mem
     // to dispatch
     output pipeline_push_forward_t [ISSUE_WIDTH - 1: 0] mem_reg_pf,
     output csr_push_forward_t mem_csr_pf,
+    output alu_op_t [ISSUE_WIDTH - 1:0] pre_mem_aluop,
 
     // to ctrl
     output logic pause_mem,
@@ -51,6 +52,8 @@ module mem
     assign mem_csr_pf.csr_write_en = mem_o[0].csr_write_en || mem_o[1].csr_write_en;
     assign mem_csr_pf.csr_write_addr = mem_o[0].csr_write_en ? mem_o[0].csr_write_addr : mem_o[1].csr_write_addr;
     assign mem_csr_pf.csr_write_data = mem_o[0].csr_write_en ? mem_o[0].csr_write_data : mem_o[1].csr_write_data;
+
+    assign pre_mem_aluop = {mem_i[1].aluop, mem_i[0].aluop};
 
     // wb signal assignment
     generate
