@@ -159,9 +159,10 @@ end
 
 //TLB
 assign icache2transaddr.inst_fetch=|(pc2icache.inst_en);
-assign icache2transaddr.inst_vaddr=pc2icache.pc;
+assign icache2transaddr.inst_vaddr_a=pc2icache.pc;
+assign icache2transaddr.inst_vaddr_b=pc2icache.pc+32'h4;
 logic[`ADDR_SIZE-1:0] p_addr_a;
-assign p_addr_a=icache2transaddr.ret_inst_paddr;
+assign p_addr_a=icache2transaddr.ret_inst_paddr_a;
 
 
 logic[`ADDR_SIZE-1:0] pre_paddr_a,pre_physical_addr_a,pre_physical_addr_b;
@@ -171,6 +172,19 @@ always_ff @( posedge clk ) begin
 end
 assign pre_physical_addr_a=(current_state==`IDLE)?p_addr_a:pre_paddr_a;
 assign pre_physical_addr_b=pre_physical_addr_a+32'd4;//当地址转换刚好位于临界值时，可能paddr的tag部分应该不一样！！！！！！！
+
+/*
+logic[`ADDR_SIZE-1:0] pre_paddr_a,pre_physical_addr_a,pre_physical_addr_b;
+always_ff @( posedge clk ) begin
+    if((next_state==`IDLE)&&!pause_icache)pre_paddr_a<=p_addr_a;
+    else pre_paddr_a<=pre_paddr_a;
+end
+assign pre_physical_addr_a=pre_paddr_a;
+assign pre_physical_addr_b=pre_physical_addr_a+32'd4;//当地址转换刚好位于临界值时，可能paddr的tag部分应该不一样！！！！！！！
+*/
+
+
+
 
 logic[`ADDR_SIZE-1:0] virtual_addra,virtual_addrb;
 assign virtual_addra=pc2icache.pc;
