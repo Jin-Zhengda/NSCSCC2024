@@ -331,7 +331,7 @@ module csr
             tlbidx[31] <= csr_write_data[31];  // ne
         end else if (tlb_inst.tlbsrch_ret) begin
             if (tlb_inst.search_tlb_found) begin
-                tlbidx[4:0] <= tlb_master.search_tlb_index;
+                tlbidx[4:0] <= tlb_inst.search_tlb_index;
                 tlbidx[31]  <= 1'b0;
             end else begin
                 tlbidx[31] <= 1'b1;

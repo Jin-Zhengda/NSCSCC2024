@@ -9,6 +9,7 @@ interface mem_dcache;
     logic op;  // 操作类型，读-0，写-1
     // logic[2:0] size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
     bus32_t virtual_addr;  // 虚拟地址
+    bus32_t physical_addr;
     logic tlb_excp_cancel_req;
     logic [3:0] wstrb;  //写使能，1表示对应的8位数据需要写
     bus32_t wdata;  //需要写的数据
@@ -16,17 +17,16 @@ interface mem_dcache;
     logic addr_ok;              //该次请求的地址传输OK，读：地址被接收；写：地址和数据被接收
     logic data_ok;  //该次请求的数据传输OK，读：数据返回；写：数据写入完成
     bus32_t rdata;  //读DCache的结果
-    logic cache_miss;  //cache未命中
 
     logic uncache_en;
 
     modport master(
-        input addr_ok, data_ok, rdata, cache_miss,
+        input addr_ok, data_ok, rdata,
         output valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata, uncache_en
     );
 
     modport slave(
-        output addr_ok, data_ok, rdata, cache_miss,
+        output addr_ok, data_ok, rdata, 
         input valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata, uncache_en
     );
 endinterface : mem_dcache
@@ -181,6 +181,7 @@ interface ex_tlb;
 
     //TLBRD指令（输入的信号复用tlbidx_in），下一周期开始返回读取的结果
     //默认read
+    logic                  tlbrd_en           ;//TLBRD指令的使能信号
 
     //invtlb ——用于实现无效tlb的指令
     logic                  invtlb_en          ;//使能
@@ -189,11 +190,42 @@ interface ex_tlb;
     logic [ 4:0]           invtlb_op          ;//op
 
 
+    //TLBSRCH指令
+    logic                  search_tlb_found   ;//TLBSRCH命中
+    logic [ 4:0]           search_tlb_index   ;//TLBSRCH所需返回的index信号
+
+    //TLBRD指令（输入的信号复用tlbidx_in），下一周期开始返回读取的结果
+    logic [31:0]           tlbehi_out         ;//{r_vppn, 13'b0}
+    logic [31:0]           tlbelo0_out        ;//{4'b0, ppn0, 1'b0, g, mat0, plv0, d0, v0}
+    logic [31:0]           tlbelo1_out        ;//{4'b0, ppn1, 1'b0, g, mat1, plv1, d1, v1}
+    logic [31:0]           tlbidx_out         ;//只有[29:24]为ps信号，其他位均为0
+    logic [ 9:0]           asid_out           ;//读出的asid
+
+    //返回信号
+    logic                  tlbsrch_ret        ;
+    logic                  tlbrd_ret          ;
+
+
+
+    //例外
+    logic                  tlb_inst_exception      ;
+    logic [5:0]            tlb_inst_exception_ecode;
+    logic [8:0]            tlb_inst_exception_esubcode;
+    logic                  tlb_data_exception      ;
+    logic [5:0]            tlb_data_exception_ecode;
+    logic [8:0]            tlb_data_exception_esubcode;
+
+
+
     modport master(//ex
-        output tlbfill_en,tlbwr_en,tlbsrch_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op
+        input tlb_inst_exception,tlb_inst_exception_ecode,tlb_inst_exception_esubcode,tlb_data_exception,tlb_data_exception_ecode,tlb_data_exception_esubcode,
+                search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbsrch_ret,tlbrd_ret,
+        output tlbfill_en,tlbwr_en,tlbsrch_en,tlbrd_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op
     );
     modport slave(//tlb
-        input tlbfill_en,tlbwr_en,tlbsrch_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op
+        input tlbfill_en,tlbwr_en,tlbsrch_en,tlbrd_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op,
+        output tlb_inst_exception,tlb_inst_exception_ecode,tlb_inst_exception_esubcode,tlb_data_exception,tlb_data_exception_ecode,tlb_data_exception_esubcode,
+                search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbsrch_ret,tlbrd_ret
     );
 endinterface //ex_tlb
 
@@ -207,17 +239,7 @@ interface csr_tlb;
     logic [4:0]            rand_index         ;//TLBFILL指令的index
     logic [5:0]            ecode           ;//7.5.1对于NE变量的描述中讲到，CSR.ESTAT.Ecode   (大概使能信号，若为111111则写使能，否则根据tlbindex_in.NE判断是否写使能？
 
-    //TLBSRCH指令
-    logic [31:0]           tlbsrch_ehi        ;//TLBSRCH指令的ehi信号
-    logic                  search_tlb_found   ;//TLBSRCH命中
-    logic [ 4:0]           search_tlb_index   ;//TLBSRCH所需返回的index信号
-
-    //TLBRD指令（输入的信号复用tlbidx_in），下一周期开始返回读取的结果
-    logic [31:0]           tlbehi_out         ;//{r_vppn, 13'b0}
-    logic [31:0]           tlbelo0_out        ;//{4'b0, ppn0, 1'b0, g, mat0, plv0, d0, v0}
-    logic [31:0]           tlbelo1_out        ;//{4'b0, ppn1, 1'b0, g, mat1, plv1, d1, v1}
-    logic [31:0]           tlbidx_out         ;//只有[29:24]为ps信号，其他位均为0
-    logic [ 9:0]           asid_out           ;//读出的asid
+    
 
     //CSR信号
     logic [31:0]           csr_dmw0           ;//dmw0，有效位是[27:25]，可能会作为最后转换出来的地址的最高三位
@@ -226,15 +248,15 @@ interface csr_tlb;
     logic                  csr_pg             ;   
     logic [1:0]            csr_plv            ;
 
+
+
     modport master(//csr
-        input search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,
-        output tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,tlbsrch_ehi,
+        output tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,
                 csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv
     );
     modport slave(//tlb
-        input tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,tlbsrch_ehi,
-                csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv,
-        output search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out
+        input tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,
+                csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv
     );
 
 endinterface //csr_tlb

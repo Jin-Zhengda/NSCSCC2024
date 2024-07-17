@@ -90,9 +90,10 @@ package pipeline_types;
         logic is_privilege;
         logic is_cnt;
 
-        alu_op_t  aluop;
+        alu_op_t aluop;
         alu_sel_t alusel;
-        bus32_t   imm;
+        bus32_t imm;
+        logic [4:0] invtlb_op;
 
         logic [1:0] reg_read_en;
         logic [1:0][REG_ADDR_WIDTH - 1:0] reg_read_addr;
@@ -237,6 +238,19 @@ package pipeline_types;
         bus32_t ld_paddr;
         bus32_t ld_vaddr;
     } diff_t;
+
+    typedef struct packed {
+        logic search_tlb_found;
+
+        logic [31:0] tlbehi_out;
+        logic [31:0] tlbelo0_out;
+        logic [31:0] tlbelo1_out;
+        logic [31:0] tlbidx_out;
+        logic [9:0]  asid_out;
+
+        logic tlbsrch_ret;
+        logic tlbrd_ret;
+    } tlb_inst_t;
 
 endpackage
 

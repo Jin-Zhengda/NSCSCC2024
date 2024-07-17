@@ -84,6 +84,8 @@ module backend_top
 
     assign pause_request.pause_buffer = pause_buffer;
     assign pause_decoder = pause_request.pause_decoder;
+    assign pause_request.pause_icache = 1'b0;
+    assign pause_request.pause_if = 1'b0;
 
     // regfile
     dispatch_regfile dispatch_regfile_io ();
