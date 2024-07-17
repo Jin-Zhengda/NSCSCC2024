@@ -320,7 +320,6 @@ assign mem2dcache.rdata=(current_state==`UNCACHE_RETURN)?ducache_rdata_o:
                                     (hit_way0?(write_read_same?way0_cache_b[pre_vaddr[4:2]]:way0_cache[pre_vaddr[4:2]]):
                                     (write_read_same?way1_cache_b[pre_vaddr[4:2]]:way1_cache[pre_vaddr[4:2]])):
                                             read_from_mem[pre_vaddr[4:2]]);
-assign mem2dcache.cache_miss=hit_fail;
 
 
 
