@@ -94,7 +94,12 @@ module dram_fifo #(
 
     // full and empty judgement
     logic[$clog2(DEPTH) - 1:0] valid_sum;
-    assign valid_sum = +valid;
+    always_comb begin
+        valid_sum = 0;
+        for (integer i = 0; i < DEPTH; i++) begin
+            valid_sum = valid_sum + valid[i];
+        end
+    end
 
     assign full = (valid_sum >= (DEPTH - 2));
     assign empty = ~|valid;

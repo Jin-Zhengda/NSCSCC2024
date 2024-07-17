@@ -260,7 +260,8 @@ module alu
                         wdata = {ex_i.reg_data[1][7: 0], 24'b0};
                     end
                     default: begin
-                        wstrb = 4'b0000;                        
+                        wstrb = 4'b0000;      
+                        wdata = 32'b0;                  
                     end
                 endcase
             end
@@ -284,11 +285,13 @@ module alu
                         wstrb = 4'b0000;
                         ex_is_exception = 1'b1;
                         ex_exception_cause = `EXCEPTION_ALE;
+                        wdata = 32'b0;
                     end
                     default: begin
                         wstrb = 4'b0000;    
                         ex_is_exception = 1'b0;
-                        ex_exception_cause = 7'b0;                    
+                        ex_exception_cause = 7'b0;          
+                        wdata = 32'b0;          
                     end
                 endcase
             end
