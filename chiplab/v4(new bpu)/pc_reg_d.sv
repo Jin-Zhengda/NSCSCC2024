@@ -36,8 +36,10 @@ module pc_reg_d
     assign pc_excp = (pc.pc_o[1: 0] != 2'b00);
 
     always_ff @(posedge clk) begin
-        pc.is_exception <= {pc_excp, 5'b0};
-        pc.exception_cause <= {(pc_excp ?  `EXCEPTION_ADEF: `EXCEPTION_NOP), {5{`EXCEPTION_NOP}}};
+        pc.is_exception <= {1'b0, pc_excp, 4'b0};
+        pc.exception_cause <= {`EXCEPTION_NOP, 
+                        (pc_excp ?  `EXCEPTION_ADEF: `EXCEPTION_NOP),
+                        {4{`EXCEPTION_NOP}}};
     end
 
 

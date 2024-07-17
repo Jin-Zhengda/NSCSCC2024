@@ -14,8 +14,6 @@ import pipeline_types::*;
     input logic pause,
     input logic pause_decoder,
 
-    ex_tlb tlb_master,
-
     //icache传来的信号
     input logic [1:0][31:0] inst,
     input logic [1:0][31:0] pc,
@@ -62,15 +60,10 @@ import pipeline_types::*;
     logic [1:0][5: 0] is_exception_delay;
     logic [1:0][5:0][6: 0] exception_cause_delay;
 
-    generate
-        for (genvar i = 0; i < 2; i++) begin
-            always_ff @(posedge clk) begin
-                is_exception_delay <= {is_exception[i][6], tlb_master.tlb_inst_exception[i], is_exception[i][4:0]};
-                exception_cause_delay <= {exception_cause[i][6], tlb_master.tlb_inst_exception_cause[i], exception_cause[i][4:0]};
-            end
-        end
-    endgenerate
-
+    always_ff @(posedge clk) begin
+        is_exception_delay <= is_exception;
+        exception_cause_delay <= exception_cause;
+    end
 
     assign inst_and_pc_o.is_exception = is_exception_delay;
     assign inst_and_pc_o.exception_cause = exception_cause_delay;

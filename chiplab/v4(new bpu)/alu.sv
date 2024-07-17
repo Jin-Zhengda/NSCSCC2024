@@ -14,16 +14,6 @@ module alu
     // from stable counter
     input bus64_t cnt,
 
-    // tlb
-    output logic tlbrd_en,
-    output logic tlbsrch_en,
-    output logic tlbfill_en, 
-    output logic tlbwr_en, 
-    output logic invtlb_en,
-    output logic[9:0] invtlb_asid,
-    output logic[18:0] invtlb_vpn,
-    output logic[4:0] invtlb_op,
-
     // with dcache
     output logic valid,
     output logic op,
@@ -270,7 +260,8 @@ module alu
                         wdata = {ex_i.reg_data[1][7: 0], 24'b0};
                     end
                     default: begin
-                        wstrb = 4'b0000;                        
+                        wstrb = 4'b0000;      
+                        wdata = 32'b0;                  
                     end
                 endcase
             end
@@ -294,11 +285,13 @@ module alu
                         wstrb = 4'b0000;
                         ex_is_exception = 1'b1;
                         ex_exception_cause = `EXCEPTION_ALE;
+                        wdata = 32'b0;
                     end
                     default: begin
                         wstrb = 4'b0000;    
                         ex_is_exception = 1'b0;
-                        ex_exception_cause = 7'b0;                    
+                        ex_exception_cause = 7'b0;          
+                        wdata = 32'b0;          
                     end
                 endcase
             end
@@ -410,38 +403,6 @@ module alu
         endcase
     end
 
-    // tlb 
-    always_comb begin
-        tlbrd_en = 1'b0;
-        tlbsrch_en = 1'b0;
-        tlbfill_en = 1'b0;
-        tlbwr_en = 1'b0;
-        invtlb_en = 1'b0;
-        invtlb_asid = 10'b0;
-        invtlb_vpn = 19'b0;
-        invtlb_op = 5'b0;
-
-        case(ex_i.aluop)
-            `ALU_TLBRD: begin
-                tlbrd_en = 1'b1;
-            end
-            `ALU_TLBSRCH: begin
-                tlbsrch_en = 1'b1;
-            end
-            `ALU_TLBFILL: begin
-                tlbfill_en = 1'b1;
-            end
-            `ALU_TLBWR: begin
-                tlbwr_en = 1'b1;
-            end
-            `ALU_INVTLB: begin
-                invtlb_en = 1'b1;
-                invtlb_asid = (ex_i.invtlb_op < 5'h4)? 10'b0: ex_i.reg_data[0][9:0];
-                invtlb_vpn = (ex_i.invtlb_op < 5'h5)? 19'b0: ex_i.reg_data[1][31:13];
-                invtlb_op = ex_i.invtlb_op;
-            end
-        endcase
-    end
 
     // reg data 
     assign ex_o.reg_write_en = ex_i.reg_write_en;
