@@ -269,9 +269,9 @@ module axi_interface(
                         wdata  <= cache_wdata;
                         wlast  <= cache_wlast;
                     end else begin
-                        wvalid <= 1'b0;
-                        wdata  <= cache_wdata;
-                        wlast  <= cache_wlast;
+                        wvalid <= wvalid;//1'b0;
+                        wdata  <= wdata;//cache_wdata;
+                        wlast  <= wlast;//cache_wlast;
                     end
                 end
                 BVALID: begin
