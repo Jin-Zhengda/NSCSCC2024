@@ -69,12 +69,12 @@ module mem
     endgenerate
 
     // exception 
-    logic [ISSUE_WIDTH - 1: 0] is_exception;
-    logic [ISSUE_WIDTH - 1: 0][6: 0] exception_cause;
+    logic [ISSUE_WIDTH - 1: 0][5:0] is_exception;
+    logic [ISSUE_WIDTH - 1: 0][5:0][6: 0] exception_cause;
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign is_exception[i] = mem_i[i].is_exception;
-            assign exception_cause[i] = mem_i[i].exception_cause[4:0];
+            assign is_exception[i] = {mem_i[i].is_exception[5:1], tlb_master.tlb_data_exception};
+            assign exception_cause[i] = {mem_i[i].exception_cause[4:0], tlb_master.tlb_data_exception_cause};
         end
     endgenerate
 
@@ -94,8 +94,8 @@ module mem
     assign tlb_inst_i.search_tlb_found = tlb_master.search_tlb_found;
     assign tlb_inst_i.search_tlb_index = tlb_master.search_tlb_index;
     assign tlb_inst_i.tlbehi_out = tlb_master.tlbehi_out;
-    assign tlb_inst_i.tlblo0_out = tlb_master.tlblo0_out;
-    assign tlb_inst_i.tlblo1_out = tlb_master.tlblo1_out;
+    assign tlb_inst_i.tlbelo0_out = tlb_master.tlbelo0_out;
+    assign tlb_inst_i.tlbelo1_out = tlb_master.tlbelo1_out;
     assign tlb_inst_i.tlbidx_out = tlb_master.tlbidx_out;
     assign tlb_inst_i.asid_out = tlb_master.asid_out;
     assign tlb_inst_i.tlbsrch_ret = tlb_master.tlbsrch_ret;

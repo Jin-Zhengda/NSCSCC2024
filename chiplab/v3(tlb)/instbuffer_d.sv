@@ -174,7 +174,8 @@ import pipeline_types::*;
             // Control
             .flush    (flush),
             .full     (full[i]),
-            .empty    (empty[i])
+            .empty    (empty[i]),
+            .push_stall(push_stall[i])
         );
     end
 

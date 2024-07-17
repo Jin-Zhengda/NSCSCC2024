@@ -142,15 +142,16 @@ interface ctrl_csr;
     logic [8:0] esubcode;
     exception_cause_t exception_cause;
     logic is_ertn;
+    logic is_tlb_exception;
 
     modport master(
         input eentry, era, ecfg, estat, crmd,
-        output is_exception, exception_pc, exception_addr, ecode, esubcode, exception_cause, is_ertn
+        output is_exception, exception_pc, exception_addr, ecode, esubcode, exception_cause, is_ertn, is_tlb_exception
     );
 
     modport slave(
         output eentry, era, ecfg, estat, crmd, is_ertn,
-        input is_exception, exception_pc, exception_addr, ecode, esubcode, exception_cause
+        input is_exception, exception_pc, exception_addr, ecode, esubcode, exception_cause, is_tlb_exception
     );
 endinterface : ctrl_csr
 
@@ -208,23 +209,21 @@ interface ex_tlb;
 
 
     //例外
-    logic                  tlb_inst_exception      ;
-    logic [5:0]            tlb_inst_exception_ecode;
-    logic [8:0]            tlb_inst_exception_esubcode;
+    logic [1:0]            tlb_inst_exception      ;
+    logic [1:0][6:0]       tlb_inst_exception_cause     ;
     logic                  tlb_data_exception      ;
-    logic [5:0]            tlb_data_exception_ecode;
-    logic [8:0]            tlb_data_exception_esubcode;
+    logic [6:0]            tlb_data_exception_cause;
 
 
 
     modport master(//ex
-        input tlb_inst_exception,tlb_inst_exception_ecode,tlb_inst_exception_esubcode,tlb_data_exception,tlb_data_exception_ecode,tlb_data_exception_esubcode,
+        input tlb_inst_exception,tlb_inst_exception_cause,tlb_data_exception,tlb_data_exception_cause,
                 search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbsrch_ret,tlbrd_ret,
         output tlbfill_en,tlbwr_en,tlbsrch_en,tlbrd_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op
     );
     modport slave(//tlb
         input tlbfill_en,tlbwr_en,tlbsrch_en,tlbrd_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op,
-        output tlb_inst_exception,tlb_inst_exception_ecode,tlb_inst_exception_esubcode,tlb_data_exception,tlb_data_exception_ecode,tlb_data_exception_esubcode,
+        output tlb_inst_exception,tlb_inst_exception_cause,tlb_data_exception,tlb_data_exception_cause,
                 search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbsrch_ret,tlbrd_ret
     );
 endinterface //ex_tlb

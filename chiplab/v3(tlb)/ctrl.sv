@@ -157,6 +157,9 @@ module ctrl
     exception_cause_t exception_cause_out;
     assign exception_cause_out = is_exception[0] ? exception_cause[0] : exception_cause[1];
     assign csr_master.exception_cause = exception_cause_out;
+    assign csr_master.is_tlb_exception = (|is_exception) ? (exception_cause_out == `EXCEPTION_PIL || exception_cause_out == `EXCEPTION_PIS
+                                        || exception_cause_out == `EXCEPTION_PIF || exception_cause_out == `EXCEPTION_PME 
+                                        || exception_cause_out == `EXCEPTION_PPI || exception_cause_out == `EXCEPTION_TLBR): 1'b0;
     always_comb begin
         case (exception_cause_out)
             `EXCEPTION_INT: begin

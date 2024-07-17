@@ -21,7 +21,6 @@ module csr
     input bus32_t csr_write_data,
 
     input tlb_inst_t tlb_inst,
-    input logic is_tlb_exception,
 
     // from stable counter
     bus64_t cnt,
@@ -359,7 +358,7 @@ module csr
             end else begin
                 tlbehi[31:13] <= 19'b0;
             end
-        end else if (is_tlb_exception) begin
+        end else if (ctrl_slave.is_tlb_exception) begin
             tlbehi[31:13] <= ctrl_slave.exception_addr[31:13];
         end 
     end

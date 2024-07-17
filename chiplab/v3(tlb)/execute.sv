@@ -22,6 +22,9 @@ module execute
     mem_dcache dcache_master,
     output cache_inst_t cache_inst,
 
+    // tlb
+    ex_tlb tlb_master,
+
     // to bpu
     output branch_update update_info,
 
@@ -72,6 +75,7 @@ module execute
                 .rst,
                 .ex_i(ex_i[i]),
                 .cnt,
+                .tlb_master(tlb_master),
                 .valid(valid[i]),
                 .op(op[i]),
                 .uncache_en(uncache_en[i]),
