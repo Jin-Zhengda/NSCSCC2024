@@ -123,16 +123,16 @@ module ctrl
     // exception addr
     always_comb begin
         if (is_exception[0]) begin
-            if (commit_ctrl_o[0].is_exception[1] && commit_ctrl_o[0].exception_cause[1] == `EXCEPTION_ADEF) begin
-                csr_master.exception_pc = commit_ctrl_o[0].branch_excp_pc;
-            end else begin
+            if (commit_ctrl_o[0].is_exception[5]) begin
                 csr_master.exception_pc = commit_ctrl_o[0].pc;
+            end else begin
+                csr_master.exception_pc = commit_ctrl_o[0].branch_excp_pc;
             end
         end else if (is_exception[1]) begin
-            if (commit_ctrl_o[1].is_exception[1] && commit_ctrl_o[1].exception_cause[1] == `EXCEPTION_ADEF) begin
-                csr_master.exception_pc = commit_ctrl_o[1].branch_excp_pc;
-            end else begin
+            if (commit_ctrl_o[1].is_exception[5]) begin
                 csr_master.exception_pc = commit_ctrl_o[1].pc;
+            end else begin
+                csr_master.exception_pc = commit_ctrl_o[1].branch_excp_pc;
             end
         end else begin
             csr_master.exception_pc = 32'b0;
