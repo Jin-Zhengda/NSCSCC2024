@@ -125,7 +125,7 @@ always_comb begin
         next_state=`IDLE;
     end
     else if(current_state==`UNCACHE_RETURN)begin
-        if(pre_op==1'b1&&wr_rdy)next_state=`IDLE;
+        if(pre_op==1'b1&&ducache_bvalid_o)next_state=`IDLE;
         else if(pre_op==1'b0&&ducache_rvalid_o)next_state=`IDLE;
         else next_state=`UNCACHE_RETURN;
     end
@@ -184,6 +184,7 @@ logic [6:0] way0_index_addr;
 logic [6:0] way1_index_addr;
 assign way0_index_addr=|wea_way0?write_index_addr:read_index_addr;
 assign way1_index_addr=|wea_way1?write_index_addr:read_index_addr;
+
 
 BRAM Bank0_way0(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(way0_cache[0]),.enb(1'b1),.web(wea_way0_single[0]),.dinb(cache_wdata[0]),.addrb(write_index_addr),.doutb(way0_cache_b[0]));
 BRAM Bank1_way0(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(way0_cache[1]),.enb(1'b1),.web(wea_way0_single[1]),.dinb(cache_wdata[1]),.addrb(write_index_addr),.doutb(way0_cache_b[1]));
@@ -299,7 +300,7 @@ assign wea_way1=(pre_valid&&hit_way1&&pre_op==1'b1)?pre_wstrb:((pre_valid&&ret_v
 
 
 assign mem2dcache.addr_ok=mem2dcache.valid&&((next_state==`IDLE)||((current_state==`IDLE)&&(next_state==`UNCACHE_RETURN)));
-assign mem2dcache.data_ok=((next_state==`IDLE)||(current_state==`IDLE)&&(next_state==`UNCACHE_RETURN))&&pre_valid&&pre_op==1'b0;
+assign mem2dcache.data_ok=((next_state==`IDLE)||((current_state==`UNCACHE_RETURN)&&(next_state==`IDLE)))&&pre_valid&&pre_op==1'b0;
 assign mem2dcache.rdata=(current_state==`UNCACHE_RETURN)?ducache_rdata_o:
                             (hit_success?
                                     (hit_way0?(write_read_same?way0_cache_b[pre_vaddr[4:2]]:way0_cache[pre_vaddr[4:2]]):

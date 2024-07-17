@@ -1,11 +1,12 @@
 `ifndef PIPELINE_TYPES_SV
 `define PIPELINE_TYPES_SV
+`define DIFF
 
 package pipeline_types;
 
     parameter REG_WIDTH = 32;
     parameter REG_ADDR_WIDTH = 5;
-    parameter CSR_ADDR_WIDTH = 12;
+    parameter CSR_ADDR_WIDTH = 14;
     parameter ALU_OP_WIDTH = 8;
     parameter ALU_SEL_WIDTH = 3;
 
@@ -14,9 +15,6 @@ package pipeline_types;
 
     parameter DECODER_WIDTH = 2;
     parameter ISSUE_WIDTH = 2;
-
-    parameter READ_PORTS = DECODER_WIDTH * 2;
-    parameter WRITE_PORTS = DECODER_WIDTH;
 
 
     typedef logic [REG_WIDTH - 1:0] bus32_t;
@@ -90,10 +88,12 @@ package pipeline_types;
         logic [5:0][EXC_CAUSE_WIDTH - 1:0] exception_cause;
         logic inst_valid;
         logic is_privilege;
+        logic is_cnt;
 
-        alu_op_t  aluop;
+        alu_op_t aluop;
         alu_sel_t alusel;
-        bus32_t   imm;
+        bus32_t imm;
+        logic [4:0] invtlb_op;
 
         logic [1:0] reg_read_en;
         logic [1:0][REG_ADDR_WIDTH - 1:0] reg_read_addr;
@@ -118,6 +118,13 @@ package pipeline_types;
         reg_addr_t reg_write_addr;
         bus32_t reg_write_data;
     } pipeline_push_forward_t;
+
+    // csr push forward
+    typedef struct packed {
+        logic csr_write_en;
+        csr_addr_t csr_write_addr;
+        bus32_t csr_write_data;
+    } csr_push_forward_t;
 
     // dispatch and ex
     typedef struct packed {
@@ -165,6 +172,7 @@ package pipeline_types;
         alu_op_t aluop;
 
         bus32_t mem_addr;
+        bus32_t mem_data;
 
         logic csr_write_en;
         csr_addr_t csr_addr;
@@ -224,11 +232,25 @@ package pipeline_types;
         logic [7:0] inst_st_en;
         bus32_t st_paddr;
         bus32_t st_vaddr;
+        bus32_t st_data;
 
         logic [7:0] inst_ld_en;
         bus32_t ld_paddr;
         bus32_t ld_vaddr;
     } diff_t;
+
+    typedef struct packed {
+        logic search_tlb_found;
+
+        logic [31:0] tlbehi_out;
+        logic [31:0] tlbelo0_out;
+        logic [31:0] tlbelo1_out;
+        logic [31:0] tlbidx_out;
+        logic [9:0]  asid_out;
+
+        logic tlbsrch_ret;
+        logic tlbrd_ret;
+    } tlb_inst_t;
 
 endpackage
 

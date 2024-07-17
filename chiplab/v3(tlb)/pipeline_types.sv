@@ -241,6 +241,7 @@ package pipeline_types;
 
     typedef struct packed {
         logic search_tlb_found;
+        logic [4:0] search_tlb_index;
 
         logic [31:0] tlbehi_out;
         logic [31:0] tlbelo0_out;

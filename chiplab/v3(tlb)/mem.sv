@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 `include "core_defines.sv"
 `include "csr_defines.sv"
+`include "pipeline_types.sv"
 //`define DIFF 
 
 module mem
@@ -88,6 +89,7 @@ module mem
 
     // tlb inst
     assign tlb_inst_i.search_tlb_found = tlb_master.search_tlb_found;
+    assign tlb_inst_i.search_tlb_index = tlb_master.search_tlb_index;
     assign tlb_inst_i.tlbehi_out = tlb_master.tlbehi_out;
     assign tlb_inst_i.tlblo0_out = tlb_master.tlblo0_out;
     assign tlb_inst_i.tlblo1_out = tlb_master.tlblo1_out;
