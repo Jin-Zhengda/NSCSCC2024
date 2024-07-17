@@ -299,7 +299,7 @@ assign wea_way1=(pre_valid&&hit_way1&&pre_op==1'b1)?pre_wstrb:((pre_valid&&ret_v
 
 
 
-assign mem2dcache.addr_ok=mem2dcache.valid&&((next_state==`IDLE)||((current_state==`IDLE)&&(next_state==`UNCACHE_RETURN)));
+assign mem2dcache.addr_ok=mem2dcache.valid&&(next_state==`IDLE);
 assign mem2dcache.data_ok=((next_state==`IDLE)||((current_state==`UNCACHE_RETURN)&&(next_state==`IDLE)))&&pre_valid&&pre_op==1'b0;
 assign mem2dcache.rdata=(current_state==`UNCACHE_RETURN)?ducache_rdata_o:
                             (hit_success?

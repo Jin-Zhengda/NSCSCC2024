@@ -17,6 +17,7 @@ module ctrl
     // from wb
     input mem_wb_t [ISSUE_WIDTH - 1:0] wb_o,
     input commit_ctrl_t [ISSUE_WIDTH - 1:0] commit_ctrl_o,
+    input tlb_inst_t tlb_inst_o,
 
     // with csr
     ctrl_csr csr_master,
@@ -37,7 +38,8 @@ module ctrl
     output logic is_llw_scw,
     output logic csr_write_en,
     output csr_addr_t csr_write_addr,
-    output bus32_t csr_write_data
+    output bus32_t csr_write_data,
+    output tlb_inst_t tlb_inst
     
     `ifdef DIFF
     ,
@@ -116,6 +118,7 @@ module ctrl
     assign csr_write_en = wb_o[0].csr_write_en | wb_o[1].csr_write_en;
     assign csr_write_addr = wb_o[0].csr_write_en ? wb_o[0].csr_write_addr: wb_o[1].csr_write_addr;
     assign csr_write_data = wb_o[0].csr_write_en ? wb_o[0].csr_write_data: wb_o[1].csr_write_data;
+    assign tlb_inst = (|is_exception) ? 0: tlb_inst_o;
 
     // exception addr
     assign csr_master.exception_pc = is_exception[0] ? commit_ctrl_o[0].pc: commit_ctrl_o[1].pc;

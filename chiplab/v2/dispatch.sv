@@ -54,18 +54,6 @@ module dispatch
     logic [1:0] inst_valid;
     assign inst_valid = {dispatch_i[1].pc != 32'b0, dispatch_i[0].pc != 32'b0};
 
-    // bus32_t pc1_i;
-    // bus32_t pc2_i;
-
-    // assign pc1_i = dispatch_i[0].pc;
-    // assign pc2_i = dispatch_i[1].pc;
-
-    // bus32_t pc1_o;
-    // bus32_t pc2_o;
-
-    // assign pc1_o = ex_i[0].pc;
-    // assign pc2_o = ex_i[1].pc;
-
     logic issue_double_en;
 
     logic privilege_inst;
@@ -83,17 +71,7 @@ module dispatch
     assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst && !cnt_inst && (&inst_valid);
     //assign issue_double_en = 2'b0;
 
-    always_comb begin
-        if (flush || rst || !(|inst_valid)) begin
-            issue_en = 2'b00;
-        end else if (issue_double_en) begin
-            issue_en = 2'b11;
-        end else if (inst_valid[0]) begin
-            issue_en = 2'b01;
-        end else begin
-            issue_en = 2'b10;
-        end
-    end
+    assign issue_en = (flush || rst || !(|inst_valid)) ? 2'b00 : (issue_double_en ? 2'b11 : (inst_valid[0] ? 2'b01 : 2'b10));
 
     // signal assignment
     generate

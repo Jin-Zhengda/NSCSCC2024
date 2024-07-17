@@ -34,6 +34,7 @@ module backend_top
 
     // to instbuffer
     output logic [1:0] send_inst_en,
+    output logic pause_decoder,
 
     // with tlb
     ex_tlb ex_tlb_master,
