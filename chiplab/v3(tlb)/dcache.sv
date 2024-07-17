@@ -1,60 +1,4 @@
-typedef logic[31:0] bus32_t;
-typedef logic[255:0] bus256_t;
 
-typedef struct packed {
-    logic is_cacop;
-    logic[4:0]cacop_code;
-    logic is_preld;
-    logic hint;
-    bus32_t addr;
-}cache_inst_t;
-
-interface mem_dcache;
-    logic valid;  // 请求有效
-    logic op;  // 操作类型，读-0，写-1
-    // logic[2:0] size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
-    bus32_t virtual_addr;  // 虚拟地址
-    bus32_t physical_addr;
-    logic tlb_excp_cancel_req;
-    logic [3:0] wstrb;  //写使能，1表示对应的8位数据需要写
-    bus32_t wdata;  //需要写的数据
-
-    logic addr_ok;              //该次请求的地址传输OK，读：地址被接收；写：地址和数据被接收
-    logic data_ok;  //该次请求的数据传输OK，读：数据返回；写：数据写入完成
-    bus32_t rdata;  //读DCache的结果
-
-    logic uncache_en;
-
-    modport master(
-        input addr_ok, data_ok, rdata, 
-        output valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata, uncache_en
-    );
-
-    modport slave(
-        output addr_ok, data_ok, rdata, 
-        input valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata, uncache_en
-    );
-endinterface : mem_dcache
-
-
-
-interface dcache_transaddr;
-    logic                   data_fetch;    //指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
-    logic [31:0]            data_vaddr;    //虚拟地址
-    logic [31:0]            ret_data_paddr;//物理地址
-    logic                   cacop_op_mode_di;//assign cacop_op_mode_di = ms_cacop && ((cacop_op_mode == 2'b0) || (cacop_op_mode == 2'b1));
-    logic                   store;//当前为store操作
-
-    modport master(//dcache
-        input ret_data_paddr,
-        output data_fetch,data_vaddr,cacop_op_mode_di,store
-    );
-
-    modport slave(
-        output ret_data_paddr,
-        input data_fetch,data_vaddr,cacop_op_mode_di,store
-    );
-endinterface : dcache_transaddr
 
 
 
@@ -292,8 +236,8 @@ logic[`INDEX_SIZE-1:0]tagv0_addr,tagv1_addr;
 assign tagv0_addr=|wea_way0?tagv_addr_write:read_index_addr;
 assign tagv1_addr=|wea_way1?tagv_addr_write:read_index_addr;
 
-BRAM TagV0(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w0),.enb(1'b1),.web(wea_way0),.dinb(tagv_data_tagv),.addrb(tagv_addr_write),.doutb());
-BRAM TagV1(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w1),.enb(1'b1),.web(wea_way1),.dinb(tagv_data_tagv),.addrb(tagv_addr_write),.doutb());
+BRAM TagV0(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w0),.enb(1'b1),.web(wea_way0),.dinb(tagv_data_tagv),.addrb(tagv_addr_write));
+BRAM TagV1(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w1),.enb(1'b1),.web(wea_way1),.dinb(tagv_data_tagv),.addrb(tagv_addr_write));
 
 
 logic[31:0] write_mask;

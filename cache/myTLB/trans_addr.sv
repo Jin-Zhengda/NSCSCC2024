@@ -391,8 +391,8 @@ logic [19:0]inst_tag,data_tag;
 assign inst_paddr = (pg_mode && inst_dmw0_en) ? {csr2tlb.csr_dmw0[`PSEG], inst_vaddr_buffer[28:0]} :
                     (pg_mode && inst_dmw1_en) ? {csr2tlb.csr_dmw1[`PSEG], inst_vaddr_buffer[28:0]} : inst_vaddr_buffer;
 
-assign inst_offset = icache2transaddr.inst_vaddr[4:0];
-assign inst_index  = icache2transaddr.inst_vaddr[11:5];
+assign inst_offset = inst_vaddr_buffer[4:0];
+assign inst_index  = inst_vaddr_buffer[11:5];
 assign inst_tag    = inst_addr_trans_en ? ((s0_ps == 6'd12) ? s0_ppn : {s0_ppn[19:10], inst_paddr[21:12]}) : inst_paddr[31:12];
 
 
@@ -400,8 +400,8 @@ assign inst_tag    = inst_addr_trans_en ? ((s0_ps == 6'd12) ? s0_ppn : {s0_ppn[1
 assign data_paddr = (pg_mode && data_dmw0_en && !dcache2transaddr.cacop_op_mode_di) ? {csr2tlb.csr_dmw0[`PSEG], data_vaddr_buffer[28:0]} : 
                     (pg_mode && data_dmw1_en && !dcache2transaddr.cacop_op_mode_di) ? {csr2tlb.csr_dmw1[`PSEG], data_vaddr_buffer[28:0]} : data_vaddr_buffer;
 
-assign data_offset = dcache2transaddr.data_vaddr[4:0];
-assign data_index  = dcache2transaddr.data_vaddr[11:5];
+assign data_offset = data_vaddr_buffer[4:0];
+assign data_index  = data_vaddr_buffer[11:5];
 assign data_tag    = data_addr_trans_en ? ((s1_ps == 6'd12) ? s1_ppn : {s1_ppn[19:10], data_paddr[21:12]}) : data_paddr[31:12];
 
 
