@@ -150,6 +150,7 @@ package pipeline_types;
         csr_addr_t csr_addr;
 
         logic [4:0] cacop_code;
+        logic [4:0] invtlb_op;
 
         logic   pre_is_branch;
         logic   pre_is_branch_taken;

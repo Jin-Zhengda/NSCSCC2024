@@ -95,6 +95,7 @@ module dispatch
             assign dispatch_o[id_idx].inst_valid = dispatch_i[id_idx].inst_valid;
             assign dispatch_o[id_idx].is_privilege = dispatch_i[id_idx].is_privilege;
             assign dispatch_o[id_idx].cacop_code = dispatch_i[id_idx].cacop_code;
+            assign dispatch_o[id_idx].invtlb_op = dispatch_i[id_idx].invtlb_op;
             assign dispatch_o[id_idx].is_exception = dispatch_i[id_idx].is_exception;
             assign dispatch_o[id_idx].exception_cause = dispatch_i[id_idx].exception_cause;
             assign dispatch_o[id_idx].aluop = dispatch_i[id_idx].aluop;
