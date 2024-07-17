@@ -1,7 +1,4 @@
 
-
-
-
 `timescale 1ns / 1ps
 
 `define ADDR_SIZE 32
@@ -333,7 +330,7 @@ logic [255:0]record_write_mem_data;
 always_ff @( posedge clk ) begin
     if(reset)record_dirty<=1'b0;
     else if(data_bvalid_o)record_dirty<=1'b0;
-    else if(next_state==`ASKMEM)begin
+    else if((next_state==`ASKMEM)&&write_dirty)begin
         record_dirty<=write_dirty;
         record_write_mem_addr<={(LRU_pick?tagv_cache_w1[19:0]:tagv_cache_w0[19:0]),target_physical_addr[11:0]};
         record_write_mem_data<=LRU_pick?{way1_cache[7],way1_cache[6],way1_cache[5],way1_cache[4],way1_cache[3],way1_cache[2],way1_cache[1],way1_cache[0]}:{way0_cache[7],way0_cache[6],way0_cache[5],way0_cache[4],way0_cache[3],way0_cache[2],way0_cache[1],way0_cache[0]};
