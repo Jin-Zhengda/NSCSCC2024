@@ -85,17 +85,7 @@ module dispatch
     assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst && !cnt_inst && (&inst_valid);
     //assign issue_double_en = 2'b0;
 
-    always_comb begin
-        if (flush || rst || !(|inst_valid)) begin
-            issue_en = 2'b00;
-        end else if (issue_double_en) begin
-            issue_en = 2'b11;
-        end else if (inst_valid[0]) begin
-            issue_en = 2'b01;
-        end else begin
-            issue_en = 2'b10;
-        end
-    end
+    assign issue_en = (flush || rst || !(|inst_valid)) ? 2'b00 : issue_double_en ? 2'b11 : inst_valid[0] ? 2'b01 : 2'b10;
 
     // signal assignment
     generate
@@ -128,9 +118,6 @@ module dispatch
             end
         end
     endgenerate
-
-    bus32_t imm;
-    assign imm = dispatch_i[1].imm;
 
     generate
         for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin

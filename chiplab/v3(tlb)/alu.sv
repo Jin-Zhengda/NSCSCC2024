@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 `include "core_defines.sv"
 `include "csr_defines.sv"
+`include "pipeline_types.sv"
 
 module alu
     import pipeline_types::*;
@@ -13,11 +14,17 @@ module alu
     // from stable counter
     input bus64_t cnt,
 
-    // with tlb
+    // tlb
     ex_tlb tlb_master,
 
     // with dcache
-    mem_dcache dcache_master,
+    output logic valid,
+    output logic op,
+    output logic uncache_en,
+    input logic addr_ok,
+    output bus32_t virtual_addr,
+    output bus32_t wdata,
+    output logic [3:0] wstrb,
 
     // to bpu
     output branch_update update_info,
@@ -37,7 +44,7 @@ module alu
     output ex_mem_t ex_o
 );
     // diff 
-    assign ex_o.mem_data = dcache_master.wdata;
+    assign ex_o.mem_data = wdata;
 
     // basic assignmnet 
     assign ex_o.pc = ex_i.pc;
@@ -73,7 +80,7 @@ module alu
     bus32_t div_alu_res;
     logic pause_ex_div;
     logic start_div;
-    logic op;
+    logic singed_op;
     logic done;
     logic is_running;
 
@@ -87,14 +94,14 @@ module alu
 
     assign start_div = (ex_i.aluop == `ALU_DIVW || ex_i.aluop == `ALU_MODW || ex_i.aluop == `ALU_DIVWU 
                         || ex_i.aluop == `ALU_MODWU) && !done && !is_running && (last_pc != ex_i.pc);
-    assign op = (ex_i.aluop == `ALU_DIVW || ex_i.aluop == `ALU_MODW);
+    assign singed_op = (ex_i.aluop == `ALU_DIVW || ex_i.aluop == `ALU_MODW);
     assign pause_ex_div = start_div || is_running;
 
     div_alu u_div_alu(
         .clk,
         .rst,
 
-        .op,
+        .op(singed_op),
         .dividend(ex_i.reg_data[0]),
         .divisor(ex_i.reg_data[1]),
         .start(start_div),
@@ -152,7 +159,6 @@ module alu
     // load store alu
     logic LLbit;
     assign LLbit = ex_i.csr_read_data[0];
-    assign dcache_master.tlb_excp_cancel_req = 1'b0;
 
     bus32_t load_store_alu_res;
     assign load_store_alu_res = (ex_i.aluop == `ALU_SCW)? {31'b0, LLbit}: 32'b0;
@@ -164,7 +170,7 @@ module alu
                         || ex_i.aluop == `ALU_STW || ex_i.aluop == `ALU_SCW;
 
     logic pause_ex_mem;
-    assign pause_ex_mem = is_mem && dcache_master.valid && !dcache_master.addr_ok;
+    assign pause_ex_mem = is_mem && valid && !addr_ok;
 
     logic[11: 0] si12;
     logic[13: 0] si14;
@@ -188,24 +194,23 @@ module alu
         endcase
     end
 
-    assign dcache_master.virtual_addr = ex_o.mem_addr;
+    assign virtual_addr = ex_o.mem_addr;
     logic mem_is_valid;
 
     always_comb begin
         if (ex_o.is_exception == 6'b0) begin
-            if (ex_i.pc < 32'h1c000100) begin
-            //if (ex_i.pc < 32'h00000000) begin
-                dcache_master.uncache_en = mem_is_valid && !ex_is_exception;
-                dcache_master.valid = 1'b0;
+            if (virtual_addr[31: 16] == 16'hbfaf) begin
+                uncache_en = mem_is_valid && !ex_is_exception;
+                valid = uncache_en;
             end 
             else begin
-                dcache_master.uncache_en = 1'b0;
-                dcache_master.valid = mem_is_valid && !ex_is_exception;
+                uncache_en = 1'b0;
+                valid = mem_is_valid && !ex_is_exception;
             end
         end
         else begin
-            dcache_master.uncache_en = 1'b0;
-            dcache_master.valid = 1'b0;
+            uncache_en = 1'b0;
+            valid = 1'b0;
         end
     end
 
@@ -214,77 +219,77 @@ module alu
             `ALU_LDB, `ALU_LDBU: begin
                 ex_is_exception = 1'b0;
                 ex_exception_cause = 7'b0;
-                dcache_master.op = 1'b0;
+                op = 1'b0;
                 mem_is_valid = 1'b1;
-                dcache_master.wdata = 32'b0;
-                dcache_master.wstrb = 4'b1111;
+                wdata = 32'b0;
+                wstrb = 4'b1111;
             end
             `ALU_LDH, `ALU_LDHU: begin
                 ex_is_exception = (ex_o.mem_addr[1: 0] == 2'b01) || (ex_o.mem_addr[1: 0] == 2'b11);
                 ex_exception_cause = (ex_o.mem_addr[1: 0] == 2'b01 || ex_o.mem_addr[1: 0] == 2'b11) ? `EXCEPTION_ALE : 7'b0;
-                dcache_master.op = 1'b0;
+                op = 1'b0;
                 mem_is_valid = 1'b1;
-                dcache_master.wdata = 32'b0;
-                dcache_master.wstrb = 4'b1111;
+                wdata = 32'b0;
+                wstrb = 4'b1111;
             end
             `ALU_LDW, `ALU_LLW: begin
                 ex_is_exception = (ex_o.mem_addr[1: 0] != 2'b00);
                 ex_exception_cause = (ex_o.mem_addr[1: 0] != 2'b00) ? `EXCEPTION_ALE: 7'b0;
-                dcache_master.op = 1'b0;
+                op = 1'b0;
                 mem_is_valid = 1'b1;
-                dcache_master.wdata = 32'b0;
-                dcache_master.wstrb = 4'b1111;
+                wdata = 32'b0;
+                wstrb = 4'b1111;
             end
             `ALU_STB: begin
                 ex_is_exception = 1'b0;
                 ex_exception_cause = 7'b0;
-                dcache_master.op = 1'b1;
+                op = 1'b1;
                 mem_is_valid = 1'b1;
                 case (ex_o.mem_addr[1: 0])
                     2'b00: begin
-                        dcache_master.wstrb = 4'b0001;
-                        dcache_master.wdata = {24'b0, ex_i.reg_data[1][7: 0]};
+                        wstrb = 4'b0001;
+                        wdata = {24'b0, ex_i.reg_data[1][7: 0]};
                     end 
                     2'b01: begin
-                        dcache_master.wstrb = 4'b0010;
-                        dcache_master.wdata = {16'b0, ex_i.reg_data[1][7: 0], 8'b0};
+                        wstrb = 4'b0010;
+                        wdata = {16'b0, ex_i.reg_data[1][7: 0], 8'b0};
                     end
                     2'b10: begin
-                        dcache_master.wstrb = 4'b0100;
-                        dcache_master.wdata = {8'b0, ex_i.reg_data[1][7: 0], 16'b0};
+                        wstrb = 4'b0100;
+                        wdata = {8'b0, ex_i.reg_data[1][7: 0], 16'b0};
                     end
                     2'b11: begin
-                        dcache_master.wstrb = 4'b1000;
-                        dcache_master.wdata = {ex_i.reg_data[1][7: 0], 24'b0};
+                        wstrb = 4'b1000;
+                        wdata = {ex_i.reg_data[1][7: 0], 24'b0};
                     end
                     default: begin
-                        dcache_master.wstrb = 4'b0000;                        
+                        wstrb = 4'b0000;                        
                     end
                 endcase
             end
             `ALU_STH: begin
-                dcache_master.op = 1'b1;
+                op = 1'b1;
                 mem_is_valid = 1'b1;
                 case (ex_o.mem_addr[1: 0])
                     2'b00: begin
-                        dcache_master.wstrb = 4'b0011;
-                        dcache_master.wdata = {16'b0, ex_i.reg_data[1][15: 0]};
+                        wstrb = 4'b0011;
+                        wdata = {16'b0, ex_i.reg_data[1][15: 0]};
                         ex_is_exception = 1'b0;
                         ex_exception_cause = 7'b0;
                     end 
                     2'b10: begin
-                        dcache_master.wstrb = 4'b1100;
-                        dcache_master.wdata = {ex_i.reg_data[1][15: 0], 16'b0};
+                        wstrb = 4'b1100;
+                        wdata = {ex_i.reg_data[1][15: 0], 16'b0};
                         ex_is_exception = 1'b0;
                         ex_exception_cause = 7'b0;
                     end
                     2'b01, 2'b11: begin
-                        dcache_master.wstrb = 4'b0000;
+                        wstrb = 4'b0000;
                         ex_is_exception = 1'b1;
                         ex_exception_cause = `EXCEPTION_ALE;
                     end
                     default: begin
-                        dcache_master.wstrb = 4'b0000;    
+                        wstrb = 4'b0000;    
                         ex_is_exception = 1'b0;
                         ex_exception_cause = 7'b0;                    
                     end
@@ -293,32 +298,32 @@ module alu
             `ALU_STW: begin
                 ex_is_exception = (ex_o.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
                 ex_exception_cause = (ex_o.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
-                dcache_master.op = 1'b1;
-                dcache_master.wdata = ex_i.reg_data[1];
+                op = 1'b1;
+                wdata = ex_i.reg_data[1];
                 mem_is_valid = 1'b1;
-                dcache_master.wstrb = 4'b1111;
+                wstrb = 4'b1111;
             end
             `ALU_SCW: begin
                 ex_is_exception = (ex_o.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
                 ex_exception_cause = (ex_o.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
                 if (LLbit) begin
-                    dcache_master.op = 1'b1;
-                    dcache_master.wdata = ex_i.reg_data[1];
+                    op = 1'b1;
+                    wdata = ex_i.reg_data[1];
                     mem_is_valid = 1'b1;
-                    dcache_master.wstrb = 4'b1111;
+                    wstrb = 4'b1111;
                 end
                 else begin
-                    dcache_master.op = 1'b0;
-                    dcache_master.wdata = 32'b0;
+                    op = 1'b0;
+                    wdata = 32'b0;
                     mem_is_valid = 1'b0;
-                    dcache_master.wstrb = 4'b1111;
+                    wstrb = 4'b1111;
                 end
             end
             default: begin
                 mem_is_valid = 1'b0;
-                dcache_master.wdata = 32'b0;
-                dcache_master.op = 1'b0;
-                dcache_master.wstrb = 4'b1111;
+                wdata = 32'b0;
+                op = 1'b0;
+                wstrb = 4'b1111;
                 ex_is_exception = 1'b0;
                 ex_exception_cause = 7'b0;
             end
@@ -432,7 +437,6 @@ module alu
             end
         endcase
     end
-
 
     // reg data 
     assign ex_o.reg_write_en = ex_i.reg_write_en;
