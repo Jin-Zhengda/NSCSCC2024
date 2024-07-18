@@ -60,16 +60,6 @@ import pipeline_types::*;
     assign fetch_cancel[1] = (is_branch[0] && pre_taken_or_not[0]);
 
 
-    logic [1:0][5: 0] is_exception_delay;
-    logic [1:0][5:0][6: 0] exception_cause_delay;
-
-    always_ff @(posedge clk) begin
-        is_exception_delay <= is_exception;
-        exception_cause_delay <= exception_cause;
-    end
-
-    assign inst_and_pc_o.is_exception = is_exception_delay;
-    assign inst_and_pc_o.exception_cause = exception_cause_delay;
 
     logic [1:0] fetch_en;
     assign fetch_en[0] = stall? 1'b0: icache_fetch_inst_en[0];
@@ -99,9 +89,9 @@ import pipeline_types::*;
     end
 
     logic [1:0] push_en;
-    logic [1:0][98:0] push_data;
+    logic [1:0][146:0] push_data;
     logic [1:0] pop_en;
-    logic [1:0][98:0] pop_data;
+    logic [1:0][146:0] pop_data;
     logic [1:0] full;
     logic [1:0] empty;
 
@@ -118,7 +108,7 @@ import pipeline_types::*;
                     push_data[i] = 0;
                 end else if(fetch_en[i]) begin
                     push_en[i] = 1;
-                    push_data[i] = fetch_cancel[i] ? 32'b0: {!valid_next, pre_branch_addr, pre_taken_or_not[i], is_branch[i], inst[i], pc[i]};
+                    push_data[i] = fetch_cancel[i] ? 32'b0: {is_exception[i],exception_cause[i],!valid_next, pre_branch_addr, pre_taken_or_not[i], is_branch[i], inst[i], pc[i]};
                 end else begin
                     push_en[i] = 0;
                     push_data[i] = 0;
@@ -132,13 +122,11 @@ import pipeline_types::*;
             always_comb begin
                 if(rst) begin
                     pop_en[i] = 0;
-                    inst_and_pc_o.inst_o[i] = 0;
-                    inst_and_pc_o.pc_o[i] = 0;
+                    inst_and_pc_o = 0;
                     branch_info[i] = 0;
                 end else if((pause | stall | empty[i]) && !buffer_full) begin
                     pop_en[i] = 0;
-                    inst_and_pc_o.inst_o[i] = 0;
-                    inst_and_pc_o.pc_o[i] = 0;
+                    inst_and_pc_o = 0;
                     branch_info[i] = 0;
                 end else if(send_inst_en[i]) begin
                     pop_en[i] = 1;
@@ -148,10 +136,11 @@ import pipeline_types::*;
                     inst_and_pc_o.valid[i] = pop_data[i][98];
                     branch_info[i].pre_taken_or_not = pop_data[i][65];
                     branch_info[i].pre_branch_addr = pop_data[i][97:66];
+                    inst_and_pc_o.exception_cause[i] = pop_data[i][140:99];
+                    inst_and_pc_o.is_exception[i] = pop_data[i][146:141];
                 end else begin
                     pop_en[i] = 0;
-                    inst_and_pc_o.inst_o[i] = 0;
-                    inst_and_pc_o.pc_o[i] = 0;
+                    inst_and_pc_o = 0;
                     branch_info[i] = 0;
                 end
             end
@@ -163,7 +152,7 @@ import pipeline_types::*;
     for (genvar i = 0; i < 2; ++i) begin : gen_fifo_bank
         fifo #(
             .DEPTH     (`InstBufferSize),
-            .DATA_WIDTH(99)
+            .DATA_WIDTH(147)
         ) fifo_bank (
             .clk      (clk),
             .rst      (rst),
