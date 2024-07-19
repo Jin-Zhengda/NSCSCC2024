@@ -6,29 +6,17 @@ module tlb
     input        clk,
     // search port 0
     input                        s0_fetch    ,//控制信号，取指令的使能
-    input   [18:0]               s0_vppn_a     ,//虚双页号(VPPN)
-    input                        s0_odd_page_a ,//表示查奇页表还是偶页表
+    input   [18:0]               s0_vppn     ,//虚双页号(VPPN)
+    input                        s0_odd_page ,//表示查奇页表还是偶页表
     input   [ 9:0]               s0_asid     ,//地址空间标识(ASID)即Address Space Identifier，用于区分不同进程中相同的虚地址
-    output                       s0_found_a    ,//输出信号，表示s0中命中了
+    output                       s0_found    ,//输出信号，表示s0中命中了
     output  [ 4:0]               s0_index    ,//不懂！！！！！！！！！！！！！！！！！！！！！！
-    output  [ 5:0]               s0_ps_a       ,//页大小(PS)，6 比特。仅在 MTLB 中出现。用于指定该页表项中存放的页大小。数值是页大小的 2的幂指数。龙芯架构 32 位精简版只支持 4KB 和 4MB 两种页大小,对应的 PS 值分别是 12 和 22。
-    output  [19:0]               s0_ppn_a      ,//物理页号(PPN)
-    output                       s0_v_a        ,//有效位(V)，1比特。为1表明该页表项是有效的且被访问过的。
-    output                       s0_d_a        ,//脏位(D)，1比特。为1表示该页表项所对应的地址范围内已有脏数据。
-    output  [ 1:0]               s0_mat_a      ,//存储访问类型(MAT)，2 比特。控制落在该页表项所在地址空间上访存操作的存储访问类型。存储访问类型：:0--强序非缓存,1--一致可缓存。2/3--保留。
-    output  [ 1:0]               s0_plv_a      ,//特权等级(PLV)，2比特。该页表项对应的特权等级。该页表项可以被任何特权等级不低于 PLV的程序访问。
-
-    input   [18:0]               s0_vppn_b     ,
-    input                        s0_odd_page_b ,
-    output                       s0_found_b    ,
-
-    output  [ 5:0]               s0_ps_b       ,
-    output  [19:0]               s0_ppn_b      ,
-    output                       s0_v_b        ,
-    output                       s0_d_b        ,
-    output  [ 1:0]               s0_mat_b      ,
-    output  [ 1:0]               s0_plv_b      ,
-
+    output  [ 5:0]               s0_ps       ,//页大小(PS)，6 比特。仅在 MTLB 中出现。用于指定该页表项中存放的页大小。数值是页大小的 2的幂指数。龙芯架构 32 位精简版只支持 4KB 和 4MB 两种页大小,对应的 PS 值分别是 12 和 22。
+    output  [19:0]               s0_ppn      ,//物理页号(PPN)
+    output                       s0_v        ,//有效位(V)，1比特。为1表明该页表项是有效的且被访问过的。
+    output                       s0_d        ,//脏位(D)，1比特。为1表示该页表项所对应的地址范围内已有脏数据。
+    output  [ 1:0]               s0_mat      ,//存储访问类型(MAT)，2 比特。控制落在该页表项所在地址空间上访存操作的存储访问类型。存储访问类型：:0--强序非缓存,1--一致可缓存。2/3--保留。
+    output  [ 1:0]               s0_plv      ,//特权等级(PLV)，2比特。该页表项对应的特权等级。该页表项可以被任何特权等级不低于 PLV的程序访问。
     //search port 1
     input                        s1_fetch    ,
     input   [18:0]               s1_vppn     ,
@@ -127,53 +115,35 @@ end
 
 
 //创建reg变量记录输入请求
-reg		   s0_fetch_r_a   ;
-reg [18:0] s0_vppn_r_a    ;
-reg        s0_odd_page_r_a;
-reg [ 9:0] s0_asid_r_a    ;
-reg		   s0_fetch_r_b   ;
-reg [18:0] s0_vppn_r_b    ;
-reg        s0_odd_page_r_b;
-reg [ 9:0] s0_asid_r_b    ;
+reg		   s0_fetch_r   ;
+reg [18:0] s0_vppn_r    ;
+reg        s0_odd_page_r;
+reg [ 9:0] s0_asid_r    ;
 reg		   s1_fetch_r   ;
 reg [18:0] s1_vppn_r    ;
 reg        s1_odd_page_r;
 reg [ 9:0] s1_asid_r    ;
 
 //one-hot类型记录命中情况
-wire [TLBNUM-1:0] match0_a;
-wire [TLBNUM-1:0] match0_b;
+wire [TLBNUM-1:0] match0;
 wire [TLBNUM-1:0] match1;
 
 //数值类型表示命中数据所在的下标
-wire [$clog2(TLBNUM)-1:0] match0_en_a;
-wire [$clog2(TLBNUM)-1:0] match0_en_b;
+wire [$clog2(TLBNUM)-1:0] match0_en;
 wire [$clog2(TLBNUM)-1:0] match1_en;
 
 //表示查奇页表还是偶页表
-wire [TLBNUM-1:0] s0_odd_page_buffer_a;
-wire [TLBNUM-1:0] s0_odd_page_buffer_b;
+wire [TLBNUM-1:0] s0_odd_page_buffer;
 wire [TLBNUM-1:0] s1_odd_page_buffer;
 
 //为s0_fetch_r，s0_vppn_r，s0_odd_page_r，s0_asid_r赋值
 always @(posedge clk) begin
-	s0_fetch_r_a <= s0_fetch;
+	s0_fetch_r <= s0_fetch;
 	if (s0_fetch) begin
-		s0_vppn_r_a      <= s0_vppn_a;    
-        s0_odd_page_r_a  <= s0_odd_page_a;
-        s0_asid_r_a      <= s0_asid;
-        s0_vppn_r_b      <= s0_vppn_b;    
-        s0_odd_page_r_b  <= s0_odd_page_b;
-        s0_asid_r_b      <= s0_asid;
+		s0_vppn_r      <= s0_vppn;    
+        s0_odd_page_r  <= s0_odd_page;
+        s0_asid_r      <= s0_asid;
 	end
-    else begin
-        s0_vppn_r_a      <= 19'b0;
-        s0_odd_page_r_a  <= 1'b0;
-        s0_asid_r_a      <= 10'b0;
-        s0_vppn_r_b      <= 19'b0;
-        s0_odd_page_r_b  <= 1'b0;
-        s0_asid_r_b      <= 10'b0;
-    end
 	s1_fetch_r <= s1_fetch;
 	if (s1_fetch) begin
 		s1_vppn_r      <= s1_vppn;    
@@ -181,6 +151,9 @@ always @(posedge clk) begin
         s1_asid_r      <= s1_asid;
 	end
     else begin
+        s0_vppn_r      <= 19'b0;
+        s0_odd_page_r  <= 1'b0;
+        s0_asid_r      <= 10'b0;
         s1_vppn_r      <= 19'b0;    
         s1_odd_page_r  <= 1'b0;
         s1_asid_r      <= 10'b0;
@@ -192,18 +165,15 @@ genvar i;
 generate
     for (i = 0; i < TLBNUM; i = i + 1)
         begin: match
-            assign s0_odd_page_buffer_a[i] = (tlb_ps[i] == 6'd12) ? s0_odd_page_r_a : s0_vppn_r_a[8];
-            assign s0_odd_page_buffer_b[i] = (tlb_ps[i] == 6'd12) ? s0_odd_page_r_b : s0_vppn_r_b[8];
-            assign match0_a[i] = tlb_e[i] && ((tlb_ps[i] == 6'd12) ? s0_vppn_r_a == tlb_vppn[i] : s0_vppn_r_a[18: 9] == tlb_vppn[i][18: 9]) && ((s0_asid_r_a == tlb_asid[i]) || tlb_g[i]);
-            assign match0_b[i] = tlb_e[i] && ((tlb_ps[i] == 6'd12) ? s0_vppn_r_b == tlb_vppn[i] : s0_vppn_r_b[18: 9] == tlb_vppn[i][18: 9]) && ((s0_asid_r_b == tlb_asid[i]) || tlb_g[i]);
+            assign s0_odd_page_buffer[i] = (tlb_ps[i] == 6'd12) ? s0_odd_page_r : s0_vppn_r[8];
+            assign match0[i] = tlb_e[i] && ((tlb_ps[i] == 6'd12) ? s0_vppn_r == tlb_vppn[i] : s0_vppn_r[18: 9] == tlb_vppn[i][18: 9]) && ((s0_asid_r == tlb_asid[i]) || tlb_g[i]);
             assign s1_odd_page_buffer[i] = (tlb_ps[i] == 6'd12) ? s1_odd_page_r : s1_vppn_r[8];
             assign match1[i] = tlb_e[i] && ((tlb_ps[i] == 6'd12) ? s1_vppn_r == tlb_vppn[i] : s1_vppn_r[18: 9] == tlb_vppn[i][18: 9]) && ((s1_asid_r == tlb_asid[i]) || tlb_g[i]);
         end
 endgenerate
 
 //解码数据，转化便于使用
-encoder_32_5 en_match0_a (.in({{(32-TLBNUM){1'b0}},match0_a}), .out(match0_en_a));//将32位的one-hot型数据解码成5位，即输出为 32位数据中是1的那一个数据的下标
-encoder_32_5 en_match0_b (.in({{(32-TLBNUM){1'b0}},match0_b}), .out(match0_en_b));
+encoder_32_5 en_match0 (.in({{(32-TLBNUM){1'b0}},match0}), .out(match0_en));//将32位的one-hot型数据解码成5位，即输出为 32位数据中是1的那一个数据的下标
 encoder_32_5 en_match1 (.in({{(32-TLBNUM){1'b0}},match1}), .out(match1_en));
 
 
@@ -211,25 +181,14 @@ encoder_32_5 en_match1 (.in({{(32-TLBNUM){1'b0}},match1}), .out(match1_en));
 
 
 //给输出信号赋值，将信息处理成输出
-assign s0_found_a = |match0_a;
-assign s0_index_a = {{(5-$clog2(TLBNUM)){1'b0}},match0_en_a};
-assign s0_ps_a    = tlb_ps[match0_en_a];
-assign s0_ppn_a   = s0_odd_page_buffer_a[match0_en_a] ? tlb_ppn1[match0_en_a] : tlb_ppn0[match0_en_a];
-assign s0_v_a     = s0_odd_page_buffer_a[match0_en_a] ? tlb_v1[match0_en_a]   : tlb_v0[match0_en_a]  ;
-assign s0_d_a     = s0_odd_page_buffer_a[match0_en_a] ? tlb_d1[match0_en_a]   : tlb_d0[match0_en_a]  ;
-assign s0_mat_a   = s0_odd_page_buffer_a[match0_en_a] ? tlb_mat1[match0_en_a] : tlb_mat0[match0_en_a];
-assign s0_plv_a   = s0_odd_page_buffer_a[match0_en_a] ? tlb_plv1[match0_en_a] : tlb_plv0[match0_en_a];
-
-assign s0_found_b = |match0_b;
-assign s0_index_b = {{(5-$clog2(TLBNUM)){1'b0}},match0_en_b};
-assign s0_ps_b    = tlb_ps[match0_en_b];
-assign s0_ppn_b   = s0_odd_page_buffer_b[match0_en_b] ? tlb_ppn1[match0_en_b] : tlb_ppn0[match0_en_b];
-assign s0_v_b     = s0_odd_page_buffer_b[match0_en_b] ? tlb_v1[match0_en_b]   : tlb_v0[match0_en_b]  ;
-assign s0_d_b     = s0_odd_page_buffer_b[match0_en_b] ? tlb_d1[match0_en_b]   : tlb_d0[match0_en_b]  ;
-assign s0_mat_b   = s0_odd_page_buffer_b[match0_en_b] ? tlb_mat1[match0_en_b] : tlb_mat0[match0_en_b];
-assign s0_plv_b   = s0_odd_page_buffer_b[match0_en_b] ? tlb_plv1[match0_en_b] : tlb_plv0[match0_en_b];
-
-
+assign s0_found = |match0;
+assign s0_index = {{(5-$clog2(TLBNUM)){1'b0}},match0_en};
+assign s0_ps    = tlb_ps[match0_en];
+assign s0_ppn   = s0_odd_page_buffer[match0_en] ? tlb_ppn1[match0_en] : tlb_ppn0[match0_en];
+assign s0_v     = s0_odd_page_buffer[match0_en] ? tlb_v1[match0_en]   : tlb_v0[match0_en]  ;
+assign s0_d     = s0_odd_page_buffer[match0_en] ? tlb_d1[match0_en]   : tlb_d0[match0_en]  ;
+assign s0_mat   = s0_odd_page_buffer[match0_en] ? tlb_mat1[match0_en] : tlb_mat0[match0_en];
+assign s0_plv   = s0_odd_page_buffer[match0_en] ? tlb_plv1[match0_en] : tlb_plv0[match0_en];
 
 assign s1_found = |match1;
 assign s1_index = {{(5-$clog2(TLBNUM)){1'b0}},match1_en};
