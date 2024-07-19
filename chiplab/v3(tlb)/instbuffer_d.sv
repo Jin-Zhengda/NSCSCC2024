@@ -14,13 +14,13 @@ import pipeline_types::*;
     input logic pause,
     input logic pause_decoder,
 
-    ex_tlb tlb_master,
-
     //icache传来的信号
     input logic [1:0][31:0] inst,
     input logic [1:0][31:0] pc,
     input logic [1:0][5: 0] is_exception,
     input logic [1:0][5:0][6: 0] exception_cause,
+    input logic [1:0] tlb_inst_exception,
+    input logic [1:0][6:0] tlb_inst_exception_cause,
 
     //bpu传来的信号
     input logic [1:0] is_branch,
@@ -46,6 +46,14 @@ import pipeline_types::*;
     logic[1:0] last_is_branch_delay;
     logic[1:0] last_pre_taken_or_not_delay;
 
+    logic [1:0][5:0] buffer_is_exception;
+    logic [1:0][5:0][6:0] buffer_exception_cause;
+    generate
+        for (genvar i = 0; i < 2; i++) begin
+            assign buffer_is_exception[i] = {is_exception[i][5], tlb_inst_exception[i], is_exception[i][3:0]};
+            assign buffer_exception_cause[i] = {exception_cause[i][5], tlb_inst_exception_cause[i], exception_cause[i][3:0]};
+        end
+    endgenerate
 
     always_ff @(posedge clk) begin
         last_is_branch <= is_branch;
@@ -58,22 +66,6 @@ import pipeline_types::*;
     assign fetch_cancel[0] = 0;
     assign fetch_cancel[1] = (is_branch[0] && pre_taken_or_not[0]);
 
-
-    logic [1:0][5: 0] is_exception_delay;
-    logic [1:0][5:0][6: 0] exception_cause_delay;
-
-    generate
-        for (genvar i = 0; i < 2; i++) begin
-            always_ff @(posedge clk) begin
-                is_exception_delay <= {is_exception[i][6], tlb_master.tlb_inst_exception[i], is_exception[i][4:0]};
-                exception_cause_delay <= {exception_cause[i][6], tlb_master.tlb_inst_exception_cause[i], exception_cause[i][4:0]};
-            end
-        end
-    endgenerate
-
-
-    assign inst_and_pc_o.is_exception = is_exception_delay;
-    assign inst_and_pc_o.exception_cause = exception_cause_delay;
 
     logic [1:0] fetch_en;
     assign fetch_en[0] = stall? 1'b0: icache_fetch_inst_en[0];
@@ -103,9 +95,9 @@ import pipeline_types::*;
     end
 
     logic [1:0] push_en;
-    logic [1:0][98:0] push_data;
+    logic [1:0][146:0] push_data;
     logic [1:0] pop_en;
-    logic [1:0][98:0] pop_data;
+    logic [1:0][146:0] pop_data;
     logic [1:0] full;
     logic [1:0] empty;
     logic [1:0] push_stall;
@@ -123,7 +115,7 @@ import pipeline_types::*;
                     push_data[i] = 0;
                 end else if(fetch_en[i]) begin
                     push_en[i] = 1;
-                    push_data[i] = fetch_cancel[i] ? 32'b0: {!valid_next, pre_branch_addr, pre_taken_or_not[i], is_branch[i], inst[i], pc[i]};
+                    push_data[i] = fetch_cancel[i] ? 32'b0: {buffer_is_exception[i],buffer_exception_cause[i],!valid_next, pre_branch_addr, pre_taken_or_not[i], is_branch[i], inst[i], pc[i]};
                 end else begin
                     push_en[i] = 0;
                     push_data[i] = 0;
@@ -137,13 +129,12 @@ import pipeline_types::*;
             always_comb begin
                 if(rst) begin
                     pop_en[i] = 0;
-                    inst_and_pc_o.inst_o[i] = 0;
+                    inst_and_pc_o = 0;
                     inst_and_pc_o.pc_o[i] = 0;
                     branch_info[i] = 0;
                 end else if(((pause | empty[i]) && !buffer_full) | pause_decoder) begin
                     pop_en[i] = 0;
-                    inst_and_pc_o.inst_o[i] = 0;
-                    inst_and_pc_o.pc_o[i] = 0;
+                    inst_and_pc_o = 0;
                     branch_info[i] = 0;
                 end else if(send_inst_en[i]) begin
                     pop_en[i] = 1;
@@ -153,10 +144,11 @@ import pipeline_types::*;
                     inst_and_pc_o.valid[i] = pop_data[i][98];
                     branch_info[i].pre_taken_or_not = pop_data[i][65];
                     branch_info[i].pre_branch_addr = pop_data[i][97:66];
+                    inst_and_pc_o.exception_cause[i] = pop_data[i][140:99];
+                    inst_and_pc_o.is_exception[i] = pop_data[i][146:141];
                 end else begin
                     pop_en[i] = 0;
-                    inst_and_pc_o.inst_o[i] = 0;
-                    inst_and_pc_o.pc_o[i] = 0;
+                    inst_and_pc_o = 0;
                     branch_info[i] = 0;
                 end
             end
@@ -168,7 +160,7 @@ import pipeline_types::*;
     for (genvar i = 0; i < 2; ++i) begin : gen_fifo_bank
         fifo #(
             .DEPTH     (`InstBufferSize),
-            .DATA_WIDTH(99)
+            .DATA_WIDTH(147)
         ) fifo_bank (
             .clk      (clk),
             .rst      (rst),
@@ -187,7 +179,5 @@ import pipeline_types::*;
     end
 
 
-
-    
 
 endmodule

@@ -182,7 +182,7 @@ module core_top (
     reg             cmt1_ertn         ;
     reg     [5:0]   cmt1_csr_ecode    ;
     reg             cmt1_tlbfill_en   ;
-    reg             cmt_rand_index    ;
+    reg     [4:0]   cmt_rand_index    ;
 
     // to difftest debug
     reg             trap                  ;
@@ -341,7 +341,8 @@ module core_top (
         .buffer_full(buffer_full),
         .bpu_flush,
         .pause_decoder,
-        .tlb_master(ex_tlb_io.master)
+        .tlb_inst_exception(ex_tlb_io.tlb_inst_exception),
+        .tlb_inst_exception_cause(ex_tlb_io.tlb_inst_exception_cause)
     );
 
     logic icache_cacop;
@@ -563,6 +564,8 @@ logic wr_rdy;
     );
 
     `ifdef DIFF
+    assign tlbfill_en0 = diff[0].inst_valid ? ex_tlb_io.tlbfill_en : 1'b0;
+    assign tlbfill_en1 = diff[1].inst_valid ? ex_tlb_io.tlbfill_en : 1'b0;
     always @(posedge aclk) begin
         if (rst) begin
             {cmt0_valid, cmt0_cnt_inst, cmt0_timer_64, cmt0_inst_ld_en, cmt0_ld_paddr, cmt0_ld_vaddr, cmt0_inst_st_en, cmt0_st_paddr, cmt0_st_vaddr, cmt0_st_data, cmt0_csr_rstat_en, cmt0_csr_data} <= 0;
@@ -593,7 +596,7 @@ logic wr_rdy;
             cmt0_excp_flush  <= diff[0].excp_flush;
             cmt0_ertn        <= diff[0].ertn_flush;
             cmt0_csr_ecode   <= diff[0].ecode;
-            cmt0_tlbfill_en  <= tlbfill_en0         ;   
+            cmt0_tlbfill_en  <= diff[0].tlbfill_en;   
 
             cmt1_valid       <= diff[1].inst_valid;
             cmt1_cnt_inst    <= diff[1].cnt_inst;
@@ -618,8 +621,8 @@ logic wr_rdy;
             cmt1_excp_flush  <= diff[1].excp_flush;
             cmt1_ertn        <= diff[1].ertn_flush;
             cmt1_csr_ecode   <= diff[1].ecode;
-            cmt1_tlbfill_en  <= tlbfill_en1         ;
-            cmt_rand_index   <= rand_index            ;  
+            cmt1_tlbfill_en  <= diff[1].tlbfill_en;
+            cmt_rand_index   <= cnt[4:0];  
         end
           
     end
@@ -647,46 +650,19 @@ logic wr_rdy;
         end
     end
 
-    logic pc1_lt_pc2;
     logic excp_flush;
     bus32_t excp_pc;
     bus32_t excp_inst;
     
-    assign pc1_lt_pc2 = cmt0_pc < cmt1_pc;
     always_comb begin
-        if (pc1_lt_pc2) begin
-            if (cmt0_excp_flush) begin
-                excp_flush = cmt0_excp_flush;
-                excp_pc = cmt0_pc;
-                excp_inst = cmt0_inst;
-            end else begin
-                excp_flush = cmt1_excp_flush;
-                excp_pc = cmt1_pc;
-                excp_inst = cmt1_inst;
-            end
+        if (cmt0_excp_flush) begin
+            excp_flush = cmt0_excp_flush;
+            excp_pc = cmt0_pc;
+            excp_inst = cmt0_inst;
         end else begin
-            if (cmt1_excp_flush) begin
-                excp_flush = cmt1_excp_flush;
-                excp_pc = cmt1_pc;
-                excp_inst = cmt1_inst;
-            end else begin
-                excp_flush = cmt0_excp_flush;
-                excp_pc = cmt0_pc;
-                excp_inst = cmt0_inst;
-            end
-        end
-    end
-
-    logic inst_index;
-    always_comb begin
-        if (pc1_lt_pc2) begin
-            if (cmt0_valid && cmt1_valid) inst_index = 1'b0;
-            else if (cmt0_valid) inst_index = 1'b0;
-            else if (cmt1_valid) inst_index = 1'b1;
-        end else begin
-            if (cmt0_valid && cmt1_valid) inst_index = 1'b1;
-            else if (cmt0_valid) inst_index = 1'b0;
-            else if (cmt1_valid) inst_index = 1'b1;
+            excp_flush = cmt1_excp_flush;
+            excp_pc = cmt1_pc;
+            excp_inst = cmt1_inst;
         end
     end
     
@@ -694,15 +670,13 @@ logic wr_rdy;
     DifftestInstrCommit DifftestInstrCommit_0(
         .clock              (aclk           ),
         .coreid             (0              ),
-        .index              (inst_index     ),
+        .index              (0     ),
         .valid              (cmt0_valid   ),
         .pc                 (cmt0_pc      ),
         .instr              (cmt0_inst    ),
         .skip               (0              ),
-        // .is_TLBFILL         (cmt_tlbfill_en0),
-        .is_TLBFILL         (0),
-        // .TLBFILL_index      (cmt_rand_index ),
-        .TLBFILL_index      (0),
+        .is_TLBFILL         (cmt0_tlbfill_en),
+        .TLBFILL_index      (cmt_rand_index ),
         .is_CNTinst         (cmt0_cnt_inst),
         .timer_64_value     (cmt0_timer_64),
         .wen                (cmt0_wen     ),
@@ -715,15 +689,13 @@ logic wr_rdy;
     DifftestInstrCommit DifftestInstrCommit_1(
         .clock              (aclk           ),
         .coreid             (0              ),
-        .index              (!inst_index    ),
+        .index              (1    ),
         .valid              (cmt1_valid   ),
         .pc                 (cmt1_pc      ),
         .instr              (cmt1_inst    ),
         .skip               (0              ),
-        // .is_TLBFILL         (cmt_tlbfill_en1),
-        .is_TLBFILL         (0),
-        // .TLBFILL_index      (cmt_rand_index ),
-        .TLBFILL_index      (0),
+        .is_TLBFILL         (cmt1_tlbfill_en),
+        .TLBFILL_index      (cmt_rand_index ),
         .is_CNTinst         (cmt1_cnt_inst),
         .timer_64_value     (cmt1_timer_64),
         .wen                (cmt1_wen     ),
@@ -755,8 +727,8 @@ logic wr_rdy;
         .cycleCnt           (cycleCnt       ),
         .instrCnt           (instrCnt       )
     );
-
-    DifftestStoreEvent DifftestStoreEvent(
+     
+    DifftestStoreEvent DifftestStoreEvent0(
         .clock              (aclk             ),
         .coreid             (0                ),
         .index              (0                ),
@@ -766,13 +738,32 @@ logic wr_rdy;
         .storeData          (cmt0_st_data   )
     );
 
-    DifftestLoadEvent DifftestLoadEvent(
+    DifftestStoreEvent DifftestStoreEvent1(
+        .clock              (aclk             ),
+        .coreid             (0                ),
+        .index              (1                ),
+        .valid              (cmt1_inst_st_en),
+        .storePAddr         (cmt1_st_paddr  ),
+        .storeVAddr         (cmt1_st_vaddr  ),
+        .storeData          (cmt1_st_data   )
+    );
+
+    DifftestLoadEvent DifftestLoadEvent0(
         .clock              (aclk             ),
         .coreid             (0                ),
         .index              (0                ),
         .valid              (cmt0_inst_ld_en),
         .paddr              (cmt0_ld_paddr  ),
         .vaddr              (cmt0_ld_vaddr  )
+    );
+
+    DifftestLoadEvent DifftestLoadEvent1(
+        .clock              (aclk             ),
+        .coreid             (0                ),
+        .index              (1                ),
+        .valid              (cmt1_inst_ld_en),
+        .paddr              (cmt1_ld_paddr  ),
+        .vaddr              (cmt1_ld_vaddr  )
     );
 
     DifftestCSRRegState DifftestCSRRegState(

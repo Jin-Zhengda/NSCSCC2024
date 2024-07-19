@@ -66,8 +66,13 @@ module ctrl
     assign csr_master.is_ertn = is_ertn;
 
     // new target
+    logic is_refetch;
+    bus32_t refetch_target;
+    assign refetch_target = commit_ctrl_o[0].pc + commit_ctrl_o[1].pc + 32'h4;
     logic [1:0] is_exception;
-    assign new_pc = |is_exception ?  csr_master.eentry: (is_ertn ? csr_master.era : branch_target);
+    logic is_tlbrefill;
+    assign new_pc = |is_exception ?  (is_tlbrefill ? csr_master.tlbrentry: csr_master.eentry): (is_ertn ? csr_master.era : (is_refetch ? refetch_target: branch_target));
+    //assign new_pc = |is_exception ?  csr_master.eentry: (is_ertn ? csr_master.era : branch_target);
 
     // exception enable
     generate
@@ -82,13 +87,13 @@ module ctrl
     // flush[4] dispatch, flush[5] ex, flush[6] mem, flush[7] wb
     assign flush = {
         1'b0,
-        |is_exception || is_ertn,
-        |is_exception || is_ertn,
-        |is_exception || is_ertn || branch_flush || ex_excp_flush,
-        |is_exception || is_ertn || branch_flush || ex_excp_flush,
-        |is_exception || is_ertn || branch_flush,
-        |is_exception || is_ertn || branch_flush || bpu_flush,
-        |is_exception || is_ertn || branch_flush
+        |is_exception || is_ertn || is_refetch,
+        |is_exception || is_ertn || is_refetch,
+        |is_exception || is_ertn || branch_flush || ex_excp_flush || is_refetch,
+        |is_exception || is_ertn || branch_flush || ex_excp_flush || is_refetch,
+        |is_exception || is_ertn || branch_flush || is_refetch,
+        |is_exception || is_ertn || branch_flush || bpu_flush || is_refetch,
+        |is_exception || is_ertn || branch_flush || is_refetch
     };
 
     // commit
@@ -114,72 +119,70 @@ module ctrl
         end
     end
 
+    // csr relate
+    logic is_tlb_inst;
+    assign is_tlb_inst = (commit_ctrl_o[0].aluop == `ALU_TLBSRCH) || (commit_ctrl_o[0].aluop == `ALU_TLBRD) || (commit_ctrl_o[0].aluop == `ALU_TLBWR)
+                        || (commit_ctrl_o[1].aluop == `ALU_TLBSRCH) || (commit_ctrl_o[1].aluop == `ALU_TLBRD) || (commit_ctrl_o[1].aluop == `ALU_TLBWR);
     assign is_llw_scw = wb_o[0].is_llw_scw | wb_o[1].is_llw_scw;
     assign csr_write_en = wb_o[0].csr_write_en | wb_o[1].csr_write_en;
     assign csr_write_addr = wb_o[0].csr_write_en ? wb_o[0].csr_write_addr: wb_o[1].csr_write_addr;
     assign csr_write_data = wb_o[0].csr_write_en ? wb_o[0].csr_write_data: wb_o[1].csr_write_data;
-    assign tlb_inst = (|is_exception) ? 0: tlb_inst_o;
+    assign tlb_inst = !(|is_exception) && is_tlb_inst  ? tlb_inst_o: 0;
+    assign is_refetch = !(|is_exception) && (csr_write_en || is_tlb_inst);
 
-    // exception addr
-    always_comb begin
-        if (is_exception[0]) begin
-            if (commit_ctrl_o[0].is_exception[5]) begin
-                csr_master.exception_pc = commit_ctrl_o[0].pc;
-            end else begin
-                csr_master.exception_pc = commit_ctrl_o[0].branch_excp_pc;
-            end
-        end else if (is_exception[1]) begin
-            if (commit_ctrl_o[1].is_exception[5]) begin
-                csr_master.exception_pc = commit_ctrl_o[1].pc;
-            end else begin
-                csr_master.exception_pc = commit_ctrl_o[1].branch_excp_pc;
-            end
-        end else begin
-            csr_master.exception_pc = 32'b0;
-        end
-    end
-
+    assign csr_master.exception_pc = is_exception[0] ? commit_ctrl_o[0].pc: commit_ctrl_o[1].pc;
     assign csr_master.exception_addr = is_exception[0] ? commit_ctrl_o[0].mem_addr: commit_ctrl_o[1].mem_addr;
 
     // exception cause
     exception_cause_t [ISSUE_WIDTH - 1: 0] exception_cause;
-    always_comb begin
-        for (integer i = 0; i < ISSUE_WIDTH; i++) begin
-            if (is_exception[i]) begin
-                if (is_interrupt) begin
-                    exception_cause[i] = `EXCEPTION_INT;
-                end else if (commit_ctrl_o[i].is_exception[5]) begin
-                    exception_cause[i] = commit_ctrl_o[i].exception_cause[5];
-                end else if (commit_ctrl_o[i].is_exception[4]) begin
-                    exception_cause[i] = commit_ctrl_o[i].exception_cause[4];
-                end else if (commit_ctrl_o[i].is_exception[3]) begin
-                    exception_cause[i] = commit_ctrl_o[i].exception_cause[3];
-                end else if (commit_ctrl_o[i].is_exception[2]) begin
-                    if (commit_ctrl_o[i].is_privilege && csr_master.crmd[1:0] != 2'b00) begin
-                        exception_cause[i] = `EXCEPTION_IPE;
+    logic [1:0][5:0] inst_is_exception;
+    assign inst_is_exception = {commit_ctrl_o[1].is_exception, commit_ctrl_o[0].is_exception};
+    logic [1:0][5:0][6:0] inst_exception_cause;
+    assign inst_exception_cause = {commit_ctrl_o[1].exception_cause, commit_ctrl_o[0].exception_cause};
+    generate
+        for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
+            always_comb begin
+                if (is_exception[i]) begin
+                    if (is_interrupt) begin
+                        exception_cause[i] = `EXCEPTION_INT;
+                    end else if (inst_is_exception[i][5]) begin
+                        exception_cause[i] = inst_exception_cause[i][5];
+                    end else if (inst_is_exception[i][4]) begin
+                        exception_cause[i] = inst_exception_cause[i][4];
+                    end else if (inst_is_exception[i][3]) begin
+                        if (commit_ctrl_o[i].is_privilege && csr_master.crmd[1:0] != 2'b00) begin
+                            exception_cause[i] = `EXCEPTION_IPE;
+                        end else begin
+                            exception_cause[i] = inst_exception_cause[i][3];
+                        end
+                    end else if (inst_is_exception[i][2]) begin
+                        exception_cause[i] = inst_exception_cause[i][2];
+                    end else if (inst_is_exception[i][1]) begin
+                        exception_cause[i] = inst_exception_cause[i][1];
+                    end else if (inst_is_exception[i][0]) begin
+                        exception_cause[i] = inst_exception_cause[i][0];
                     end else begin
-                        exception_cause[i] = commit_ctrl_o[i].exception_cause[2];
+                        exception_cause[i] = `EXCEPTION_NOP;
                     end
-                end else if (commit_ctrl_o[i].is_exception[1]) begin
-                    exception_cause[i] = commit_ctrl_o[i].exception_cause[1];
-                end else if (commit_ctrl_o[i].is_exception[0]) begin
-                    exception_cause[i] = commit_ctrl_o[i].exception_cause[0];
                 end else begin
                     exception_cause[i] = `EXCEPTION_NOP;
                 end
-            end else begin
-                exception_cause[i] = `EXCEPTION_NOP;
             end
         end
-    end
+    endgenerate
+        
 
     // exception cause info
     exception_cause_t exception_cause_out;
     assign exception_cause_out = is_exception[0] ? exception_cause[0] : exception_cause[1];
     assign csr_master.exception_cause = exception_cause_out;
-    assign csr_master.is_tlb_exception = (|is_exception) ? (exception_cause_out == `EXCEPTION_PIL || exception_cause_out == `EXCEPTION_PIS
-                                        || exception_cause_out == `EXCEPTION_PIF || exception_cause_out == `EXCEPTION_PME 
-                                        || exception_cause_out == `EXCEPTION_PPI || exception_cause_out == `EXCEPTION_TLBR): 1'b0;
+    logic is_tlb_exception;
+    assign is_tlb_exception = (|is_exception) ? (exception_cause_out == `EXCEPTION_PIL || exception_cause_out == `EXCEPTION_PIS
+                                || exception_cause_out == `EXCEPTION_PIF || exception_cause_out == `EXCEPTION_PME 
+                                || exception_cause_out == `EXCEPTION_PPI || exception_cause_out == `EXCEPTION_TLBR): 1'b0;
+    assign csr_master.is_tlb_exception = is_tlb_exception;
+    assign is_tlbrefill = (|is_exception) ? (exception_cause_out == `EXCEPTION_TLBR): 1'b0;
+    assign csr_master.is_inst_tlb_exception = (commit_ctrl_o[0].is_exception[4] || commit_ctrl_o[1].is_exception[4]) && is_tlb_exception;
     always_comb begin
         case (exception_cause_out)
             `EXCEPTION_INT: begin
@@ -295,7 +298,7 @@ module ctrl
     // diff 
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign ctrl_diff_o[i].debug_wb_pc = ctrl_diff_o[i].inst_valid ? ctrl_diff_i[i].debug_wb_pc: 32'b0;
+            assign ctrl_diff_o[i].debug_wb_pc = ctrl_diff_i[i].debug_wb_pc;
             assign ctrl_diff_o[i].debug_wb_inst = ctrl_diff_i[i].debug_wb_inst;
             assign ctrl_diff_o[i].debug_wb_rf_wen = {4{reg_write_en_out[i]}};
             assign ctrl_diff_o[i].debug_wb_rf_wnum = reg_write_addr[i];
@@ -317,6 +320,8 @@ module ctrl
             assign ctrl_diff_o[i].inst_ld_en = ctrl_diff_i[i].inst_ld_en;
             assign ctrl_diff_o[i].ld_paddr = ctrl_diff_i[i].ld_paddr;
             assign ctrl_diff_o[i].ld_vaddr = ctrl_diff_i[i].ld_vaddr;
+
+            assign ctrl_diff_o[i].tlbfill_en = ctrl_diff_i[i].tlbfill_en;
         end
     endgenerate
 

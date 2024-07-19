@@ -161,10 +161,8 @@ package pipeline_types;
         bus32_t pc;
         bus32_t inst;
 
-        bus32_t branch_excp_pc;
-
         logic [5:0] is_exception;
-        logic [5:0][6:0] exception_cause;
+        logic [5:0][EXC_CAUSE_WIDTH-1:0] exception_cause;
         logic inst_valid;
         logic is_privilege;
 
@@ -201,7 +199,6 @@ package pipeline_types;
         logic [5:0][EXC_CAUSE_WIDTH - 1:0] exception_cause;
 
         bus32_t pc;
-        bus32_t branch_excp_pc;
         bus32_t mem_addr;
 
         alu_op_t aluop;
@@ -241,11 +238,14 @@ package pipeline_types;
         logic [7:0] inst_ld_en;
         bus32_t ld_paddr;
         bus32_t ld_vaddr;
+
+        logic tlbfill_en;
     } diff_t;
 
     typedef struct packed {
         logic search_tlb_found;
         logic [4:0] search_tlb_index;
+        logic tlbrd_valid; 
 
         logic [31:0] tlbehi_out;
         logic [31:0] tlbelo0_out;

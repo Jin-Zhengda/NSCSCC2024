@@ -69,31 +69,34 @@ module mem
     endgenerate
 
     // exception 
-    logic [ISSUE_WIDTH - 1: 0][5:0] is_exception;
-    logic [ISSUE_WIDTH - 1: 0][5:0][6: 0] exception_cause;
+    logic [ISSUE_WIDTH - 1: 0][5:0] mem_is_exception;
+    logic [ISSUE_WIDTH - 1: 0][5:0][6: 0] mem_exception_cause;
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign is_exception[i] = {mem_i[i].is_exception[5:1], tlb_master.tlb_data_exception};
-            assign exception_cause[i] = {mem_i[i].exception_cause[4:0], tlb_master.tlb_data_exception_cause};
+            assign mem_is_exception[i] = {mem_i[i].is_exception[5:1], tlb_master.tlb_data_exception};
+            assign mem_exception_cause[i] = {mem_i[i].exception_cause[5:1], tlb_master.tlb_data_exception_cause};
         end
     endgenerate
 
     // ctrl signal assignment
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign commit_ctrl_i[i].is_exception = mem_i[i].is_exception;
-            assign commit_ctrl_i[i].exception_cause = mem_i[i].exception_cause;
+            assign commit_ctrl_i[i].is_exception = mem_is_exception[i];
+            assign commit_ctrl_i[i].exception_cause = mem_exception_cause[i];
             assign commit_ctrl_i[i].pc = mem_i[i].pc;
-            assign commit_ctrl_i[i].branch_excp_pc = mem_i[i].branch_excp_pc;
             assign commit_ctrl_i[i].mem_addr = mem_i[i].mem_addr;
             assign commit_ctrl_i[i].aluop = mem_i[i].aluop;
             assign commit_ctrl_i[i].is_privilege = mem_i[i].is_privilege;
         end
     endgenerate
 
+    logic [5:0] temp;
+    assign temp = commit_ctrl_i[0].is_exception;
+
     // tlb inst
     assign tlb_inst_i.search_tlb_found = tlb_master.search_tlb_found;
     assign tlb_inst_i.search_tlb_index = tlb_master.search_tlb_index;
+    assign tlb_inst_i.tlbrd_valid = tlb_master.tlbrd_valid;
     assign tlb_inst_i.tlbehi_out = tlb_master.tlbehi_out;
     assign tlb_inst_i.tlbelo0_out = tlb_master.tlbelo0_out;
     assign tlb_inst_i.tlbelo1_out = tlb_master.tlbelo1_out;
@@ -231,7 +234,7 @@ module mem
         end
     endgenerate 
     // pause
-    assign pause_mem = (pause_uncache[0] || pause_uncache[1]) && !mem_i[0].is_exception[1] && !mem_i[1].is_exception[1];
+    assign pause_mem = (pause_uncache[0] || pause_uncache[1]) && (mem_is_exception[0] == 6'b0) && (mem_is_exception[1] == 6'b0);
 
     `ifdef DIFF
     // diff_o
@@ -254,14 +257,16 @@ module mem
 
             assign diff_o[i].inst_st_en = {4'b0, (mem_i[i].is_llw_scw && (mem_i[i].aluop == `ALU_SCW)),mem_i[i].aluop == `ALU_STW, 
                             mem_i[i].aluop == `ALU_STH, mem_i[i].aluop == `ALU_STB};
-            assign diff_o[i].st_paddr = mem_i[i].mem_addr;
+            assign diff_o[i].st_paddr = dcache_master.physical_addr;
             assign diff_o[i].st_vaddr = mem_i[i].mem_addr;
             assign diff_o[i].st_data = mem_i[i].mem_data;
 
             assign diff_o[i].inst_ld_en = {2'b0, mem_i[i].aluop == `ALU_LLW, mem_i[i].aluop == `ALU_LDW, mem_i[i].aluop == `ALU_LDHU,
                             mem_i[i].aluop == `ALU_LDH, mem_i[i].aluop == `ALU_LDBU, mem_i[i].aluop == `ALU_LDB};
-            assign diff_o[i].ld_paddr = mem_i[i].mem_addr;
+            assign diff_o[i].ld_paddr = dcache_master.physical_addr;
             assign diff_o[i].ld_vaddr = mem_i[i].mem_addr;
+
+            assign diff_o[i].tlbfill_en = (mem_i[i].aluop == `ALU_TLBFILL);
         end
     endgenerate
     `endif

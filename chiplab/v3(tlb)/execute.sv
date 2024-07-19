@@ -18,6 +18,9 @@ module execute
     // from stable counter
     input bus64_t cnt,
 
+    // from mem
+    input logic pause_mem,
+
     // with dcache
     mem_dcache dcache_master,
     output cache_inst_t cache_inst,
@@ -63,6 +66,7 @@ module execute
     logic [1:0] [9:0] invtlb_asid;
     logic [1:0] [18:0] invtlb_vpn;
     logic [1:0] [4:0] invtlb_op;
+    logic [1:0] [4:0] rand_index;
 
     ex_mem_t [ISSUE_WIDTH - 1:0] ex_o;
 
@@ -84,6 +88,7 @@ module execute
     assign tlb_master.invtlb_asid = invtlb_asid[0] | invtlb_asid[1];
     assign tlb_master.invtlb_vpn = invtlb_vpn[0] | invtlb_vpn[1];
     assign tlb_master.invtlb_op = invtlb_op[0] | invtlb_op[1];
+    assign tlb_master.rand_index = tlbfill_en[0] ? rand_index[0] : rand_index[1];
 
     generate
         for (genvar i = 0; i < 2; i++) begin
@@ -100,6 +105,7 @@ module execute
                 .invtlb_asid(invtlb_asid[i]),
                 .invtlb_vpn(invtlb_vpn[i]),
                 .invtlb_op(invtlb_op[i]),
+                .rand_index(rand_index[i]),
                 .valid(valid[i]),
                 .op(op[i]),
                 .uncache_en(uncache_en[i]),
@@ -148,11 +154,15 @@ module execute
         end
     end
 
-    assign ex_excp_flush = (ex_o[0].is_exception != 6'b0 || ex_o[1].is_exception != 6'b0 || ex_o[0].aluop == `ALU_ERTN || ex_o[1].aluop == `ALU_ERTN) && !pause_ex;
+    logic is_tlb_inst;
+    assign is_tlb_inst = (ex_o[0].aluop == `ALU_TLBSRCH) || (ex_o[0].aluop == `ALU_TLBRD) || (ex_o[0].aluop == `ALU_TLBWR)
+                        || (ex_o[1].aluop == `ALU_TLBSRCH) || (ex_o[1].aluop == `ALU_TLBRD) || (ex_o[1].aluop == `ALU_TLBWR);
+    assign ex_excp_flush = (ex_o[0].is_exception != 6'b0 || ex_o[1].is_exception != 6'b0 || ex_o[0].aluop == `ALU_ERTN || ex_o[1].aluop == `ALU_ERTN
+                            || ex_o[0].csr_write_en || ex_o[1].csr_write_en || is_tlb_inst) && !pause_ex;
 
     // to mem
     always_ff @(posedge clk) begin
-        if (rst || flush || pause_ex) begin
+        if (rst || flush || (pause_ex && !pause_mem)) begin
             mem_i <= '{default: 0};
         end else if (!pause) begin
             if (branch_flush_alu[0]) begin
