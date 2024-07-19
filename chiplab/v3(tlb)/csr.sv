@@ -187,13 +187,13 @@ module csr
     assign ctrl_slave.era = era;
     assign ctrl_slave.ecfg = ecfg;
     assign ctrl_slave.estat = estat;
+    assign ctrl_slave.tlbrentry = tlbrentry;
 
     assign tlb_master.tlbidx = tlbidx;
     assign tlb_master.tlbehi = tlbehi;
     assign tlb_master.tlbelo0 = tlbelo0;
     assign tlb_master.tlbelo1 = tlbelo1;
     assign tlb_master.asid = asid[9:0];
-    assign tlb_master.rand_index = cnt[4:0];
     assign tlb_master.ecode = estat[21:16];
     assign tlb_master.csr_dmw0 = dmw0;
     assign tlb_master.csr_dmw1 = dmw1;
@@ -296,7 +296,11 @@ module csr
             case (ctrl_slave.exception_cause)
                 `EXCEPTION_TLBR, `EXCEPTION_ALE, `EXCEPTION_PIL, `EXCEPTION_PIS, 
                 `EXCEPTION_PIF, `EXCEPTION_PME, `EXCEPTION_PPI: begin
-                    badv <= ctrl_slave.exception_addr;
+                    if (ctrl_slave.is_inst_tlb_exception) begin
+                        badv <= ctrl_slave.exception_pc;
+                    end else begin
+                        badv <= ctrl_slave.exception_addr;
+                    end
                 end
                 `EXCEPTION_ADEF: begin
                     badv <= ctrl_slave.exception_pc;
@@ -336,12 +340,12 @@ module csr
                 tlbidx[31] <= 1'b1;
             end
         end else if (tlb_inst.tlbrd_ret) begin
-            if (tlb_inst.search_tlb_found) begin
+            if (tlb_inst.tlbrd_valid) begin
                 tlbidx[29:24] <= tlb_inst.tlbidx_out[29:24];
                 tlbidx[31] <= tlb_inst.tlbidx_out[31];
             end else begin
                 tlbidx[29:24] <= 6'b0;
-                tlbidx[31] <= 1'b1;
+                tlbidx[31] <= tlb_inst.tlbidx_out[31];
             end
         end 
     end
@@ -353,13 +357,17 @@ module csr
         end else if (tlbehi_wen) begin
             tlbehi[31:13] <= csr_write_data[31:13];  // vppn
         end else if (tlb_inst.tlbrd_ret) begin
-            if (tlb_inst.search_tlb_found) begin
+            if (tlb_inst.tlbrd_valid) begin
                 tlbehi[31:13] <= tlb_inst.tlbehi_out[31:13];
             end else begin
                 tlbehi[31:13] <= 19'b0;
             end
         end else if (ctrl_slave.is_tlb_exception) begin
-            tlbehi[31:13] <= ctrl_slave.exception_addr[31:13];
+            if (ctrl_slave.is_inst_tlb_exception) begin
+                tlbehi[31:13] <= ctrl_slave.exception_pc[31:13];
+            end else begin
+                tlbehi[31:13] <= ctrl_slave.exception_addr[31:13];
+            end
         end 
     end
 
@@ -375,7 +383,7 @@ module csr
             tlbelo0[6] <= csr_write_data[6];  // G
             tlbelo0[31:8] <= csr_write_data[31:8];  // PPN
         end else if (tlb_inst.tlbrd_ret) begin
-            if (tlb_inst.search_tlb_found) begin
+            if (tlb_inst.tlbrd_valid) begin
                 tlbelo0[0] <= tlb_inst.tlbelo0_out[0];
                 tlbelo0[1] <= tlb_inst.tlbelo0_out[1];
                 tlbelo0[3:2] <= tlb_inst.tlbelo0_out[3:2];
@@ -405,7 +413,7 @@ module csr
             tlbelo1[6] <= csr_write_data[6];  // G
             tlbelo1[31:8] <= csr_write_data[31:8];  // PPN
         end else if (tlb_inst.tlbrd_ret) begin
-            if (tlb_inst.search_tlb_found) begin
+            if (tlb_inst.tlbrd_valid) begin
                 tlbelo1[0] <= tlb_inst.tlbelo1_out[0];
                 tlbelo1[1] <= tlb_inst.tlbelo1_out[1];
                 tlbelo1[3:2] <= tlb_inst.tlbelo1_out[3:2];
@@ -432,7 +440,7 @@ module csr
         end else if (asid_wen) begin
             asid[9:0] <= csr_write_data[9:0];
         end else if (tlb_inst.tlbrd_ret) begin
-            if (tlb_inst.search_tlb_found) begin
+            if (tlb_inst.tlbrd_valid) begin
                 asid[9:0] <= tlb_inst.asid_out;
             end else begin
                 asid[9:0] <= 10'b0;

@@ -223,8 +223,10 @@ assign pg_mode = csr2tlb.csr_pg && !csr2tlb.csr_da;
 assign inst_addr_trans_en_a = pg_mode && !inst_dmw0_en_a && !inst_dmw1_en_a;
 assign inst_addr_trans_en_b = pg_mode && !inst_dmw0_en_b && !inst_dmw1_en_b;
 assign data_addr_trans_en = pg_mode && !data_dmw0_en && !data_dmw1_en && !dcache2transaddr.cacop_op_mode_di;
-
-
+logic data_addr_trans_en_delay;
+always_ff @( posedge clk ) begin
+    data_addr_trans_en_delay<=data_addr_trans_en;
+end
 //s0的输出(入？)变量声明，用于指令地址翻译
 logic [18:0] s0_vppn_a     ;
 logic        s0_odd_page_a ;
@@ -281,7 +283,7 @@ logic [19:0] w_ppn1      ;
 
 //trans write port sig 将写信号转换成TLB模块需要的格式
 assign we      = ex2tlb.tlbfill_en || ex2tlb.tlbwr_en;//写使能信号
-assign w_index = ({5{ex2tlb.tlbfill_en}} & csr2tlb.rand_index) | ({5{ex2tlb.tlbwr_en}} & csr2tlb.tlbidx[`INDEX]);//写操作的index
+assign w_index = ({5{ex2tlb.tlbfill_en}} & ex2tlb.rand_index) | ({5{ex2tlb.tlbwr_en}} & csr2tlb.tlbidx[`INDEX]);//写操作的index
 assign w_vppn  = csr2tlb.tlbehi[`VPPN];//写的vppn19位
 assign w_g     = csr2tlb.tlbelo0[`TLB_G] && csr2tlb.tlbelo1[`TLB_G];//写的全局标志位{6}
 assign w_ps    = csr2tlb.tlbidx[`PS];//pageSize
@@ -462,7 +464,7 @@ assign data_paddr = (pg_mode && data_dmw0_en && !dcache2transaddr.cacop_op_mode_
 
 assign data_offset = data_vaddr_buffer[4:0];
 assign data_index  = data_vaddr_buffer[11:5];
-assign data_tag    = data_addr_trans_en ? ((s1_ps == 6'd12) ? s1_ppn : {s1_ppn[19:10], data_paddr[21:12]}) : data_paddr[31:12];
+assign data_tag    = data_addr_trans_en_delay ? ((s1_ps == 6'd12) ? s1_ppn : {s1_ppn[19:10], data_paddr[21:12]}) : data_paddr[31:12];
 
 
 assign icache2transaddr.ret_inst_paddr_a={inst_tag_a,inst_index_a,inst_offset_a};
@@ -501,14 +503,17 @@ assign ex2tlb.tlb_inst_exception_cause[1]=tlb_inst_refill_b?`EXCEPTION_TLBR:(
 assign ex2tlb.tlb_inst_exception[0]=tlb_inst_refill_a||tlb_inst_pif_a||tlb_inst_ppi_a;
 assign ex2tlb.tlb_inst_exception[1]=tlb_inst_refill_b||tlb_inst_pif_b||tlb_inst_ppi_b;
 
-
+logic data_fetch_delay;
+always_ff @( posedge clk ) begin
+    data_fetch_delay<=dcache2transaddr.data_fetch;
+end
 //data
 logic tlb_data_refill,tlb_data_pif,tlb_data_pil,tlb_data_pis,tlb_data_ppi,tlb_data_pme;
-assign tlb_data_refill=((!data_tlb_found)&&data_addr_trans_en);
-assign tlb_data_pil=dcache2transaddr.data_fetch&&!dcache2transaddr.store &&!data_tlb_v && data_addr_trans_en;
-assign tlb_data_pis=dcache2transaddr.data_fetch&&dcache2transaddr.store && !data_tlb_v && data_addr_trans_en;
-assign tlb_data_ppi=(dcache2transaddr.data_fetch && data_tlb_v && (csr2tlb.csr_plv > data_tlb_plv) && data_addr_trans_en);
-assign tlb_data_pme=dcache2transaddr.store && data_tlb_v && (csr2tlb.csr_plv <= data_tlb_plv) && !data_tlb_d && data_addr_trans_en;
+assign tlb_data_refill=(data_fetch_delay&&(!data_tlb_found)&&data_addr_trans_en_delay);
+assign tlb_data_pil=data_fetch_delay&&!dcache2transaddr.store &&!data_tlb_v && data_addr_trans_en_delay;
+assign tlb_data_pis=data_fetch_delay&&dcache2transaddr.store && !data_tlb_v && data_addr_trans_en_delay;
+assign tlb_data_ppi=data_fetch_delay&& data_tlb_v && (csr2tlb.csr_plv > data_tlb_plv) && data_addr_trans_en_delay;
+assign tlb_data_pme=dcache2transaddr.store && data_tlb_v && (csr2tlb.csr_plv <= data_tlb_plv) && !data_tlb_d && data_addr_trans_en_delay;
 
 assign ex2tlb.tlb_data_exception_cause=tlb_data_refill?(`EXCEPTION_TLBR):(
         tlb_data_pil?(`EXCEPTION_PIL):(
@@ -521,5 +526,9 @@ assign ex2tlb.tlb_data_exception_cause=tlb_data_refill?(`EXCEPTION_TLBR):(
 );
 assign ex2tlb.tlb_data_exception=tlb_data_refill||tlb_data_pil||tlb_data_pis||tlb_data_ppi||tlb_data_pme;
 
+
+assign ex2tlb.tlbrd_valid=r_e;
+
+assign dcache2transaddr.tlb_exception=tlb_data_refill||tlb_data_pil||tlb_data_pis||tlb_data_ppi||tlb_data_pme;
 
 endmodule

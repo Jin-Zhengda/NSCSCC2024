@@ -38,7 +38,7 @@ module decoder
     bus32_t inst_in[2];
     generate
         for (genvar i = 0; i < 2 ;i++) begin
-            assign inst_in[i] = (pc[i] < 32'h1c000000 && pc[i] != 32'b0) ? 32'h4c000020: inst[i];
+            assign inst_in[i] = (pc[i] < 32'h1c000000 || pc[i] >= 32'ha0000000 && pc[i] != 32'b0) ? 32'h4c000020: inst[i];
         end
     endgenerate
 
@@ -46,7 +46,7 @@ module decoder
         for (genvar i = 0; i < DECODER_WIDTH; i++) begin : id
             id u_id (
                 .pc(pc[i]),
-                .inst(inst_in[i]),
+                .inst(inst[i]),
                 .pre_is_branch(pre_is_branch[i]),
                 .pre_is_branch_taken(pre_is_branch_taken[i]),
                 .pre_branch_addr(pre_branch_addr[i]),

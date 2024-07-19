@@ -11,7 +11,6 @@ interface mem_dcache;
     // logic[2:0] size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
     bus32_t virtual_addr;  // 虚拟地址
     bus32_t physical_addr;
-    logic tlb_excp_cancel_req;
     logic [3:0] wstrb;  //写使能，1表示对应的8位数据需要写
     bus32_t wdata;  //需要写的数据
 
@@ -23,12 +22,12 @@ interface mem_dcache;
 
     modport master(
         input addr_ok, data_ok, rdata,
-        output valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata, uncache_en
+        output valid, op, virtual_addr, wstrb, wdata, uncache_en
     );
 
     modport slave(
         output addr_ok, data_ok, rdata, 
-        input valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata, uncache_en
+        input valid, op, virtual_addr, wstrb, wdata, uncache_en
     );
 endinterface : mem_dcache
 
@@ -135,6 +134,7 @@ interface ctrl_csr;
     bus32_t ecfg;
     bus32_t estat;
     bus32_t crmd;
+    bus32_t tlbrentry;
 
     logic is_exception;
     bus32_t exception_pc;
@@ -144,15 +144,16 @@ interface ctrl_csr;
     exception_cause_t exception_cause;
     logic is_ertn;
     logic is_tlb_exception;
+    logic is_inst_tlb_exception;
 
     modport master(
-        input eentry, era, ecfg, estat, crmd,
+        input eentry, era, ecfg, estat, crmd, tlbrentry,
         output is_exception, exception_pc, exception_addr, ecode, esubcode, exception_cause, is_ertn, is_tlb_exception
     );
 
     modport slave(
-        output eentry, era, ecfg, estat, crmd, is_ertn,
-        input is_exception, exception_pc, exception_addr, ecode, esubcode, exception_cause, is_tlb_exception
+        output eentry, era, ecfg, estat, crmd, tlbrentry, 
+        input is_exception, exception_pc, exception_addr, ecode, esubcode, exception_cause, is_tlb_exception, is_ertn
     );
 endinterface : ctrl_csr
 
@@ -160,6 +161,7 @@ endinterface : ctrl_csr
 interface ex_tlb;
     //TLBFILL和TLBWR指令
     logic                  tlbfill_en         ;//TLBFILL指令的使能信号
+    logic [4:0]            rand_index         ;//TLBFILL指令的index
     logic                  tlbwr_en           ;//TLBWR指令的使能信号
 
     //TLBSRCH指令
@@ -190,6 +192,7 @@ interface ex_tlb;
     //返回信号
     logic                  tlbsrch_ret        ;
     logic                  tlbrd_ret          ;
+    logic                  tlbrd_valid        ;
 
 
 
@@ -204,12 +207,14 @@ interface ex_tlb;
     modport master(//ex
         input tlb_inst_exception,tlb_inst_exception_cause,tlb_data_exception,tlb_data_exception_cause,
                 search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbsrch_ret,tlbrd_ret,
-        output tlbfill_en,tlbwr_en,tlbsrch_en,tlbrd_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op
+                tlbrd_valid,
+        output tlbfill_en,tlbwr_en,tlbsrch_en,tlbrd_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op,rand_index
     );
     modport slave(//tlb
-        input tlbfill_en,tlbwr_en,tlbsrch_en,tlbrd_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op,
+        input tlbfill_en,tlbwr_en,tlbsrch_en,tlbrd_en,invtlb_en,invtlb_asid,invtlb_vpn,invtlb_op,rand_index,
         output tlb_inst_exception,tlb_inst_exception_cause,tlb_data_exception,tlb_data_exception_cause,
-                search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbsrch_ret,tlbrd_ret
+                search_tlb_found,search_tlb_index,tlbehi_out,tlbelo0_out,tlbelo1_out,tlbidx_out,asid_out,tlbsrch_ret,tlbrd_ret,
+                tlbrd_valid 
     );
 endinterface //ex_tlb
 
@@ -220,7 +225,7 @@ interface csr_tlb;
     logic [31:0]           tlbelo0,tlbelo1    ;//7.5.3TLB表项低位，包含写入TLB表项的内容
     logic [ 9:0]           asid               ;//7.5.4ASID的低9位
     //TLBFILL和TLBWR指令
-    logic [4:0]            rand_index         ;//TLBFILL指令的index
+
     logic [5:0]            ecode           ;//7.5.1对于NE变量的描述中讲到，CSR.ESTAT.Ecode   (大概使能信号，若为111111则写使能，否则根据tlbindex_in.NE判断是否写使能？
 
     
@@ -235,11 +240,11 @@ interface csr_tlb;
 
 
     modport master(//csr
-        output tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,
+        output tlbidx,tlbehi,tlbelo0,tlbelo1,asid,ecode,
                 csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv
     );
     modport slave(//tlb
-        input tlbidx,tlbehi,tlbelo0,tlbelo1,asid,rand_index,ecode,
+        input tlbidx,tlbehi,tlbelo0,tlbelo1,asid,ecode,
                 csr_dmw0,csr_dmw1,csr_da,csr_pg,csr_plv
     );
 
@@ -280,14 +285,15 @@ interface dcache_transaddr;
     logic [31:0]            ret_data_paddr;//物理地址
     logic                   cacop_op_mode_di;//assign cacop_op_mode_di = ms_cacop && ((cacop_op_mode == 2'b0) || (cacop_op_mode == 2'b1));
     logic                   store;//当前为store操作
+    logic                   tlb_exception;
 
     modport master(//dcache
-        input ret_data_paddr,
+        input ret_data_paddr,tlb_exception,
         output data_fetch,data_vaddr,cacop_op_mode_di,store
     );
 
     modport slave(
-        output ret_data_paddr,
+        output ret_data_paddr,tlb_exception,
         input data_fetch,data_vaddr,cacop_op_mode_di,store
     );
 endinterface : dcache_transaddr

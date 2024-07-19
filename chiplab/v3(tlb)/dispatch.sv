@@ -215,13 +215,7 @@ module dispatch
     endgenerate
 
     // handle tlb use inst
-    logic pre_is_tlb;
-    assign pre_is_tlb = (pre_ex_aluop[0] == `ALU_TLBSRCH) || (pre_ex_aluop[0] == `ALU_TLBRD) || (pre_ex_aluop[1] == `ALU_TLBSRCH) || (pre_ex_aluop[1] == `ALU_TLBRD)
-                        || (pre_mem_aluop[0] == `ALU_TLBSRCH) || (pre_mem_aluop[0] == `ALU_TLBRD) || (pre_mem_aluop[1] == `ALU_TLBSRCH) || (pre_mem_aluop[1] == `ALU_TLBRD)
-                        || (pre_wb_aluop[0] == `ALU_TLBSRCH) || (pre_wb_aluop[0] == `ALU_TLBRD) || (pre_wb_aluop[1] == `ALU_TLBSRCH) || (pre_wb_aluop[1] == `ALU_TLBRD) ;
-
-    // pause request
-    assign pause_dispatch = |(reg1_load_relate | reg2_load_relate) || pre_is_tlb;
+    assign pause_dispatch = |(reg1_load_relate | reg2_load_relate);
 
     dispatch_ex_t [DECODER_WIDTH - 1:0] ex_temp;
     assign ex_temp[0] = issue_en[0] ? dispatch_o[0] : 0;

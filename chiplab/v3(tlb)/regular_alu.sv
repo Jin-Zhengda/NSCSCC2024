@@ -5,54 +5,12 @@ module regular_alu
     import pipeline_types::*;
 (
     input alu_op_t  aluop,
-    input alu_sel_t alusel,
 
     input  bus32_t reg1,
     input  bus32_t reg2,
     
     output bus32_t result
 );
-
-    bus32_t logic_res;
-    bus32_t shift_res;
-    bus32_t arithmetic_res;
-
-    always_comb begin : logic_calculate
-        case (aluop)
-            `ALU_OR, `ALU_ORI, `ALU_LU12I: begin
-                logic_res = reg1 | reg2;
-            end
-            `ALU_NOR: begin
-                logic_res = ~(reg1 | reg2);
-            end
-            `ALU_AND, `ALU_ANDI: begin
-                logic_res = reg1 & reg2;
-            end
-            `ALU_XOR, `ALU_XORI: begin
-                logic_res = reg1 ^ reg2;
-            end
-            default: begin
-                logic_res = 32'b0;
-            end
-        endcase
-    end
-
-    always_comb begin : shift_calculate
-        case (aluop)
-            `ALU_SLLW, `ALU_SLLIW: begin
-                shift_res = reg1 << reg2[4:0];
-            end
-            `ALU_SRLW, `ALU_SRLIW: begin
-                shift_res = reg1 >> reg2[4:0];
-            end
-            `ALU_SRAW, `ALU_SRAIW: begin
-                shift_res = ({32{reg1[31]}} << (6'd32 - {1'b0, reg2[4:0]})) | reg1 >> reg2[4:0];
-            end
-            default: begin
-                shift_res = 32'b0;
-            end
-        endcase
-    end
 
     logic   reg1_lt_reg2;
     bus32_t reg2_i_mux;
@@ -82,34 +40,38 @@ module regular_alu
 
     always_comb begin : result_assign
         case (aluop)
+            `ALU_OR, `ALU_ORI, `ALU_LU12I: begin
+                result = reg1 | reg2;
+            end
+            `ALU_NOR: begin
+                result = ~(reg1 | reg2);
+            end
+            `ALU_AND, `ALU_ANDI: begin
+                result = reg1 & reg2;
+            end
+            `ALU_XOR, `ALU_XORI: begin
+                result = reg1 ^ reg2;
+            end
+            `ALU_SLLW, `ALU_SLLIW: begin
+                result = reg1 << reg2[4:0];
+            end
+            `ALU_SRLW, `ALU_SRLIW: begin
+                result = reg1 >> reg2[4:0];
+            end
+            `ALU_SRAW, `ALU_SRAIW: begin
+                result = ({32{reg1[31]}} << (6'd32 - {1'b0, reg2[4:0]})) | reg1 >> reg2[4:0];
+            end
             `ALU_ADDW, `ALU_SUBW, `ALU_ADDIW, `ALU_PCADDU12I: begin
-                arithmetic_res = sum_result;
+                result = sum_result;
             end
             `ALU_SLT, `ALU_SLTU, `ALU_SLTI, `ALU_SLTUI: begin
-                arithmetic_res = {31'b0, reg1_lt_reg2};
+                result = {31'b0, reg1_lt_reg2};
             end
             `ALU_MULW: begin
-                arithmetic_res = mul_result[31:0];
+                result = mul_result[31:0];
             end
             `ALU_MULHW, `ALU_MULHWU: begin
-                arithmetic_res = mul_result[63:32];
-            end
-            default: begin
-                arithmetic_res = 32'b0;
-            end
-        endcase
-    end
-
-    always_comb begin
-        case (alusel)
-            `ALU_SEL_LOGIC: begin
-                result = logic_res;
-            end
-            `ALU_SEL_SHIFT: begin
-                result = shift_res;
-            end
-            `ALU_SEL_ARITHMETIC: begin
-                result = arithmetic_res;
+                result = mul_result[63:32];
             end
             default: begin
                 result = 32'b0;

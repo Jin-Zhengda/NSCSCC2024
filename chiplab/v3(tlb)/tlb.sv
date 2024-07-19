@@ -166,12 +166,6 @@ always @(posedge clk) begin
         s0_odd_page_r_b  <= s0_odd_page_b;
         s0_asid_r_b      <= s0_asid;
 	end
-	s1_fetch_r <= s1_fetch;
-	if (s1_fetch) begin
-		s1_vppn_r      <= s1_vppn;    
-        s1_odd_page_r  <= s1_odd_page;
-        s1_asid_r      <= s1_asid;
-	end
     else begin
         s0_vppn_r_a      <= 19'b0;
         s0_odd_page_r_a  <= 1'b0;
@@ -179,6 +173,15 @@ always @(posedge clk) begin
         s0_vppn_r_b      <= 19'b0;
         s0_odd_page_r_b  <= 1'b0;
         s0_asid_r_b      <= 10'b0;
+    end
+    
+	s1_fetch_r <= s1_fetch;
+	if (s1_fetch) begin
+		s1_vppn_r      <= s1_vppn;    
+        s1_odd_page_r  <= s1_odd_page;
+        s1_asid_r      <= s1_asid;
+	end
+    else begin
         s1_vppn_r      <= 19'b0;    
         s1_odd_page_r  <= 1'b0;
         s1_asid_r      <= 10'b0;

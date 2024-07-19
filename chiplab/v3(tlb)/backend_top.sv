@@ -213,6 +213,8 @@ module backend_top
         .flush(flush[5]),
         .pause(pause[5]),
 
+        .pause_mem(pause_request.pause_mem),
+
         .ex_i,
         .cnt(cnt),
 

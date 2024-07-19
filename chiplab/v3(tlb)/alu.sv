@@ -23,6 +23,7 @@ module alu
     output logic[9:0] invtlb_asid,
     output logic[18:0] invtlb_vpn,
     output logic[4:0] invtlb_op,
+    output logic[4:0] rand_index,
 
     // with dcache
     output logic valid,
@@ -60,18 +61,19 @@ module alu
     assign ex_o.is_privilege = ex_i.is_privilege;
     assign ex_o.aluop = ex_i.aluop;
 
-    logic ex_mem_is_exception;
-    exception_cause_t ex_mem_exception_cause;
-    logic branch_target_exception;
-    exception_cause_t branch_target_exception_cause;
-
     logic ex_is_exception;
     exception_cause_t ex_exception_cause;
-    assign ex_is_exception = ex_mem_is_exception || branch_target_exception;
-    assign ex_exception_cause = ex_mem_is_exception ? ex_mem_exception_cause: branch_target_exception;
 
-    assign ex_o.is_exception = {ex_i.is_exception[5: 2], ex_is_exception, ex_i.is_exception[0]};
-    assign ex_o.exception_cause = {ex_i.exception_cause[5: 2], ex_exception_cause, ex_i.exception_cause[0]};
+    logic ex_mem_is_exception;
+    exception_cause_t ex_mem_exception_cause;
+    logic tlb_op_exception;
+    exception_cause_t tlb_op_exception_cause;
+
+    assign ex_is_exception = ex_mem_is_exception || tlb_op_exception;
+    assign ex_exception_cause = (ex_mem_is_exception)? ex_mem_exception_cause: tlb_op_exception_cause;
+
+    assign ex_o.is_exception = {ex_i.is_exception[5:2], ex_is_exception, ex_i.is_exception[0]};
+    assign ex_o.exception_cause = {ex_i.exception_cause[5:2], ex_exception_cause, ex_i.exception_cause[0]};
 
     assign pre_ex_aluop = ex_i.aluop;
 
@@ -82,7 +84,6 @@ module alu
 
     regular_alu u_regular_alu(
         .aluop(ex_i.aluop),
-        .alusel(ex_i.alusel),
 
         .reg1(reg1),
         .reg2(ex_i.reg_data[1]),
@@ -166,10 +167,7 @@ module alu
 
         .update_info(update_info),
         .branch_flush(branch_flush),
-        .branch_alu_res(branch_alu_res),
-        .branch_target_exception(branch_target_exception),
-        .branch_target_exception_cause(branch_target_exception_cause),
-        .branch_excp_pc(ex_o.branch_excp_pc)
+        .branch_alu_res(branch_alu_res)
     );
     assign branch_target_alu = update_info.branch_actual_addr;
 
@@ -420,6 +418,11 @@ module alu
         endcase
     end
 
+    bus32_t reg_data1;
+    bus32_t reg_data2;
+    assign reg_data1 = ex_i.reg_data[0];
+    assign reg_data2 = ex_i.reg_data[1];
+
     // tlb 
     always_comb begin
         tlbrd_en = 1'b0;
@@ -430,6 +433,9 @@ module alu
         invtlb_asid = 10'b0;
         invtlb_vpn = 19'b0;
         invtlb_op = 5'b0;
+        rand_index = 5'b0;
+        tlb_op_exception = 1'b0;
+        tlb_op_exception_cause = `EXCEPTION_NOP;
 
         case(ex_i.aluop)
             `ALU_TLBRD: begin
@@ -440,15 +446,18 @@ module alu
             end
             `ALU_TLBFILL: begin
                 tlbfill_en = 1'b1;
+                rand_index = cnt_real[4:0];
             end
             `ALU_TLBWR: begin
                 tlbwr_en = 1'b1;
             end
             `ALU_INVTLB: begin
                 invtlb_en = 1'b1;
-                invtlb_asid = (ex_i.invtlb_op < 5'h4)? 10'b0: ex_i.reg_data[0][9:0];
-                invtlb_vpn = (ex_i.invtlb_op < 5'h5)? 19'b0: ex_i.reg_data[1][31:13];
+                invtlb_asid = (ex_i.invtlb_op < 5'h4)? 10'b0: reg_data1[9:0];
+                invtlb_vpn = (ex_i.invtlb_op < 5'h5)? 19'b0: reg_data2[31:13];
                 invtlb_op = ex_i.invtlb_op;
+                tlb_op_exception = (ex_i.invtlb_op > 5'h6);
+                tlb_op_exception_cause = (ex_i.invtlb_op > 5'h6)? `EXCEPTION_INE: `EXCEPTION_NOP;
             end
         endcase
     end
@@ -459,7 +468,7 @@ module alu
     
     always_comb begin: reg_write
         case (ex_i.alusel)
-            `ALU_SEL_LOGIC, `ALU_SEL_SHIFT,`ALU_SEL_ARITHMETIC: begin
+            `ALU_SEL_ARITHMETIC: begin
                 ex_o.reg_write_data = regular_alu_res;
             end
             `ALU_SEL_DIV: begin
