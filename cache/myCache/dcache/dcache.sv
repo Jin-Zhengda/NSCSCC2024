@@ -1,62 +1,3 @@
-typedef logic[31:0] bus32_t;
-typedef logic[255:0] bus256_t;
-
-typedef struct packed {
-    logic is_cacop;
-    logic[4:0]cacop_code;
-    logic is_preld;
-    logic hint;
-    bus32_t addr;
-}cache_inst_t;
-
-interface mem_dcache;
-    logic valid;  // 请求有效
-    logic op;  // 操作类型，读-0，写-1
-    // logic[2:0] size;           // 数据大小，3’b000——字节，3’b001——半字，3’b010——字
-    bus32_t virtual_addr;  // 虚拟地址
-    bus32_t physical_addr;
-    logic tlb_excp_cancel_req;
-    logic [3:0] wstrb;  //写使能，1表示对应的8位数据需要写
-    bus32_t wdata;  //需要写的数据
-
-    logic addr_ok;              //该次请求的地址传输OK，读：地址被接收；写：地址和数据被接收
-    logic data_ok;  //该次请求的数据传输OK，读：数据返回；写：数据写入完成
-    bus32_t rdata;  //读DCache的结果
-
-    logic uncache_en;
-
-    modport master(
-        input addr_ok, data_ok, rdata, 
-        output valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata, uncache_en
-    );
-
-    modport slave(
-        output addr_ok, data_ok, rdata, 
-        input valid, op, virtual_addr, tlb_excp_cancel_req, wstrb, wdata, uncache_en
-    );
-endinterface : mem_dcache
-
-
-
-interface dcache_transaddr;
-    logic                   data_fetch;    //指令地址转换信息有效的信号assign fetch_en  = inst_valid && inst_addr_ok;
-    logic [31:0]            data_vaddr;    //虚拟地址
-    logic [31:0]            ret_data_paddr;//物理地址
-    logic                   cacop_op_mode_di;//assign cacop_op_mode_di = ms_cacop && ((cacop_op_mode == 2'b0) || (cacop_op_mode == 2'b1));
-    logic                   store;//当前为store操作
-
-    modport master(//dcache
-        input ret_data_paddr,
-        output data_fetch,data_vaddr,cacop_op_mode_di,store
-    );
-
-    modport slave(
-        output ret_data_paddr,
-        input data_fetch,data_vaddr,cacop_op_mode_di,store
-    );
-endinterface : dcache_transaddr
-
-
 
 `timescale 1ns / 1ps
 
@@ -139,14 +80,7 @@ logic[3:0]pre_wstrb;
 logic[`DATA_SIZE-1:0]pre_wdata;
 logic[`ADDR_SIZE-1:0]pre_vaddr;
 always_ff @( posedge clk ) begin
-    if((current_state==`IDLE)&&(next_state==`UNCACHE_RETURN))begin
-        pre_valid<=mem2dcache.valid;
-        pre_op<=mem2dcache.op;
-        pre_wstrb<=mem2dcache.wstrb;
-        pre_wdata<=mem2dcache.wdata;
-        pre_vaddr<=mem2dcache.virtual_addr;
-    end
-    else if(next_state==`IDLE)begin
+    if(next_state==`IDLE||dcache2transaddr.tlb_exception)begin
         pre_valid<=mem2dcache.valid;
         pre_op<=mem2dcache.op;
         pre_wstrb<=mem2dcache.wstrb;
@@ -173,7 +107,7 @@ always_ff @( posedge clk ) begin
     else current_state<=next_state;
 end
 always_comb begin
-    if(reset)next_state=`IDLE;
+    if(reset||dcache2transaddr.tlb_exception)next_state=`IDLE;
     else if(current_state==`IDLE)begin
         if(!pre_valid)next_state=`IDLE;
         else if(dcache_uncache)next_state=`UNCACHE_RETURN;
@@ -202,12 +136,14 @@ always_comb begin
     else next_state=`IDLE;
 end
 
+assign dcache2transaddr.store=pre_op;
+assign dcache2transaddr.cacop_op_mode_di=1'b0;
 assign dcache2transaddr.data_fetch=mem2dcache.valid;
 assign dcache2transaddr.data_vaddr=mem2dcache.virtual_addr;
 logic[`ADDR_SIZE-1:0] p_addr,pre_physical_addr,target_physical_addr;
 assign p_addr=dcache2transaddr.ret_data_paddr;
 always_ff @( posedge clk ) begin
-    if(current_state==`IDLE)pre_physical_addr<=p_addr;
+    if((current_state==`IDLE)||dcache2transaddr.tlb_exception)pre_physical_addr<=p_addr;
     else pre_physical_addr<=pre_physical_addr;
 end
 assign target_physical_addr=(current_state==`IDLE)?p_addr:pre_physical_addr;
@@ -215,7 +151,10 @@ assign target_physical_addr=(current_state==`IDLE)?p_addr:pre_physical_addr;
 
 logic write_read_same;
 assign write_read_same=(pre_valid&&pre_op==1'b1)&&(mem2dcache.valid&&mem2dcache.op==1'b0)&&(pre_vaddr[31:5]==mem2dcache.virtual_addr[31:5]);
-
+logic write_read_same_delay;
+always_ff @( posedge clk ) begin
+    write_read_same_delay<=write_read_same;
+end
 
 
 
@@ -292,8 +231,8 @@ logic[`INDEX_SIZE-1:0]tagv0_addr,tagv1_addr;
 assign tagv0_addr=|wea_way0?tagv_addr_write:read_index_addr;
 assign tagv1_addr=|wea_way1?tagv_addr_write:read_index_addr;
 
-BRAM TagV0(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w0),.enb(1'b1),.web(wea_way0),.dinb(tagv_data_tagv),.addrb(tagv_addr_write),.doutb());
-BRAM TagV1(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w1),.enb(1'b1),.web(wea_way1),.dinb(tagv_data_tagv),.addrb(tagv_addr_write),.doutb());
+BRAM TagV0(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w0),.enb(1'b1),.web(wea_way0),.dinb(tagv_data_tagv),.addrb(tagv_addr_write));
+BRAM TagV1(.clk(clk),.ena(1'b1),.wea(4'b0),.dina(32'b0),.addra(read_index_addr),.douta(tagv_cache_w1),.enb(1'b1),.web(wea_way1),.dinb(tagv_data_tagv),.addrb(tagv_addr_write));
 
 
 logic[31:0] write_mask;
@@ -343,8 +282,8 @@ assign hit_success = (hit_way0 | hit_way1) & pre_valid;
 assign hit_fail = ~(hit_success) & pre_valid;
 
 
-assign wea_way0=(pre_valid&&hit_way0&&pre_op==1'b1)?pre_wstrb:((pre_valid&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000);
-assign wea_way1=(pre_valid&&hit_way1&&pre_op==1'b1)?pre_wstrb:((pre_valid&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000);
+assign wea_way0=!dcache2transaddr.tlb_exception&&((pre_valid&&hit_way0&&pre_op==1'b1)?pre_wstrb:((pre_valid&&ret_valid&&LRU_pick==1'b0)?4'b1111:4'b0000));
+assign wea_way1=!dcache2transaddr.tlb_exception&&((pre_valid&&hit_way1&&pre_op==1'b1)?pre_wstrb:((pre_valid&&ret_valid&&LRU_pick==1'b1)?4'b1111:4'b0000));
 
 
 
@@ -373,14 +312,14 @@ assign mem2dcache.addr_ok=mem2dcache.valid&&((next_state==`IDLE)||((current_stat
 assign mem2dcache.data_ok=((next_state==`IDLE)||(current_state==`IDLE)&&(next_state==`UNCACHE_RETURN))&&pre_valid&&pre_op==1'b0;
 assign mem2dcache.rdata=(current_state==`UNCACHE_RETURN)?ducache_rdata_o:
                             (hit_success?
-                                    (hit_way0?(write_read_same?way0_cache_b[pre_vaddr[4:2]]:way0_cache[pre_vaddr[4:2]]):
-                                    (write_read_same?way1_cache_b[pre_vaddr[4:2]]:way1_cache[pre_vaddr[4:2]])):
+                                    (hit_way0?(write_read_same_delay?way0_cache_b[pre_vaddr[4:2]]:way0_cache[pre_vaddr[4:2]]):
+                                    (write_read_same_delay?way1_cache_b[pre_vaddr[4:2]]:way1_cache[pre_vaddr[4:2]])):
                                             read_from_mem[pre_vaddr[4:2]]);
-assign mem2dcache.cache_miss=hit_fail;
 
 
 
-assign rd_req=((next_state==`ASKMEM)||(current_state==`ASKMEM))&&!ret_valid;
+
+assign rd_req=!dcache2transaddr.tlb_exception&&((next_state==`ASKMEM)||(current_state==`ASKMEM))&&!ret_valid;
 assign rd_type=3'b100;
 assign rd_addr=target_physical_addr;
 
@@ -390,7 +329,7 @@ logic [255:0]record_write_mem_data;
 always_ff @( posedge clk ) begin
     if(reset)record_dirty<=1'b0;
     else if(data_bvalid_o)record_dirty<=1'b0;
-    else if(next_state==`ASKMEM)begin
+    else if((next_state==`ASKMEM)&&write_dirty)begin
         record_dirty<=write_dirty;
         record_write_mem_addr<={(LRU_pick?tagv_cache_w1[19:0]:tagv_cache_w0[19:0]),target_physical_addr[11:0]};
         record_write_mem_data<=LRU_pick?{way1_cache[7],way1_cache[6],way1_cache[5],way1_cache[4],way1_cache[3],way1_cache[2],way1_cache[1],way1_cache[0]}:{way0_cache[7],way0_cache[6],way0_cache[5],way0_cache[4],way0_cache[3],way0_cache[2],way0_cache[1],way0_cache[0]};
@@ -401,7 +340,7 @@ always_ff @( posedge clk ) begin
         record_write_mem_data<=record_write_mem_data;
     end 
 end
-assign wr_req=record_dirty&&!data_bvalid_o;
+assign wr_req=!dcache2transaddr.tlb_exception&&record_dirty&&!data_bvalid_o;
 assign wr_addr=record_write_mem_addr;
 assign wr_data=record_write_mem_data;
 assign wr_wstrb=4'b1111;
@@ -410,15 +349,15 @@ assign wr_wstrb=4'b1111;
 
 
 
-assign ducache_ren_i=(current_state==`UNCACHE_RETURN)&&pre_op==1'b0;
-assign ducache_wen_i=(current_state==`UNCACHE_RETURN)&&pre_op==1'b1;
-assign ducache_araddr_i=ducache_ren_i?pre_vaddr:32'b0;
-assign ducache_awaddr_i=ducache_wen_i?pre_vaddr:32'b0;
+assign ducache_ren_i=!dcache2transaddr.tlb_exception&&((current_state==`UNCACHE_RETURN)&&pre_op==1'b0);
+assign ducache_wen_i=!dcache2transaddr.tlb_exception&&((current_state==`UNCACHE_RETURN)&&pre_op==1'b1);
+assign ducache_araddr_i=ducache_ren_i?target_physical_addr:32'b0;
+assign ducache_awaddr_i=ducache_wen_i?target_physical_addr:32'b0;
 assign ducache_wdata_i=ducache_wen_i?pre_wdata:32'b0;
 assign ducache_strb=ducache_wen_i?pre_wstrb:4'b0;
 
 
 
-
+assign mem2dcache.physical_addr=target_physical_addr;
 
 endmodule

@@ -159,9 +159,10 @@ end
 
 //TLB
 assign icache2transaddr.inst_fetch=|(pc2icache.inst_en);
-assign icache2transaddr.inst_vaddr=pc2icache.pc;
+assign icache2transaddr.inst_vaddr_a=pc2icache.pc;
+assign icache2transaddr.inst_vaddr_b=pc2icache.pc+32'h4;
 logic[`ADDR_SIZE-1:0] p_addr_a;
-assign p_addr_a=icache2transaddr.ret_inst_paddr;
+assign p_addr_a=icache2transaddr.ret_inst_paddr_a;
 
 
 logic[`ADDR_SIZE-1:0] pre_paddr_a,pre_physical_addr_a,pre_physical_addr_b;
@@ -306,13 +307,8 @@ assign pc2icache.pc_for_bpu[0]=(branch_flush||flush_delay)?32'b0:pre_vaddr_a;
 assign pc2icache.pc_for_bpu[1]=(branch_flush||flush_delay)?32'b0:((current_state==`UNCACHE_RETURN)?(`DATA_SIZE'b0): pre_vaddr_b);
 
 
-logic[`ADDR_SIZE-1:0] record_uncache_pc;
-always_ff @( posedge clk ) begin
-    if(pc2icache.uncache_en&&(next_state==`IDLE))record_uncache_pc<=pc2icache.pc;
-    else record_uncache_pc<=record_uncache_pc;
-end
 assign iucache_ren_i=(!flush_delay)&&(!branch_flush)&&(((current_state==`IDLE)&&pc2icache.uncache_en)||(current_state==`UNCACHE_RETURN));
-assign iucache_addr_i=record_uncache_pc;//uncache模式直接用的虚拟地址，不知道对不对
+assign iucache_addr_i=pre_physical_addr_a;
 
 assign flush=branch_flush;
 
