@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module mul 
+module mul_alu
     import pipeline_types::*;
 (
     input logic clk,
