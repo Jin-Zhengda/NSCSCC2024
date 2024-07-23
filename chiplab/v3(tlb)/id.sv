@@ -42,10 +42,7 @@ module id
     logic [ 4:0] rk;
     logic [ 4:0] rj;
     logic [ 4:0] rd;
-    logic [14:0] code;
     logic [13:0] csr;
-    logic [ 9:0] level;
-    logic [ 4:0] invtlb_op;
 
     assign opcode1 = inst[31:22];
     assign opcode2 = inst[31:15];
@@ -64,9 +61,7 @@ module id
     assign rk = inst[14:10];
     assign rj = inst[9:5];
     assign rd = inst[4:0];
-    assign code = inst[14:0];
     assign csr = inst[23:10];
-    assign level = inst[9:0];
 
     logic inst_valid;
     logic id_exception;

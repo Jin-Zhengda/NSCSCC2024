@@ -202,6 +202,8 @@ module csr
     assign tlb_master.csr_da = crmd[3];
     assign tlb_master.csr_pg = crmd[4];
     assign tlb_master.csr_plv = crmd[1:0];
+    assign tlb_master.csr_datf = crmd[6:5];
+    assign tlb_master.csr_datm = crmd[8:7];
 
     logic timer_en;
     logic eret_tlbrefill_excp;
