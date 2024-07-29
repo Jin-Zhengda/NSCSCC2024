@@ -8,8 +8,6 @@ module decoder_3R
 (
     input bus32_t pc,
     input bus32_t inst,
-    input logic [5:0] is_exception,
-    input logic [5:0][EXC_CAUSE_WIDTH - 1:0] exception_cause,
 
     output id_dispatch_t id_o
 );
@@ -28,9 +26,10 @@ module decoder_3R
     assign rd = inst[4:0];
     assign ui5 = inst[14:10];
 
-    assign id_o.is_exception = 6'b0;
-    assign id_o.exception_cause = {6{`EXCEPTION_INE}};
-    assign id_o.id_o.inst_valid = id_o.inst_valid;
+    assign id_o.pc = pc;
+    assign id_o.inst = inst;
+    assign id_o.is_exception = 3'b0;
+    assign id_o.exception_cause = {3{`EXCEPTION_INE}};
     assign id_o.reg_read_addr[0] = rj;
     assign id_o.reg_read_addr[1] = rk;
     assign id_o.csr_read_en = 1'b0;

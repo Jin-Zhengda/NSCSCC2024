@@ -8,37 +8,17 @@ module id
 (
     input bus32_t pc,
     input bus32_t inst,
-    input logic pre_is_branch,
+    input logic valid,
     input logic pre_is_branch_taken,
     input bus32_t pre_branch_addr,
-    input logic [5:0] is_exception,
-    input logic [5:0][EXC_CAUSE_WIDTH - 1:0] exception_cause,
+    input logic [1:0] is_exception,
+    input logic [1:0][EXC_CAUSE_WIDTH - 1:0] exception_cause,
 
     output id_dispatch_t id_o
 );
 
-    assign id_o.pc = pc;
-    assign id_o.inst = inst;
-    assign id_o.pre_is_branch = pre_is_branch;
-    assign id_o.pre_is_branch_taken = pre_is_branch_taken;
-    assign id_o.pre_branch_addr = pre_branch_addr;
-
-    // logic inst_valid;
-    // logic id_exception;
-    // exception_cause_t id_exception_cause;
-
-    // assign id_o.is_exception = {
-    //     is_exception[5:4],
-    //     {(inst_valid ? id_exception: 1'b1)},
-    //     is_exception[2:0]
-    // };
-    // assign id_o.exception_cause = {
-    //     exception_cause[5:4],
-    //     {(inst_valid ? id_exception_cause : `EXCEPTION_INE)},
-    //     exception_cause[2:0]
-    // };
-
-    id_dispatch_t [5:0] part_id_o;  
+    id_dispatch_t [5:0] part_id_o; 
+     
     decoder_1R decoder_1R_inst (
         .pc(pc),
         .inst(inst),
@@ -86,10 +66,19 @@ module id
     };
 
 
-    logic is_sys_break;
-    exception_cause_t sys_break_cause;
-    assign is_sys_break = (id_o.aluop == `ALU_SYSCALL || id_o.aluop == `ALU_BREAK);
-    assign sys_break_cause = (id_o.aluop == `ALU_SYSCALL) ? `EXCEPTION_SYS : `EXCEPTION_BRK;
+    logic sys_exception;
+    logic brk_exception;
+    assign sys_exception = id_o.aluop == `ALU_SYSCALL;
+    assign brk_exception = id_o.aluop == `ALU_BREAK;
+    exception_cause_t id_exception_cause;
+    always_comb begin
+        case({brk_exception, sys_exception})
+            2'b01: id_exception_cause = `EXCEPTION_SYS;
+            2'b10: id_exception_cause = `EXCEPTION_BRK;
+            default: id_exception_cause = `EXCEPTION_NOP;
+        endcase
+    end
+
     always_comb begin 
         case(id_valid_vec)
             6'b000001: begin
@@ -109,15 +98,20 @@ module id
             end
             6'b100000: begin
                 id_o = part_id_o[5];
-                id_o.is_exception = {is_exception[5:4], is_sys_break, is_exception[2:0]};
-                id_o.exception_cause = {exception_cause[5:4], sys_break_cause, exception_cause[2:0]};
+                id_o.is_exception = {is_exception, sys_exception | brk_exception};
+                id_o.exception_cause = {exception_cause, id_exception_cause};
             end
             default: begin
                 id_o = 0;
-                id_o.is_exception = {is_exception[5:4], 1'b1, is_exception[2:0]};
-                id_o.exception_cause = {exception_cause[5:4], `EXCEPTION_INE, exception_cause[2:0]};
+                id_o.pc = pc;
+                id_o.is_exception = {is_exception, 1'b1};
+                id_o.exception_cause = {exception_cause, id_exception_cause};
             end
         endcase
+
+        id_o.pre_is_branch_taken = pre_is_branch_taken;
+        id_o.pre_branch_addr = pre_branch_addr;
+        id_o.valid = valid;
     end
 
 endmodule

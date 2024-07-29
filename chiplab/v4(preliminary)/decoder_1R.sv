@@ -3,7 +3,7 @@
 `include "pipeline_types.sv"
 `timescale 1ns / 1ps
 
-module decoder_1R 
+module decoder_1R
     import pipeline_types::*;
 (
     input bus32_t pc,
@@ -20,8 +20,10 @@ module decoder_1R
     assign rj = inst[9:5];
     assign rd = inst[4:0];
 
-    assign id_o.is_exception = 6'b0;
-    assign id_o.exception_cause = {6{`EXCEPTION_INE}};
+    assign id_o.pc = pc;
+    assign id_o.inst = inst;
+    assign id_o.is_exception = 3'b0;
+    assign id_o.exception_cause = {3{`EXCEPTION_INE}};
     assign id_o.reg_read_en[0] = 1'b0;
     assign id_o.reg_read_en[1] = 1'b0;
     assign id_o.reg_read_addr[0] = 5'b0;
@@ -44,11 +46,11 @@ module decoder_1R
                 id_o.csr_read_en = 1'b0;
             end
             `RDCNTID_OPCDOE: begin
-                    id_o.is_cnt = 1'b1;
-                    id_o.is_privilege = 1'b0;
-                    id_o.reg_write_en = 1'b1;
-                    id_o.alusel = `ALU_SEL_CSR;
-                    id_o.inst_valid = 1'b1;
+                id_o.is_cnt = 1'b1;
+                id_o.is_privilege = 1'b0;
+                id_o.reg_write_en = 1'b1;
+                id_o.alusel = `ALU_SEL_CSR;
+                id_o.inst_valid = 1'b1;
                 if (rj == 5'b0) begin
                     id_o.reg_write_addr = rd;
                     id_o.aluop = `ALU_RDCNTVLW;

@@ -21,8 +21,10 @@ module decoder_1RI20
     assign si20 = inst[24:5];
     assign rd = inst[4:0];
 
-    assign id_o.is_exception = 6'b0;
-    assign id_o.exception_cause = {6{`EXCEPTION_INE}};
+    assign id_o.pc = pc;
+    assign id_o.inst = inst;
+    assign id_o.is_exception = 3'b0;
+    assign id_o.exception_cause = {3{`EXCEPTION_INE}};
     assign id_o.reg_write_addr = rd;
     assign id_o.is_privilege = 1'b0;
     assign id_o.reg_read_addr[0] = 5'b0;
@@ -48,7 +50,7 @@ module decoder_1RI20
                 id_o.reg_write_en = 1'b1;
                 id_o.aluop = `ALU_PCADDU12I;
                 id_o.alusel = `ALU_SEL_ARITHMETIC;
-                id_o.reg_read_en[0] = 1'b0;
+                id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {si20, 12'b0};
                 id_o.inst_valid = 1'b1;

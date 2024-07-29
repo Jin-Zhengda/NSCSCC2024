@@ -24,8 +24,10 @@ module decoder_2RI12
     assign ui12 = inst[21:10];
     assign si12 = inst[21:10];
 
-    assign id_o.is_exception = 6'b0;
-    assign id_o.exception_cause = {6{`EXCEPTION_INE}};
+    assign id_o.pc = pc;
+    assign id_o.inst = inst;
+    assign id_o.is_exception = 3'b0;
+    assign id_o.exception_cause = {3{`EXCEPTION_INE}};
     assign id_o.reg_write_addr = rd;
     assign id_o.is_privilege = 1'b0;
     assign id_o.csr_read_en = 1'b0;
