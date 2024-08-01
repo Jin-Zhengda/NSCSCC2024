@@ -11,7 +11,6 @@ module mul_alu
     input bus32_t reg2,
     input logic signed_op,
 
-    output logic ready,
     output logic done,
     output bus64_t result
 );
@@ -23,8 +22,6 @@ module mul_alu
 
     assign reg1_ext = signed'({reg1[31] & signed_op, reg1});
     assign reg2_ext = signed'({reg2[31] & signed_op, reg2});
-
-    assign ready = start;
     
     always_ff @(posedge clk) begin
         if (start) begin

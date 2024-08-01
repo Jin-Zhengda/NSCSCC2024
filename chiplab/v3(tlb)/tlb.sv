@@ -1,88 +1,42 @@
-module tlb
+//TLBIDX
+`define INDEX     4:0
+`define PS        29:24
+`define NE        31
+//TLBEHI
+`define VPPN      31:13
+//TLBELO
+`define TLB_V      0
+`define TLB_D      1
+`define TLB_PLV    3:2
+`define TLB_MAT    5:4
+`define TLB_G      6
+`define TLB_PPN    31:8
+`define TLB_PPN_EN 27:8   //todo
+
+
+//DMW
+`define PLV0      0
+`define PLV3      3 
+`define DMW_MAT   5:4
+`define PSEG      27:25
+`define VSEG      31:29
+module TLB
 #(
     parameter TLBNUM = 32
 )
 (
     input        clk,
-    // search port 0
-    input                        s0_fetch    ,//控制信号，取指令的使能
-    input   [18:0]               s0_vppn_a     ,//虚双页号(VPPN)
-    input                        s0_odd_page_a ,//表示查奇页表还是偶页表
-    input   [ 9:0]               s0_asid     ,//地址空间标识(ASID)即Address Space Identifier，用于区分不同进程中相同的虚地址
-    output                       s0_found_a    ,//输出信号，表示s0中命中了
-    output  [ 4:0]               s0_index_a    ,//不懂！！！！！！！！！！！！！！！！！！！！！！
-    output  [ 5:0]               s0_ps_a       ,//页大小(PS)，6 比特。仅在 MTLB 中出现。用于指定该页表项中存放的页大小。数值是页大小的 2的幂指数。龙芯架构 32 位精简版只支持 4KB 和 4MB 两种页大小,对应的 PS 值分别是 12 和 22。
-    output  [19:0]               s0_ppn_a      ,//物理页号(PPN)
-    output                       s0_v_a        ,//有效位(V)，1比特。为1表明该页表项是有效的且被访问过的。
-    output                       s0_d_a        ,//脏位(D)，1比特。为1表示该页表项所对应的地址范围内已有脏数据。
-    output  [ 1:0]               s0_mat_a      ,//存储访问类型(MAT)，2 比特。控制落在该页表项所在地址空间上访存操作的存储访问类型。存储访问类型：:0--强序非缓存,1--一致可缓存。2/3--保留。
-    output  [ 1:0]               s0_plv_a      ,//特权等级(PLV)，2比特。该页表项对应的特权等级。该页表项可以被任何特权等级不低于 PLV的程序访问。
+    transaddr_tlb transaddr2tlb,
+    ex_tlb        ex2tlb       ,
+    csr_tlb       csr2tlb
 
-    input   [18:0]               s0_vppn_b     ,
-    input                        s0_odd_page_b ,
-    output                       s0_found_b    ,
-    output  [ 4:0]               s0_index_b    ,
-    output  [ 5:0]               s0_ps_b       ,
-    output  [19:0]               s0_ppn_b      ,
-    output                       s0_v_b        ,
-    output                       s0_d_b        ,
-    output  [ 1:0]               s0_mat_b      ,
-    output  [ 1:0]               s0_plv_b      ,
-
-    //search port 1
-    input                        s1_fetch    ,
-    input   [18:0]               s1_vppn     ,
-    input                        s1_odd_page ,
-    input   [ 9:0]               s1_asid     ,
-    output                       s1_found    ,
-    output  [ 4:0]               s1_index    ,
-    output  [ 5:0]               s1_ps       ,
-    output  [19:0]               s1_ppn      ,
-    output                       s1_v        ,
-    output                       s1_d        ,
-    output  [ 1:0]               s1_mat      ,
-    output  [ 1:0]               s1_plv      ,
-    // write port 提供直接写TLB表的接口
-    input                       we          ,
-    input  [$clog2(TLBNUM)-1:0] w_index     ,
-    input  [18:0]               w_vppn      ,
-    input  [ 9:0]               w_asid      ,
-    input                       w_g         ,
-    input  [ 5:0]               w_ps        ,
-    input                       w_e         ,
-    input                       w_v0        ,
-    input                       w_d0        ,
-    input  [ 1:0]               w_mat0      ,
-    input  [ 1:0]               w_plv0      ,
-    input  [19:0]               w_ppn0      ,
-    input                       w_v1        ,
-    input                       w_d1        ,
-    input  [ 1:0]               w_mat1      ,
-    input  [ 1:0]               w_plv1      ,
-    input  [19:0]               w_ppn1      ,
-    // read port 提供直接读TLB表的接口
-    input  [$clog2(TLBNUM)-1:0] r_index     ,//需要读的数据在TLB表的第index个
-    output [18:0]               r_vppn      ,
-    output [ 9:0]               r_asid      ,
-    output                      r_g         ,
-    output [ 5:0]               r_ps        ,
-    output                      r_e         ,
-    output                      r_v0        ,
-    output                      r_d0        ,
-    output [ 1:0]               r_mat0      ,
-    output [ 1:0]               r_plv0      ,
-    output [19:0]               r_ppn0      ,
-    output                      r_v1        ,
-    output                      r_d1        ,
-    output [ 1:0]               r_mat1      ,
-    output [ 1:0]               r_plv1      ,
-    output [19:0]               r_ppn1      ,
-    // invalid port 清零操作接口
-    input                       inv_en      ,   //清零使能信号
-    input  [ 4:0]               inv_op      ,   //清零操作类型
-    input  [ 9:0]               inv_asid    ,   //清零操作ASID数据(选择性)
-    input  [18:0]               inv_vpn         //清零操作VPPN数据(选择性)
 );
+logic  [ 4:0]               s0_index_a;
+logic  [ 4:0]               s0_index_b;
+
+
+
+
 
 //创建TLB表的存储寄存器，0、1是龙芯规定的奇偶相邻页表
 reg [18:0] tlb_vppn     [TLBNUM-1:0];
@@ -123,23 +77,6 @@ initial begin
 end
 
 
-
-
-
-//创建reg变量记录输入请求
-reg		   s0_fetch_r_a   ;
-reg [18:0] s0_vppn_r_a    ;
-reg        s0_odd_page_r_a;
-reg [ 9:0] s0_asid_r_a    ;
-reg		   s0_fetch_r_b   ;
-reg [18:0] s0_vppn_r_b    ;
-reg        s0_odd_page_r_b;
-reg [ 9:0] s0_asid_r_b    ;
-reg		   s1_fetch_r   ;
-reg [18:0] s1_vppn_r    ;
-reg        s1_odd_page_r;
-reg [ 9:0] s1_asid_r    ;
-
 //one-hot类型记录命中情况
 wire [TLBNUM-1:0] match0_a;
 wire [TLBNUM-1:0] match0_b;
@@ -151,54 +88,24 @@ wire [$clog2(TLBNUM)-1:0] match0_en_b;
 wire [$clog2(TLBNUM)-1:0] match1_en;
 
 //表示查奇页表还是偶页表
-wire [TLBNUM-1:0] s0_odd_page_buffer_a;
-wire [TLBNUM-1:0] s0_odd_page_buffer_b;
-wire [TLBNUM-1:0] s1_odd_page_buffer;
+wire [TLBNUM-1:0] my_s0_odd_page_a;
+wire [TLBNUM-1:0] my_s0_odd_page_b;
+wire [TLBNUM-1:0] my_s1_odd_page;
 
 //为s0_fetch_r，s0_vppn_r，s0_odd_page_r，s0_asid_r赋值
-always @(posedge clk) begin
-	s0_fetch_r_a <= s0_fetch;
-	if (s0_fetch) begin
-		s0_vppn_r_a      <= s0_vppn_a;    
-        s0_odd_page_r_a  <= s0_odd_page_a;
-        s0_asid_r_a      <= s0_asid;
-        s0_vppn_r_b      <= s0_vppn_b;    
-        s0_odd_page_r_b  <= s0_odd_page_b;
-        s0_asid_r_b      <= s0_asid;
-	end
-    else begin
-        s0_vppn_r_a      <= 19'b0;
-        s0_odd_page_r_a  <= 1'b0;
-        s0_asid_r_a      <= 10'b0;
-        s0_vppn_r_b      <= 19'b0;
-        s0_odd_page_r_b  <= 1'b0;
-        s0_asid_r_b      <= 10'b0;
-    end
-    
-	s1_fetch_r <= s1_fetch;
-	if (s1_fetch) begin
-		s1_vppn_r      <= s1_vppn;    
-        s1_odd_page_r  <= s1_odd_page;
-        s1_asid_r      <= s1_asid;
-	end
-    else begin
-        s1_vppn_r      <= 19'b0;    
-        s1_odd_page_r  <= 1'b0;
-        s1_asid_r      <= 10'b0;
-    end
-end
+
 
 //为s0_odd_page_buffer，match0这种变量赋值
 genvar i;
 generate
     for (i = 0; i < TLBNUM; i = i + 1)
         begin: match
-            assign s0_odd_page_buffer_a[i] = (tlb_ps[i] == 6'd12) ? s0_odd_page_r_a : s0_vppn_r_a[8];
-            assign s0_odd_page_buffer_b[i] = (tlb_ps[i] == 6'd12) ? s0_odd_page_r_b : s0_vppn_r_b[8];
-            assign match0_a[i] = tlb_e[i] && ((tlb_ps[i] == 6'd12) ? s0_vppn_r_a == tlb_vppn[i] : s0_vppn_r_a[18: 9] == tlb_vppn[i][18: 9]) && ((s0_asid_r_a == tlb_asid[i]) || tlb_g[i]);
-            assign match0_b[i] = tlb_e[i] && ((tlb_ps[i] == 6'd12) ? s0_vppn_r_b == tlb_vppn[i] : s0_vppn_r_b[18: 9] == tlb_vppn[i][18: 9]) && ((s0_asid_r_b == tlb_asid[i]) || tlb_g[i]);
-            assign s1_odd_page_buffer[i] = (tlb_ps[i] == 6'd12) ? s1_odd_page_r : s1_vppn_r[8];
-            assign match1[i] = tlb_e[i] && ((tlb_ps[i] == 6'd12) ? s1_vppn_r == tlb_vppn[i] : s1_vppn_r[18: 9] == tlb_vppn[i][18: 9]) && ((s1_asid_r == tlb_asid[i]) || tlb_g[i]);
+            assign my_s0_odd_page_a[i] = (tlb_ps[i] == 6'd12) ? transaddr2tlb.s0_odd_page_a : transaddr2tlb.s0_vppn_a[8];
+            assign my_s0_odd_page_b[i] = (tlb_ps[i] == 6'd12) ? transaddr2tlb.s0_odd_page_b : transaddr2tlb.s0_vppn_b[8];
+            assign match0_a[i] = tlb_e[i] && ((tlb_ps[i] == 6'd12) ? transaddr2tlb.s0_vppn_a == tlb_vppn[i] : transaddr2tlb.s0_vppn_a[18: 9] == tlb_vppn[i][18: 9]) && ((csr2tlb.asid == tlb_asid[i]) || tlb_g[i]);
+            assign match0_b[i] = tlb_e[i] && ((tlb_ps[i] == 6'd12) ? transaddr2tlb.s0_vppn_b == tlb_vppn[i] : transaddr2tlb.s0_vppn_b[18: 9] == tlb_vppn[i][18: 9]) && ((csr2tlb.asid == tlb_asid[i]) || tlb_g[i]);
+            assign my_s1_odd_page[i] = (tlb_ps[i] == 6'd12) ? transaddr2tlb.s1_odd_page : transaddr2tlb.s1_vppn[8];
+            assign match1[i] = tlb_e[i] && ((tlb_ps[i] == 6'd12) ? transaddr2tlb.s1_vppn == tlb_vppn[i] : transaddr2tlb.s1_vppn[18: 9] == tlb_vppn[i][18: 9]) && ((csr2tlb.asid == tlb_asid[i]) || tlb_g[i]);
         end
 endgenerate
 
@@ -207,45 +114,113 @@ encoder_32_5 en_match0_a (.in({{(32-TLBNUM){1'b0}},match0_a}), .out(match0_en_a)
 encoder_32_5 en_match0_b (.in({{(32-TLBNUM){1'b0}},match0_b}), .out(match0_en_b));
 encoder_32_5 en_match1 (.in({{(32-TLBNUM){1'b0}},match1}), .out(match1_en));
 
+logic s0_fetch_a, s0_fetch_b, s1_fetch;
+assign s0_fetch_a = transaddr2tlb.s0_fetch_a;
+assign s0_fetch_b = transaddr2tlb.s0_fetch_b;
+assign s1_fetch = transaddr2tlb.s1_fetch;
+
+
+//向transaddr返回
+always_ff @( posedge clk ) begin
+    transaddr2tlb.tlb_ret_inst_a   <= s0_fetch_a;
+    transaddr2tlb.tlb_ret_inst_b   <= s0_fetch_b;
+    transaddr2tlb.tlb_ret_data     <= s1_fetch;
+    transaddr2tlb.s0_ps_a          <= tlb_ps[match0_en_a];
+    transaddr2tlb.s0_ps_b          <= tlb_ps[match0_en_b];
+    transaddr2tlb.s1_ps            <= tlb_ps[match1_en];
+    transaddr2tlb.s0_ppn_a         <= my_s0_odd_page_a[match0_en_a] ? tlb_ppn1[match0_en_a] : tlb_ppn0[match0_en_a];
+    transaddr2tlb.s0_ppn_b         <= my_s0_odd_page_b[match0_en_b] ? tlb_ppn1[match0_en_b] : tlb_ppn0[match0_en_b];
+    transaddr2tlb.s1_ppn           <= my_s1_odd_page[match1_en] ? tlb_ppn1[match1_en] : tlb_ppn0[match1_en];
+    transaddr2tlb.mat_inst_a       <= my_s0_odd_page_a[match0_en_a] ? tlb_mat1[match0_en_a] : tlb_mat0[match0_en_a];
+    transaddr2tlb.mat_inst_b       <= my_s0_odd_page_b[match0_en_b] ? tlb_mat1[match0_en_b] : tlb_mat0[match0_en_b];
+    transaddr2tlb.mat_data         <= my_s1_odd_page[match1_en] ? tlb_mat1[match1_en] : tlb_mat0[match1_en];
+    transaddr2tlb.inst_tlb_found_a <= |match0_a;
+    transaddr2tlb.inst_tlb_found_b <= |match0_b;
+    transaddr2tlb.data_tlb_found   <= |match1  ;
+    transaddr2tlb.inst_tlb_plv_a   <= my_s0_odd_page_a[match0_en_a] ? tlb_plv1[match0_en_a] : tlb_plv0[match0_en_a];
+    transaddr2tlb.inst_tlb_plv_b   <= my_s0_odd_page_b[match0_en_b] ? tlb_plv1[match0_en_b] : tlb_plv0[match0_en_b];
+    transaddr2tlb.data_tlb_plv     <= my_s1_odd_page[match1_en] ? tlb_plv1[match1_en] : tlb_plv0[match1_en];
+    transaddr2tlb.inst_tlb_v_a     <= my_s0_odd_page_a[match0_en_a] ? tlb_v1[match0_en_a]   : tlb_v0[match0_en_a]  ;
+    transaddr2tlb.inst_tlb_v_b     <= my_s0_odd_page_b[match0_en_b] ? tlb_v1[match0_en_b]   : tlb_v0[match0_en_b]  ;
+    transaddr2tlb.data_tlb_v       <= my_s1_odd_page[match1_en] ? tlb_v1[match1_en]   : tlb_v0[match1_en]  ;
+    transaddr2tlb.data_tlb_d       <= my_s1_odd_page[match1_en] ? tlb_d1[match1_en]   : tlb_d0[match1_en]  ;
+    transaddr2tlb.r_e              <= tlb_e[csr2tlb.tlbidx[`INDEX]]; 
+end
 
 
 
 
-//给输出信号赋值，将信息处理成输出
-assign s0_found_a = |match0_a;
-assign s0_index_a = {{(5-$clog2(TLBNUM)){1'b0}},match0_en_a};
-assign s0_ps_a    = tlb_ps[match0_en_a];
-assign s0_ppn_a   = s0_odd_page_buffer_a[match0_en_a] ? tlb_ppn1[match0_en_a] : tlb_ppn0[match0_en_a];
-assign s0_v_a     = s0_odd_page_buffer_a[match0_en_a] ? tlb_v1[match0_en_a]   : tlb_v0[match0_en_a]  ;
-assign s0_d_a     = s0_odd_page_buffer_a[match0_en_a] ? tlb_d1[match0_en_a]   : tlb_d0[match0_en_a]  ;
-assign s0_mat_a   = s0_odd_page_buffer_a[match0_en_a] ? tlb_mat1[match0_en_a] : tlb_mat0[match0_en_a];
-assign s0_plv_a   = s0_odd_page_buffer_a[match0_en_a] ? tlb_plv1[match0_en_a] : tlb_plv0[match0_en_a];
-
-assign s0_found_b = |match0_b;
-assign s0_index_b = {{(5-$clog2(TLBNUM)){1'b0}},match0_en_b};
-assign s0_ps_b    = tlb_ps[match0_en_b];
-assign s0_ppn_b   = s0_odd_page_buffer_b[match0_en_b] ? tlb_ppn1[match0_en_b] : tlb_ppn0[match0_en_b];
-assign s0_v_b     = s0_odd_page_buffer_b[match0_en_b] ? tlb_v1[match0_en_b]   : tlb_v0[match0_en_b]  ;
-assign s0_d_b     = s0_odd_page_buffer_b[match0_en_b] ? tlb_d1[match0_en_b]   : tlb_d0[match0_en_b]  ;
-assign s0_mat_b   = s0_odd_page_buffer_b[match0_en_b] ? tlb_mat1[match0_en_b] : tlb_mat0[match0_en_b];
-assign s0_plv_b   = s0_odd_page_buffer_b[match0_en_b] ? tlb_plv1[match0_en_b] : tlb_plv0[match0_en_b];
-
+//tlb写操作的信号
+logic        we          ;
+logic [ 4:0] w_index     ;
+logic [18:0] w_vppn      ;
+logic        w_g         ;
+logic [ 5:0] w_ps        ;
+logic        w_e         ;
+logic        w_v0        ;
+logic        w_d0        ;
+logic [ 1:0] w_mat0      ;
+logic [ 1:0] w_plv0      ;
+logic [19:0] w_ppn0      ;
+logic        w_v1        ;
+logic        w_d1        ;
+logic [ 1:0] w_mat1      ;
+logic [ 1:0] w_plv1      ;
+logic [19:0] w_ppn1      ;
 
 
-assign s1_found = |match1;
-assign s1_index = {{(5-$clog2(TLBNUM)){1'b0}},match1_en};
-assign s1_ps    = tlb_ps[match1_en];
-assign s1_ppn   = s1_odd_page_buffer[match1_en] ? tlb_ppn1[match1_en] : tlb_ppn0[match1_en];
-assign s1_v     = s1_odd_page_buffer[match1_en] ? tlb_v1[match1_en]   : tlb_v0[match1_en]  ;
-assign s1_d     = s1_odd_page_buffer[match1_en] ? tlb_d1[match1_en]   : tlb_d0[match1_en]  ;
-assign s1_mat   = s1_odd_page_buffer[match1_en] ? tlb_mat1[match1_en] : tlb_mat0[match1_en];
-assign s1_plv   = s1_odd_page_buffer[match1_en] ? tlb_plv1[match1_en] : tlb_plv0[match1_en];
+
+//trans write port sig 将写信号转换成TLB模块需要的格式
+assign we      = ex2tlb.tlbfill_en || ex2tlb.tlbwr_en;//写使能信号
+assign w_index = ({5{ex2tlb.tlbfill_en}} & ex2tlb.rand_index) | ({5{ex2tlb.tlbwr_en}} & csr2tlb.tlbidx[`INDEX]);//写操作的index
+assign w_vppn  = csr2tlb.tlbehi[`VPPN];//写的vppn19位
+assign w_g     = csr2tlb.tlbelo0[`TLB_G] && csr2tlb.tlbelo1[`TLB_G];//写的全局标志位{6}
+assign w_ps    = csr2tlb.tlbidx[`PS];//pageSize
+assign w_e     = (csr2tlb.ecode == 6'h3f) ? 1'b1 : !csr2tlb.tlbidx[`NE];//写使能信号，ecode_in时使能，否则tlb_idx[`NE]为0时使能
+assign w_v0    = csr2tlb.tlbelo0[`TLB_V];//有效{0}
+assign w_d0    = csr2tlb.tlbelo0[`TLB_D];//脏{1}
+assign w_plv0  = csr2tlb.tlbelo0[`TLB_PLV];//PLV特权等级{3:2}
+assign w_mat0  = csr2tlb.tlbelo0[`TLB_MAT];//存储访问类型{5:4}
+assign w_ppn0  = csr2tlb.tlbelo0[`TLB_PPN_EN];//物理页号{27:8}
+assign w_v1    = csr2tlb.tlbelo1[`TLB_V];
+assign w_d1    = csr2tlb.tlbelo1[`TLB_D];
+assign w_plv1  = csr2tlb.tlbelo1[`TLB_PLV];
+assign w_mat1  = csr2tlb.tlbelo1[`TLB_MAT];
+assign w_ppn1  = csr2tlb.tlbelo1[`TLB_PPN_EN];
+
+//tlb读操作的信号
+logic [ 4:0] r_index     ;
+logic [18:0] r_vppn      ;
+logic [ 9:0] r_asid      ;
+logic        r_g         ;
+logic [ 5:0] r_ps        ;
+logic        r_e         ;
+logic        r_v0        ;
+logic        r_d0        ; 
+logic [ 1:0] r_mat0      ;
+logic [ 1:0] r_plv0      ;
+logic [19:0] r_ppn0      ;
+logic        r_v1        ;
+logic        r_d1        ;
+logic [ 1:0] r_mat1      ;
+logic [ 1:0] r_plv1      ;
+logic [19:0] r_ppn1      ;
+
+//将读tlb的结果转换成输出格式
+assign r_index      = csr2tlb.tlbidx[`INDEX];
+assign ex2tlb.tlbehi_out   = {r_vppn, 13'b0};
+assign ex2tlb.tlbelo0_out  = {4'b0, r_ppn0, 1'b0, r_g, r_mat0, r_plv0, r_d0, r_v0};
+assign ex2tlb.tlbelo1_out  = {4'b0, r_ppn1, 1'b0, r_g, r_mat1, r_plv1, r_d1, r_v1};
+assign ex2tlb.tlbidx_out   = {!r_e, 1'b0, r_ps, 24'b0}; //note do not write index
+assign ex2tlb.asid_out     = r_asid;
+
+
 
 //实现直接写TLB的功能
 always @(posedge clk) begin
     if (we) begin
         tlb_vppn [w_index] <= w_vppn;
-        tlb_asid [w_index] <= w_asid;
+        tlb_asid [w_index] <= csr2tlb.asid;
         tlb_g    [w_index] <= w_g; 
         tlb_ps   [w_index] <= w_ps;  
         tlb_ppn0 [w_index] <= w_ppn0;
@@ -277,6 +252,16 @@ assign r_d1    =  tlb_d1   [r_index];
 assign r_mat1  =  tlb_mat1 [r_index]; 
 assign r_plv1  =  tlb_plv1 [r_index]; 
 assign r_ppn1  =  tlb_ppn1 [r_index]; 
+
+
+logic                     inv_en        ;
+logic[ 4:0]               inv_op        ;
+logic[ 9:0]               inv_asid      ;
+logic[18:0]               inv_vpn       ;
+assign inv_en   = ex2tlb.invtlb_en  ;
+assign inv_op   = ex2tlb.invtlb_op  ;
+assign inv_asid = ex2tlb.invtlb_asid;
+assign inv_vpn  = ex2tlb.invtlb_vpn ;
 
 //tlb entry invalid TLB清零功能
 generate 
@@ -321,5 +306,8 @@ generate
             end
         end 
 endgenerate
+
+
+
 
 endmodule

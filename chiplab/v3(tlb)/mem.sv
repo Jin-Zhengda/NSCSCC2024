@@ -13,16 +13,14 @@ module mem
     // from ex
     input ex_mem_t [ISSUE_WIDTH - 1: 0] mem_i,
 
-    // with dcache
-    mem_dcache dcache_master,
-
     // with tlb
     ex_tlb tlb_master,
 
+    // with dcache
+    mem_dcache dcache_master,
+
     // to dispatch
     output pipeline_push_forward_t [ISSUE_WIDTH - 1: 0] mem_reg_pf,
-    output csr_push_forward_t mem_csr_pf,
-    output alu_op_t [ISSUE_WIDTH - 1:0] pre_mem_aluop,
 
     // to ctrl
     output logic pause_mem,
@@ -40,15 +38,9 @@ module mem
     `endif
 );
 
-    bus32_t pc1;
-    bus32_t pc2;
-    assign pc1 = mem_i[0].pc;
-    assign pc2 = mem_i[1].pc;
 
     mem_wb_t [ISSUE_WIDTH - 1: 0] mem_o;
     assign wb_i = mem_o;
-
-
 
     // mem push forward
     generate
@@ -58,12 +50,6 @@ module mem
             assign mem_reg_pf[i].reg_write_data = mem_o[i].reg_write_data;
         end
     endgenerate
-
-    assign mem_csr_pf.csr_write_en = mem_o[0].csr_write_en || mem_o[1].csr_write_en;
-    assign mem_csr_pf.csr_write_addr = mem_o[0].csr_write_en ? mem_o[0].csr_write_addr : mem_o[1].csr_write_addr;
-    assign mem_csr_pf.csr_write_data = mem_o[0].csr_write_en ? mem_o[0].csr_write_data : mem_o[1].csr_write_data;
-
-    assign pre_mem_aluop = {mem_i[1].aluop, mem_i[0].aluop};
 
     // wb signal assignment
     generate
@@ -88,12 +74,6 @@ module mem
         end
     endgenerate
 
-    logic [1:0][5:0] mem_is_exception_delay;
-    logic [ISSUE_WIDTH - 1: 0][5:0][6: 0] mem_exception_cause_delay;
-    always_ff @(posedge clk) begin
-        mem_is_exception_delay <= mem_is_exception;
-        mem_exception_cause_delay <= mem_exception_cause;
-    end
 
     // ctrl signal assignment
     generate
@@ -102,13 +82,13 @@ module mem
             assign commit_ctrl_i[i].exception_cause = mem_exception_cause[i];
             assign commit_ctrl_i[i].pc = mem_i[i].pc;
             assign commit_ctrl_i[i].mem_addr = mem_i[i].mem_addr;
-            assign commit_ctrl_i[i].aluop = mem_i[i].aluop;
             assign commit_ctrl_i[i].is_privilege = mem_i[i].is_privilege;
+            assign commit_ctrl_i[i].is_ertn = mem_i[0].is_ertn || mem_i[1].is_ertn;
+            assign commit_ctrl_i[i].is_idle = mem_i[0].is_idle || mem_i[1].is_idle;
+            assign commit_ctrl_i[i].aluop = mem_i[i].aluop;
         end
     endgenerate
 
-    logic [5:0] temp;
-    assign temp = commit_ctrl_i[0].is_exception;
 
     // tlb inst
     assign tlb_inst_i.search_tlb_found = tlb_master.search_tlb_found;
@@ -125,7 +105,7 @@ module mem
 
     // mem 
     bus32_t cache_data;
-    assign cache_data = (dcache_master.data_ok) ? dcache_master.rdata : 32'b0;
+    assign cache_data = dcache_master.rdata;
 
     logic[1:0] pause_uncache;
 
@@ -252,7 +232,7 @@ module mem
     endgenerate 
 
     // pause
-    assign pause_mem = (pause_uncache[0] || pause_uncache[1]) && (mem_is_exception[0] == 6'b0) && (mem_is_exception[1] == 6'b0);
+    assign pause_mem = (pause_uncache[0] || pause_uncache[1]) && (mem_is_exception[0] == 0) && (mem_is_exception[1] == 0);
 
     `ifdef DIFF
     // diff_o
@@ -260,7 +240,7 @@ module mem
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
             assign diff_o[i].debug_wb_pc = mem_i[i].pc; 
             assign diff_o[i].debug_wb_inst = mem_i[i].inst;
-            assign diff_o[i].debug_wb_rf_wen = 1'b0;
+            assign diff_o[i].debug_wb_rf_wen = 4'b0;
             assign diff_o[i].debug_wb_rf_wnum = 5'b0;
             assign diff_o[i].debug_wb_rf_wdata = 32'b0;
             assign diff_o[i].inst_valid = mem_i[i].inst_valid;

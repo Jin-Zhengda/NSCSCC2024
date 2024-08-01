@@ -240,8 +240,8 @@ module cache_axi(
     assign axi_wen_o    = (write_state == STATE_WRITE_FREE) ? 1'b0 : 1'b1;
     assign axi_wvalid_o = (write_state == STATE_WRITE_FREE) ? 1'b0 : 1'b1;
     
-	assign axi_wlen_o   = (write_state == STATE_WRITE_DUNCACHED) ? 4'h0 : 4'h7; // byte select  这个信号我有点懵
-    assign axi_rlen_o   = (read_state == STATE_READ_IUNCACHED || read_state == STATE_READ_DUNCACHED ) ? 4'h0 : 4'h7;//byte select
+	assign axi_wlen_o   = (write_state == STATE_WRITE_DUNCACHED) ? 8'h0 : 8'h7; // byte select  这个信号我有点懵
+    assign axi_rlen_o   = (read_state == STATE_READ_IUNCACHED || read_state == STATE_READ_DUNCACHED ) ? 8'h0 : 8'h7;//byte select
 
     assign axi_wsel_o = (write_state == STATE_WRITE_DUNCACHED) ? cache_wsel_i : 4'b1111;
 

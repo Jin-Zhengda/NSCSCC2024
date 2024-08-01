@@ -49,6 +49,7 @@
 "circumstance" is in "consider under what circumstances and in" ["circumstances and in"]
 "the" is in "what ways the University, its" ["the University, its"]
 "member" is not in "administrators and faculty members should"
+"member" is in "administrators and faculty members should" ["members should"]
 "such" is in "be associated with such organizations" ["such organizations"]
 "guide" is not in "and it will recommend guiding principles"
 "regard" is in "in this regard. The University's" ["regard. The University's"]

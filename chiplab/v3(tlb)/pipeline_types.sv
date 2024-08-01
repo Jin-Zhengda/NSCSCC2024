@@ -1,6 +1,6 @@
 `ifndef PIPELINE_TYPES_SV
 `define PIPELINE_TYPES_SV
-`define DIFF
+//`define DIFF
 
 package pipeline_types;
 
@@ -42,14 +42,14 @@ package pipeline_types;
         bus32_t [1:0] inst_o;
         bus32_t [1:0] pc_o;
         logic [1:0] valid;
-        logic [1:0][5:0] is_exception;
-        logic [1:0][5:0][6:0] exception_cause;
+        logic [1:0][1:0] is_exception;
+        logic [1:0][1:0][6:0] exception_cause;
     } inst_and_pc_t;
 
     typedef struct packed {
         bus32_t pc_o;
-        logic [5:0] is_exception;
-        logic [5:0][6:0] exception_cause;
+        logic is_exception;
+        logic [6:0] exception_cause;
     } pc_out_t;
 
     typedef struct packed {
@@ -59,7 +59,6 @@ package pipeline_types;
     } branch_info_t;
 
     typedef struct packed {
-        logic   branch_flush;
         logic   update_en;
         logic   taken_or_not_actual;
         bus32_t branch_actual_addr;
@@ -84,11 +83,12 @@ package pipeline_types;
         bus32_t pc;
         bus32_t inst;
 
-        logic [5:0] is_exception;
-        logic [5:0][EXC_CAUSE_WIDTH - 1:0] exception_cause;
+        logic [2:0] is_exception;
+        logic [2:0][EXC_CAUSE_WIDTH - 1:0] exception_cause;
         logic inst_valid;
         logic is_privilege;
         logic is_cnt;
+        logic valid;
 
         alu_op_t aluop;
         alu_sel_t alusel;
@@ -105,9 +105,6 @@ package pipeline_types;
         logic csr_write_en;
         csr_addr_t csr_addr;
 
-        logic [4:0] cacop_code;
-
-        logic   pre_is_branch;
         logic   pre_is_branch_taken;
         bus32_t pre_branch_addr;
     } id_dispatch_t;
@@ -119,20 +116,13 @@ package pipeline_types;
         bus32_t reg_write_data;
     } pipeline_push_forward_t;
 
-    // csr push forward
-    typedef struct packed {
-        logic csr_write_en;
-        csr_addr_t csr_write_addr;
-        bus32_t csr_write_data;
-    } csr_push_forward_t;
-
     // dispatch and ex
     typedef struct packed {
         bus32_t pc;
         bus32_t inst;
 
-        logic [5:0] is_exception;
-        logic [5:0][EXC_CAUSE_WIDTH - 1:0] exception_cause;
+        logic [3:0] is_exception;
+        logic [3:0][EXC_CAUSE_WIDTH - 1:0] exception_cause;
         logic inst_valid;
         logic is_privilege;
 
@@ -149,10 +139,8 @@ package pipeline_types;
         logic csr_write_en;
         csr_addr_t csr_addr;
 
-        logic [4:0] cacop_code;
         logic [4:0] invtlb_op;
 
-        logic   pre_is_branch;
         logic   pre_is_branch_taken;
         bus32_t pre_branch_addr;
     } dispatch_ex_t;
@@ -161,10 +149,12 @@ package pipeline_types;
         bus32_t pc;
         bus32_t inst;
 
-        logic [5:0] is_exception;
-        logic [5:0][EXC_CAUSE_WIDTH-1:0] exception_cause;
+        logic [4:0] is_exception;
+        logic [4:0][EXC_CAUSE_WIDTH-1:0] exception_cause;
         logic inst_valid;
         logic is_privilege;
+        logic is_ertn;
+        logic is_idle;
 
         logic reg_write_en;
         reg_addr_t reg_write_addr;
@@ -202,6 +192,8 @@ package pipeline_types;
         bus32_t mem_addr;
 
         alu_op_t aluop;
+        logic is_idle;
+        logic is_ertn;
 
         logic is_privilege;
     } commit_ctrl_t;

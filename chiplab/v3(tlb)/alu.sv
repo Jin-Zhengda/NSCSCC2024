@@ -8,11 +8,21 @@ module alu
 (
     input logic clk,
     input logic rst,
+    input logic flush,
+    input logic pause_mem,
 
     input dispatch_ex_t ex_i,
 
     // from stable counter
     input bus64_t cnt,
+
+    // with dcache
+    output logic valid,
+    output logic op,
+    input logic addr_ok,
+    output bus32_t virtual_addr,
+    output bus32_t wdata,
+    output logic [3:0] wstrb,
 
     // tlb
     output logic tlbrd_en,
@@ -24,15 +34,6 @@ module alu
     output logic[18:0] invtlb_vpn,
     output logic[4:0] invtlb_op,
     output logic[4:0] rand_index,
-
-    // with dcache
-    output logic valid,
-    output logic op,
-    output logic uncache_en,
-    input logic addr_ok,
-    output bus32_t virtual_addr,
-    output bus32_t wdata,
-    output logic [3:0] wstrb,
 
     // to bpu
     output branch_update update_info,
@@ -51,7 +52,7 @@ module alu
     // to mem
     output ex_mem_t ex_o
 );
-    assign ex_o.mem_data = wdata;
+    // assign ex_o.mem_data = wdata;
     bus32_t reg_data1;
     bus32_t reg_data2;
     assign reg_data1 = ex_i.reg_data[0];
@@ -63,62 +64,65 @@ module alu
     assign ex_o.inst_valid = ex_i.inst_valid;
     assign ex_o.is_privilege = ex_i.is_privilege;
     assign ex_o.aluop = ex_i.aluop;
+    assign ex_o.is_ertn = (ex_i.aluop == `ALU_ERTN);
+    assign ex_o.is_idle = (ex_i.aluop == `ALU_IDLE);
 
-    logic ex_is_exception;
-    exception_cause_t ex_exception_cause;
+    logic ex_mem_exception;
 
-    logic ex_mem_is_exception;
-    exception_cause_t ex_mem_exception_cause;
-    logic tlb_op_exception;
-    exception_cause_t tlb_op_exception_cause;
-
-    assign ex_is_exception = ex_mem_is_exception || tlb_op_exception;
-    assign ex_exception_cause = (ex_mem_is_exception)? ex_mem_exception_cause: tlb_op_exception_cause;
-
-    assign ex_o.is_exception = {ex_i.is_exception[5:2], ex_is_exception, ex_i.is_exception[0]};
-    assign ex_o.exception_cause = {ex_i.exception_cause[5:2], ex_exception_cause, ex_i.exception_cause[0]};
+    assign ex_o.is_exception = {ex_i.is_exception, ex_mem_exception};
+    assign ex_o.exception_cause = {ex_i.exception_cause, `EXCEPTION_ALE};
 
     assign pre_ex_aluop = ex_i.aluop;
 
     // regular alu
     bus32_t regular_alu_res;
-    bus32_t reg1;
-    assign reg1 = (ex_i.aluop == `ALU_PCADDU12I) ? ex_i.pc : reg_data1;
 
     regular_alu u_regular_alu(
         .aluop(ex_i.aluop),
 
-        .reg1(reg1),
+        .reg1(reg_data1),
         .reg2(reg_data2),
 
         .result(regular_alu_res)
     );
 
-    bus32_t last_pc;
-    always_ff @( posedge clk ) begin
-        last_pc <= ex_i.pc;
-    end
-
     // mul alu
     bus32_t mul_alu_res;
     logic pause_ex_mul;
+    logic is_mul;
     logic start_mul;
     logic signed_mul;
     logic mul_done;
     bus64_t mul_result;
+    bus32_t mul_data1;
+    bus32_t mul_data2;
 
-    assign start_mul = (ex_i.aluop == `ALU_MULW || ex_i.aluop == `ALU_MULHW || ex_i.aluop == `ALU_MULHWU ) 
-                        && !mul_done && (last_pc != ex_i.pc);
+    assign is_mul = (ex_i.aluop == `ALU_MULW || ex_i.aluop == `ALU_MULHW || ex_i.aluop == `ALU_MULHWU ) && !mul_done;
+    assign pause_ex_mul = is_mul && !mul_done;
+    always_ff @(posedge clk) begin
+        if (start_mul) begin
+            start_mul <= 1'b0;
+        end else if (is_mul) begin
+            start_mul <= 1'b1;
+            mul_data1 <= reg_data1;
+            mul_data2 <= reg_data2;
+        end else begin
+            start_mul <= 1'b0;
+        end
+    end
+    
+    // assign start_mul = (ex_i.aluop == `ALU_MULW || ex_i.aluop == `ALU_MULHW || ex_i.aluop == `ALU_MULHWU ) 
+    //                     && !mul_done;
+    // assign pause_ex_mul = start_mul;
     assign signed_mul = (ex_i.aluop == `ALU_MULW || ex_i.aluop == `ALU_MULHW);
-    assign pause_ex_mul = start_mul;
 
     mul_alu u_mul_alu (
         .clk,
         .rst,
 
         .start(start_mul),
-        .reg1(reg_data1),
-        .reg2(reg_data2),
+        .reg1(mul_data1),
+        .reg2(mul_data2),
         .signed_op(signed_mul),
 
         .done(mul_done),
@@ -143,28 +147,43 @@ module alu
     // div alu
     bus32_t div_alu_res;
     logic pause_ex_div;
+    logic is_div;
     logic start_div;
     logic signed_div;
     logic div_done;
     logic is_running;
-
     bus32_t remainder;
     bus32_t quotient;
+    bus32_t div_data1;
+    bus32_t div_data2;
 
-
-
-    assign start_div = (ex_i.aluop == `ALU_DIVW || ex_i.aluop == `ALU_MODW || ex_i.aluop == `ALU_DIVWU 
-                        || ex_i.aluop == `ALU_MODWU) && !div_done && !is_running && (last_pc != ex_i.pc);
+    assign is_div = (ex_i.aluop == `ALU_DIVW || ex_i.aluop == `ALU_MODW || ex_i.aluop == `ALU_DIVWU 
+                        || ex_i.aluop == `ALU_MODWU) && !div_done;
+    assign pause_ex_div = is_div && !div_done;
+    always_ff @( posedge clk) begin
+        if (start_div) begin
+            start_div <= 1'b0;
+        end else if (is_div && !is_running) begin
+            start_div <= 1'b1;
+            div_data1 <= reg_data1;
+            div_data2 <= reg_data2;
+        end else begin
+            start_div <= 1'b0;
+        end
+    end
+    // assign start_div = (ex_i.aluop == `ALU_DIVW || ex_i.aluop == `ALU_MODW || ex_i.aluop == `ALU_DIVWU 
+    //                     || ex_i.aluop == `ALU_MODWU) && !div_done && !is_running;
+    // assign pause_ex_div = start_div || is_running;
     assign signed_div = (ex_i.aluop == `ALU_DIVW || ex_i.aluop == `ALU_MODW);
-    assign pause_ex_div = start_div || is_running;
+    
 
     div_alu u_div_alu(
         .clk,
         .rst,
 
         .op(signed_div),
-        .dividend(reg_data1),
-        .divisor(reg_data2),
+        .dividend(div_data1),
+        .divisor(div_data2),
         .start(start_div),
 
         .is_running(is_running),
@@ -245,57 +264,36 @@ module alu
         endcase
     end
 
-    assign virtual_addr = ex_o.mem_addr;
+    assign virtual_addr = ex_o.mem_addr;    
     logic mem_is_valid;
 
-    always_comb begin
-        if (ex_o.is_exception == 6'b0) begin
-            // if (virtual_addr[31: 16] == 16'hbfaf) begin
-            //     uncache_en = mem_is_valid && !ex_mem_is_exception;
-            //     valid = uncache_en;
-            // end 
-            // else begin
-            //     uncache_en = 1'b0;
-            //     valid = mem_is_valid && !ex_mem_is_exception;
-            // end
-            uncache_en = mem_is_valid && !ex_mem_is_exception;
-            valid = uncache_en;
-        end
-        else begin
-            uncache_en = 1'b0;
-            valid = 1'b0;
-        end
-    end
+    assign valid = mem_is_valid && !flush && !ex_o.is_exception && !pause_mem; 
 
     always_comb begin: to_dcache
         case (ex_i.aluop) 
             `ALU_LDB, `ALU_LDBU: begin
-                ex_mem_is_exception = 1'b0;
-                ex_mem_exception_cause = 7'b0;
+                ex_mem_exception = 1'b0;
                 op = 1'b0;
                 mem_is_valid = 1'b1;
                 wdata = 32'b0;
                 wstrb = 4'b1111;
             end
             `ALU_LDH, `ALU_LDHU: begin
-                ex_mem_is_exception = (ex_o.mem_addr[1: 0] == 2'b01) || (ex_o.mem_addr[1: 0] == 2'b11);
-                ex_mem_exception_cause = (ex_o.mem_addr[1: 0] == 2'b01 || ex_o.mem_addr[1: 0] == 2'b11) ? `EXCEPTION_ALE : 7'b0;
+                ex_mem_exception = (ex_o.mem_addr[1: 0] == 2'b01) || (ex_o.mem_addr[1: 0] == 2'b11);
                 op = 1'b0;
                 mem_is_valid = 1'b1;
                 wdata = 32'b0;
                 wstrb = 4'b1111;
             end
             `ALU_LDW, `ALU_LLW: begin
-                ex_mem_is_exception = (ex_o.mem_addr[1: 0] != 2'b00);
-                ex_mem_exception_cause = (ex_o.mem_addr[1: 0] != 2'b00) ? `EXCEPTION_ALE: 7'b0;
+                ex_mem_exception = (ex_o.mem_addr[1: 0] != 2'b00);
                 op = 1'b0;
                 mem_is_valid = 1'b1;
                 wdata = 32'b0;
                 wstrb = 4'b1111;
             end
             `ALU_STB: begin
-                ex_mem_is_exception = 1'b0;
-                ex_mem_exception_cause = 7'b0;
+                ex_mem_exception = 1'b0;
                 op = 1'b1;
                 mem_is_valid = 1'b1;
                 case (ex_o.mem_addr[1: 0])
@@ -316,7 +314,8 @@ module alu
                         wdata = {reg_data2[7: 0], 24'b0};
                     end
                     default: begin
-                        wstrb = 4'b0000;                        
+                        wstrb = 4'b0000;          
+                        wdata = 32'b0;           
                     end
                 endcase
             end
@@ -327,38 +326,34 @@ module alu
                     2'b00: begin
                         wstrb = 4'b0011;
                         wdata = {16'b0, reg_data2[15: 0]};
-                        ex_mem_is_exception = 1'b0;
-                        ex_mem_exception_cause = 7'b0;
+                        ex_mem_exception = 1'b0;
                     end 
                     2'b10: begin
                         wstrb = 4'b1100;
                         wdata = {reg_data2[15: 0], 16'b0};
-                        ex_mem_is_exception = 1'b0;
-                        ex_mem_exception_cause = 7'b0;
+                        ex_mem_exception = 1'b0;
                     end
                     2'b01, 2'b11: begin
                         wstrb = 4'b0000;
-                        ex_mem_is_exception = 1'b1;
-                        ex_mem_exception_cause = `EXCEPTION_ALE;
+                        wdata = 32'b0;
+                        ex_mem_exception = 1'b1;
                     end
                     default: begin
-                        wstrb = 4'b0000;    
-                        ex_mem_is_exception = 1'b0;
-                        ex_mem_exception_cause = 7'b0;                    
+                        wstrb = 4'b0000; 
+                        wdata = 32'b0;    
+                        ex_mem_exception = 1'b0;        
                     end
                 endcase
             end
             `ALU_STW: begin
-                ex_mem_is_exception = (ex_o.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
-                ex_mem_exception_cause = (ex_o.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
+                ex_mem_exception = (ex_o.mem_addr[1: 0] != 2'b00);
                 op = 1'b1;
                 wdata = reg_data2;
                 mem_is_valid = 1'b1;
                 wstrb = 4'b1111;
             end
             `ALU_SCW: begin
-                ex_mem_is_exception = (ex_o.mem_addr[1: 0] == 2'b00) ? 1'b0 : 1'b1;
-                ex_mem_exception_cause = (ex_o.mem_addr[1: 0] == 2'b00) ? 7'b0 : `EXCEPTION_ALE;
+                ex_mem_exception = (ex_o.mem_addr[1: 0] != 2'b00);
                 if (LLbit) begin
                     op = 1'b1;
                     wdata = reg_data2;
@@ -377,40 +372,38 @@ module alu
                 wdata = 32'b0;
                 op = 1'b0;
                 wstrb = 4'b1111;
-                ex_mem_is_exception = 1'b0;
-                ex_mem_exception_cause = 7'b0;
+                ex_mem_exception = 1'b0;
             end
         endcase
     end
 
-    always_comb begin
-        case (ex_i.aluop)
-            `ALU_PRELD: begin
-                cache_inst.is_cacop = 1'b0;
-                cache_inst.cacop_code = 5'b0;
-                cache_inst.is_preld = 1'b1;
-                cache_inst.addr = ex_o.mem_addr;  
-            end
-            `ALU_CACOP: begin
-                cache_inst.is_cacop = 1'b1;
-                cache_inst.cacop_code = ex_i.cacop_code;
-                cache_inst.is_preld = 1'b0;
-                cache_inst.addr = ex_o.mem_addr;
-            end
-            default: begin
-                cache_inst.is_cacop = 1'b0;
-                cache_inst.cacop_code = 5'b0;
-                cache_inst.is_preld = 1'b0;
-                cache_inst.addr = 32'b0;
-            end
-        endcase
-    end
+    // always_comb begin
+    //     case (ex_i.aluop)
+    //         `ALU_PRELD: begin
+    //             cache_inst.is_cacop = 1'b0;
+    //             cache_inst.cacop_code = 5'b0;
+    //             cache_inst.is_preld = 1'b1;
+    //             cache_inst.addr = ex_o.mem_addr;  
+    //         end
+    //         `ALU_CACOP: begin
+    //             cache_inst.is_cacop = 1'b1;
+    //             cache_inst.cacop_code = ex_i.cacop_code;
+    //             cache_inst.is_preld = 1'b0;
+    //             cache_inst.addr = ex_o.mem_addr;
+    //         end
+    //         default: begin
+    //             cache_inst.is_cacop = 1'b0;
+    //             cache_inst.cacop_code = 5'b0;
+    //             cache_inst.is_preld = 1'b0;
+    //             cache_inst.addr = 32'b0;
+    //         end
+    //     endcase
+    // end
+    assign cache_inst = 0;
 
     // csr && privilege alu
     bus32_t csr_alu_res;
     bus32_t mask_data;
-    bus32_t csr_data;
-    assign csr_data = ex_i.csr_read_data;
     assign mask_data = ((ex_i.csr_read_data & ~reg_data2) | (reg_data1 & reg_data2));
 
     always_comb begin
@@ -455,8 +448,6 @@ module alu
             end
         endcase
     end
-
-
 
     // tlb 
     always_comb begin

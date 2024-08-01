@@ -7,6 +7,8 @@
 module ctrl
     import pipeline_types::*;
 (
+    input logic rst,
+
     // from pipeline
     input pause_t pause_request,
     input logic   branch_flush,
@@ -26,8 +28,6 @@ module ctrl
     output logic [PIPE_WIDTH - 1:0] flush,
     output logic [PIPE_WIDTH - 1:0] pause,
     output bus32_t new_pc,
-    output logic is_interrupt,
-    output logic [1:0] send_inst_en,
 
     // to regfile
     output logic [ISSUE_WIDTH - 1:0] reg_write_en,
@@ -49,34 +49,28 @@ module ctrl
     output diff_t [ISSUE_WIDTH - 1: 0] ctrl_diff_o
     `endif
 );
-    bus32_t pc1;
-    assign pc1 = commit_ctrl_o[0].pc;
-    bus32_t pc2;
-    assign pc2 = commit_ctrl_o[1].pc;
 
     // interrupt
-    logic [11:0] int_vec;
-    assign int_vec = csr_master.crmd[2] ? (({csr_master.ecfg[12:11], csr_master.ecfg[9:0]}) & ({csr_master.estat[12:11], csr_master.estat[9:0]})) : 12'b0;
-    assign is_interrupt = (int_vec != 12'b0);
+    // logic is_interrupt;
+    // assign is_interrupt = ((csr_master.ecfg[12:0] & csr_master.estat[12:0]) != 13'b0) & csr_master.crmd[2];
 
     // ertn inst
-    logic is_ertn;
-    assign is_ertn = (commit_ctrl_o[0].is_exception == 6'b0 && commit_ctrl_o[0].aluop == `ALU_ERTN)
-                        || (commit_ctrl_o[1].is_exception == 6'b0 && commit_ctrl_o[1].aluop == `ALU_ERTN);
-    assign csr_master.is_ertn = is_ertn;
+    logic ertn_flush;
+    assign ertn_flush = commit_ctrl_o[0].is_ertn;
+    assign csr_master.is_ertn = ertn_flush;
 
     // new target
-    logic is_refetch;
+    logic refetch_flush;
     bus32_t refetch_target;
-    assign refetch_target = commit_ctrl_o[0].pc + commit_ctrl_o[1].pc + 32'h4;
+    assign refetch_target = (commit_ctrl_o[0].pc | commit_ctrl_o[1].pc) + 32'h4;
     logic [1:0] is_exception;
     logic is_tlbrefill;
-    assign new_pc = |is_exception ?  (is_tlbrefill ? csr_master.tlbrentry: csr_master.eentry): (is_ertn ? csr_master.era : (is_refetch ? refetch_target: branch_target));
+    assign new_pc = |is_exception ?  (is_tlbrefill ? csr_master.tlbrentry: csr_master.eentry): (ertn_flush ? csr_master.era : (refetch_flush ? refetch_target: branch_target));
 
     // exception enable
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign is_exception[i] = commit_ctrl_o[i].pc != 32'h1c000000 && (commit_ctrl_o[i].is_exception != 6'b0 || is_interrupt);
+            assign is_exception[i] = !rst && (commit_ctrl_o[i].is_exception != 6'b0 || csr_master.is_interrupt);
         end
     endgenerate
     assign csr_master.is_exception = |is_exception;
@@ -86,13 +80,13 @@ module ctrl
     // flush[4] dispatch, flush[5] ex, flush[6] mem, flush[7] wb
     assign flush = {
         1'b0,
-        |is_exception || is_ertn || is_refetch,
-        |is_exception || is_ertn || is_refetch,
-        |is_exception || is_ertn || branch_flush || ex_excp_flush || is_refetch,
-        |is_exception || is_ertn || branch_flush || ex_excp_flush || is_refetch,
-        |is_exception || is_ertn || branch_flush || is_refetch,
-        |is_exception || is_ertn || branch_flush || bpu_flush || is_refetch,
-        |is_exception || is_ertn || branch_flush || is_refetch
+        |is_exception || ertn_flush || refetch_flush,
+        |is_exception || ertn_flush || refetch_flush,
+        |is_exception || ertn_flush || branch_flush || ex_excp_flush || refetch_flush,
+        |is_exception || ertn_flush || branch_flush || ex_excp_flush || refetch_flush,
+        |is_exception || ertn_flush || branch_flush || refetch_flush,
+        |is_exception || ertn_flush || branch_flush || bpu_flush || refetch_flush,
+        |is_exception || ertn_flush || branch_flush || refetch_flush
     };
 
     // commit
@@ -118,6 +112,7 @@ module ctrl
         end
     end
 
+
     // csr relate
     logic is_tlb_inst;
     assign is_tlb_inst = (commit_ctrl_o[0].aluop == `ALU_TLBSRCH) || (commit_ctrl_o[0].aluop == `ALU_TLBRD) || (commit_ctrl_o[0].aluop == `ALU_TLBWR)
@@ -132,56 +127,40 @@ module ctrl
     assign csr_master.exception_pc = is_exception[0] ? commit_ctrl_o[0].pc: commit_ctrl_o[1].pc;
     assign csr_master.exception_addr = is_exception[0] ? commit_ctrl_o[0].mem_addr: commit_ctrl_o[1].mem_addr;
 
+
     // exception cause
     exception_cause_t [ISSUE_WIDTH - 1: 0] exception_cause;
     logic [1:0][5:0] inst_is_exception;
     assign inst_is_exception = {commit_ctrl_o[1].is_exception, commit_ctrl_o[0].is_exception};
     logic [1:0][5:0][6:0] inst_exception_cause;
     assign inst_exception_cause = {commit_ctrl_o[1].exception_cause, commit_ctrl_o[0].exception_cause};
+    logic [1:0][6:0] excp_vec;
+    assign excp_vec[0] = {csr_master.is_interrupt, inst_is_exception[0]};
+    assign excp_vec[1] = {csr_master.is_interrupt, inst_is_exception[1]};
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
             always_comb begin
-                if (is_exception[i]) begin
-                    if (is_interrupt) begin
-                        exception_cause[i] = `EXCEPTION_INT;
-                    end else if (inst_is_exception[i][5]) begin
-                        exception_cause[i] = inst_exception_cause[i][5];
-                    end else if (inst_is_exception[i][4]) begin
-                        exception_cause[i] = inst_exception_cause[i][4];
-                    end else if (inst_is_exception[i][3]) begin
-                        if (commit_ctrl_o[i].is_privilege && csr_master.crmd[1:0] != 2'b00) begin
-                            exception_cause[i] = `EXCEPTION_IPE;
-                        end else begin
-                            exception_cause[i] = inst_exception_cause[i][3];
-                        end
-                    end else if (inst_is_exception[i][2]) begin
-                        exception_cause[i] = inst_exception_cause[i][2];
-                    end else if (inst_is_exception[i][1]) begin
-                        exception_cause[i] = inst_exception_cause[i][1];
-                    end else if (inst_is_exception[i][0]) begin
-                        exception_cause[i] = inst_exception_cause[i][0];
-                    end else begin
-                        exception_cause[i] = `EXCEPTION_NOP;
-                    end
-                end else begin
-                    exception_cause[i] = `EXCEPTION_NOP;
-                end
+                case(excp_vec[i]) inside
+                    7'b1??????: exception_cause[i] = `EXCEPTION_INT;
+                    7'b01?????: exception_cause[i] = inst_exception_cause[i][5];
+                    7'b001????: exception_cause[i] = inst_exception_cause[i][4];
+                    7'b0001???: exception_cause[i] = (commit_ctrl_o[i].is_privilege && csr_master.crmd[1:0] != 2'b00) ? `EXCEPTION_IPE: inst_exception_cause[i][3];
+                    7'b00001??: exception_cause[i] = inst_exception_cause[i][2];
+                    7'b000001?: exception_cause[i] = inst_exception_cause[i][1];
+                    7'b0000001: exception_cause[i] = inst_exception_cause[i][0];
+                    default: exception_cause[i] = `EXCEPTION_NOP;
+                endcase
             end
         end
     endgenerate
         
-
     // exception cause info
     exception_cause_t exception_cause_out;
     assign exception_cause_out = is_exception[0] ? exception_cause[0] : exception_cause[1];
     assign csr_master.exception_cause = exception_cause_out;
-    logic is_tlb_exception;
-    assign is_tlb_exception = (|is_exception) ? (exception_cause_out == `EXCEPTION_PIL || exception_cause_out == `EXCEPTION_PIS
-                                || exception_cause_out == `EXCEPTION_PIF || exception_cause_out == `EXCEPTION_PME 
-                                || exception_cause_out == `EXCEPTION_PPI || exception_cause_out == `EXCEPTION_TLBR): 1'b0;
-    assign csr_master.is_tlb_exception = is_tlb_exception;
-    assign is_tlbrefill = (|is_exception) ? (exception_cause_out == `EXCEPTION_TLBR): 1'b0;
-    assign csr_master.is_inst_tlb_exception = (commit_ctrl_o[0].is_exception[4] || commit_ctrl_o[1].is_exception[4]) && is_tlb_exception;
+    assign csr_master.is_tlb_exception = 1'b0;
+    assign is_tlbrefill = 1'b0;
+    assign csr_master.is_inst_tlb_exception = 1'b0;
     always_comb begin
         case (exception_cause_out)
             `EXCEPTION_INT: begin
@@ -257,12 +236,13 @@ module ctrl
 
     // pause assignment
     logic pause_idle;
-    assign pause_idle = (commit_ctrl_o[0].aluop == `ALU_IDLE || commit_ctrl_o[1].aluop == `ALU_IDLE) && !is_interrupt;
+    assign pause_idle = commit_ctrl_o[0].is_idle && !csr_master.is_interrupt;
 
     // pause[0] PC, pause[1] icache, pause[2] instbuffer, pause[3] id
     // pause[4] dispatch, pause[5] ex, pause[6] mem, pause[7] wb
     logic[4:0] pause_back;
-    logic[2:0] pause_front;
+    logic pause_buffer;
+    logic[1:0] pause_front;
     always_comb begin
         if (pause_request.pause_mem || pause_idle) begin
             pause_back = 5'b01111;
@@ -278,20 +258,22 @@ module ctrl
     end
 
     always_comb begin
-        if (pause_request.pause_buffer) begin
-            pause_front = 3'b111;
-        end else if (pause_request.pause_icache) begin
-            pause_front = 3'b011;
-        end else if (pause_request.pause_if) begin
-            pause_front = 3'b001;
+        if (pause_request.pause_decoder) begin
+            pause_buffer = 1'b1; 
         end else begin
-            pause_front = 3'b000;
+            pause_buffer = 1'b0;
         end
     end
 
-    assign pause = {pause_back, pause_front};
+    always_comb begin
+        if (pause_request.pause_buffer) begin
+            pause_front = 2'b11;
+        end else begin
+            pause_front = 2'b00;
+        end
+    end
 
-    assign send_inst_en = 2'b11;
+    assign pause = {pause_back, pause_buffer, pause_front[1] && !flush[1], pause_front[0]};
 
     `ifdef DIFF
     // diff 
@@ -324,8 +306,8 @@ module ctrl
         end
     endgenerate
 
-    assign ctrl_diff_o[0].ertn_flush = (commit_ctrl_o[0].is_exception == 6'b0 && commit_ctrl_o[0].aluop == `ALU_ERTN);
-    assign ctrl_diff_o[1].ertn_flush = (commit_ctrl_o[1].is_exception == 6'b0 && commit_ctrl_o[1].aluop == `ALU_ERTN);
+    assign ctrl_diff_o[0].ertn_flush = ertn_flush;
+    assign ctrl_diff_o[1].ertn_flush = ertn_flush;
 
     assign ctrl_diff_o[0].inst_valid = is_exception[0]? 1'b0 : ctrl_diff_i[0].inst_valid;
     assign ctrl_diff_o[1].inst_valid = |is_exception? 1'b0 : ctrl_diff_i[1].inst_valid;

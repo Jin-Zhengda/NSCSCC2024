@@ -46,121 +46,105 @@ module branch_alu
     logic   is_branch_taken;
     bus32_t branch_target_addr;
 
+    assign branch_alu_res = pc + 32'h4;
+
     always_comb begin : branch_info
         case (aluop)
             `ALU_BEQ: begin
                 is_branch = 1'b1;
+                branch_target_addr = pc + branch16_addr;
                 if (reg1_eq_reg2) begin
                     is_branch_taken = 1'b1;
-                    branch_target_addr = pc + branch16_addr;
                 end else begin
                     is_branch_taken = 1'b0;
-                    branch_target_addr = 32'b0;
                 end
-                branch_alu_res = 32'b0;
             end
             `ALU_BNE: begin
                 is_branch = 1'b1;
+                branch_target_addr = pc + branch16_addr;
                 if (!reg1_eq_reg2) begin
                     is_branch_taken = 1'b1;
-                    branch_target_addr = pc + branch16_addr;
                 end else begin
                     is_branch_taken = 1'b0;
-                    branch_target_addr = 32'b0;
                 end
-                branch_alu_res = 32'b0;
             end
             `ALU_BLT, `ALU_BLTU: begin
                 is_branch = 1'b1;
+                branch_target_addr = pc + branch16_addr;
                 if (reg1_lt_reg2) begin
                     is_branch_taken = 1'b1;
-                    branch_target_addr = pc + branch16_addr;
                 end else begin
                     is_branch_taken = 1'b0;
-                    branch_target_addr = 32'b0;
                 end
-                branch_alu_res = 32'b0;
             end
             `ALU_BGE, `ALU_BGEU: begin
                 is_branch = 1'b1;
+                branch_target_addr = pc + branch16_addr;
                 if (!reg1_lt_reg2) begin
                     is_branch_taken = 1'b1;
-                    branch_target_addr = pc + branch16_addr;
                 end else begin
                     is_branch_taken = 1'b0;
-                    branch_target_addr = 32'b0;
                 end
-                branch_alu_res = 32'b0;
             end
             `ALU_B: begin
                 is_branch = 1'b1;
                 is_branch_taken = 1'b1;
                 branch_target_addr = pc + branch26_addr;
-                branch_alu_res = 32'b0;
             end
             `ALU_BL: begin
                 is_branch = 1'b1;
                 is_branch_taken = 1'b1;
                 branch_target_addr = pc + branch26_addr;
-                branch_alu_res = pc + 32'h4;
             end
             `ALU_JIRL: begin
                 is_branch = 1'b1;
                 is_branch_taken = 1'b1;
                 branch_target_addr = reg1 + branch16_addr;
-                branch_alu_res = pc + 32'h4;
             end
             default: begin
                 is_branch = 1'b0;
                 is_branch_taken = 1'b0;
                 branch_target_addr = 32'b0;
-                branch_alu_res = 32'b0;
             end
         endcase
     end
 
-    always_comb begin : branch_target
-        if (is_branch) begin
-            if (is_branch_taken && pre_is_branch_taken) begin
-                update_info.update_en = 1'b1;
+    logic[2:0] branch_pre_vec;
+    assign branch_pre_vec = {is_branch, is_branch_taken, pre_is_branch_taken};
+
+
+    always_comb begin
+        case(branch_pre_vec) 
+            3'b111: begin
+                branch_flush = |(pre_branch_addr ^ branch_target_addr);
+            end
+            3'b110, 3'b101: begin
+                branch_flush = 1'b1;
+            end
+            default: begin
+                branch_flush = 1'b0;
+            end
+        endcase
+    end
+
+    always_comb begin
+        case(branch_pre_vec) 
+            3'b111, 3'b110: begin
                 update_info.taken_or_not_actual = 1'b1;
                 update_info.branch_actual_addr = branch_target_addr;
-                if (pre_branch_addr == branch_target_addr) begin
-                    update_info.branch_flush = 1'b0;
-                end else begin
-                    update_info.branch_flush = 1'b1;
-                end
-            end else if (is_branch_taken && !pre_is_branch_taken) begin
-                update_info.update_en = 1'b1;
-                update_info.taken_or_not_actual = 1'b1;
-                update_info.branch_flush = 1'b1;
-                update_info.branch_actual_addr = branch_target_addr;
-            end else if (!is_branch_taken && pre_is_branch_taken) begin
-                update_info.update_en = 1'b1;
+            end
+            3'b101: begin
                 update_info.taken_or_not_actual = 1'b0;
-                update_info.branch_flush = 1'b1;
                 update_info.branch_actual_addr = pc + 32'h4;
-            end else if (!is_branch_taken && !pre_is_branch_taken) begin
-                update_info.update_en = 1'b1;
+            end
+            default: begin
                 update_info.taken_or_not_actual = 1'b0;
-                update_info.branch_flush = 1'b0;
-                update_info.branch_actual_addr = 32'b0;
-            end else begin
-                update_info.update_en = 1'b0;
-                update_info.taken_or_not_actual = 1'b0;
-                update_info.branch_flush = 1'b0;
                 update_info.branch_actual_addr = 32'b0;
             end
-        end else begin
-            update_info.update_en = 1'b0;
-            update_info.taken_or_not_actual = 1'b0;
-            update_info.branch_flush = 1'b0;
-            update_info.branch_actual_addr = 32'b0;
-        end
+        endcase
     end
 
     assign update_info.pc_dispatch = pc;
-
-    assign branch_flush = update_info.branch_flush;
+    assign update_info.update_en = is_branch && (aluop != `ALU_B || aluop != `ALU_BL);
 
 endmodule

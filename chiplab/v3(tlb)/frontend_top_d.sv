@@ -5,13 +5,12 @@ import pipeline_types::*;
 (
     input logic clk,
     input logic rst,
+    input logic iuncache,
 
     //icache
     pc_icache pi_master,
 
     input logic pause_decoder,
-    input logic [1:0] tlb_inst_exception,
-    input logic [1:0][6:0] tlb_inst_exception_cause,
     
     //和后端的交互
     frontend_backend fb_master,
@@ -27,48 +26,39 @@ import pipeline_types::*;
     logic inst_en_2;
     logic [1:0] taken_sure;
 
-    //bpu
-    inst_and_pc_t inst_and_pc;
-    logic is_exception;
-    logic exception_cause;
-
-
     assign pi_master.pc = pc.pc_o;
     assign pi_master.inst_en[0] = inst_en_1;
     assign pi_master.inst_en[1] = inst_en_2;
     assign pi_master.front_is_exception = pc.is_exception;
     assign pi_master.front_exception_cause = pc.exception_cause;
   
-    pc_reg_d u_pc_reg(
+    pc_reg_d_copy u_pc_reg(
         .clk,
         .rst,
         .stall(pi_master.stall),
+        .iuncache(iuncache),
         
         .pre_branch_addr,
         .taken_sure,
 
-        .branch_actual_addr(fb_master.update_info.branch_actual_addr),
         .flush(fb_master.flush[0]),
 
         .pause(fb_master.pause[0]),
-        .is_interrupt(fb_master.is_interrupt),
         .new_pc(fb_master.new_pc),
 
         .pc,
         .inst_en_1,
-        .inst_en_2,
-
-        .uncache_en(pi_master.uncache_en)
+        .inst_en_2
     );
 
     bpu_d u_bpu(
         .clk,
         .rst,
         .update_info(fb_master.update_info),
-        .stall(pi_master.stall),
+        .stall(pi_master.stall_for_buffer),
 
-        .pc(pi_master.pc_for_bpu),
-        .inst(pi_master.inst),
+        .pc(pi_master.pc_for_buffer),
+        .inst(pi_master.inst_for_buffer),
         .inst_en_1,
         .inst_en_2,
 
@@ -87,8 +77,6 @@ import pipeline_types::*;
         .stall(pi_master.stall_for_buffer),
         .pause(fb_master.pause[1]),
         .pause_decoder,
-        .tlb_inst_exception,
-        .tlb_inst_exception_cause,
 
         .inst(pi_master.inst_for_buffer),
         .pc(pi_master.pc_for_buffer),
@@ -99,7 +87,7 @@ import pipeline_types::*;
         .pre_taken_or_not(taken_sure),
         .pre_branch_addr,
 
-        .send_inst_en(fb_master.send_inst_en),
+        // .send_inst_en(fb_master.send_inst_en),
 
         .icache_fetch_inst_en(pi_master.icache_fetch_inst_en),
 

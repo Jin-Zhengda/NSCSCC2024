@@ -34,7 +34,7 @@ module dispatch
     output logic pause_dispatch,
 
     // to id
-    output logic [  ISSUE_WIDTH - 1:0] dqueue_en,
+    // output logic [  ISSUE_WIDTH - 1:0] dqueue_en,
     output logic [DECODER_WIDTH - 1:0] invalid_en,
 
     // to ex
@@ -44,24 +44,10 @@ module dispatch
     logic [ISSUE_WIDTH - 1:0] issue_en;
 
     // dispatch arbitration
-    assign dqueue_en  = (rst || flush) ? 2'b00 : 2'b11;
-    assign invalid_en = (rst || pause) ? 2'b00 : issue_en;
+    assign invalid_en = pause? 2'b00: issue_en;
 
     logic [1:0] inst_valid;
-    assign inst_valid[1] = {dispatch_i[1].inst_valid || dispatch_i[1].is_exception != 6'b0};
-    assign inst_valid[0] = {dispatch_i[0].inst_valid || dispatch_i[0].is_exception != 6'b0};
-
-    bus32_t pc1_i;
-    bus32_t pc2_i;
-
-    assign pc1_i = dispatch_i[0].pc;
-    assign pc2_i = dispatch_i[1].pc;
-
-    bus32_t pc1_o;
-    bus32_t pc2_o;
-
-    assign pc1_o = ex_i[0].pc;
-    assign pc2_o = ex_i[1].pc;
+    assign inst_valid = {dispatch_i[1].valid, dispatch_i[0].valid};
 
     logic issue_double_en;
 
@@ -80,7 +66,7 @@ module dispatch
     assign issue_double_en = !privilege_inst && !mem_inst && !data_relate_inst && !cnt_inst && (&inst_valid);
     //assign issue_double_en = 2'b00;
 
-    assign issue_en = (flush || rst) ? 2'b00 : (issue_double_en ? 2'b11 : (inst_valid[0] ? 2'b01 : (inst_valid[1] ? 2'b10: 2'b00)));
+    assign issue_en = issue_double_en ? 2'b11 : (inst_valid[0] ? 2'b01 : (inst_valid[1] ? 2'b10: 2'b00));
 
     // signal assignment
     generate
@@ -89,17 +75,15 @@ module dispatch
             assign dispatch_o[id_idx].inst = dispatch_i[id_idx].inst;
             assign dispatch_o[id_idx].inst_valid = dispatch_i[id_idx].inst_valid;
             assign dispatch_o[id_idx].is_privilege = dispatch_i[id_idx].is_privilege;
-            assign dispatch_o[id_idx].cacop_code = dispatch_i[id_idx].cacop_code;
             assign dispatch_o[id_idx].invtlb_op = dispatch_i[id_idx].invtlb_op;
-            assign dispatch_o[id_idx].is_exception = dispatch_i[id_idx].is_exception;
-            assign dispatch_o[id_idx].exception_cause = dispatch_i[id_idx].exception_cause;
+            assign dispatch_o[id_idx].is_exception = {dispatch_i[id_idx].is_exception, 1'b0};
+            assign dispatch_o[id_idx].exception_cause = {dispatch_i[id_idx].exception_cause, `EXCEPTION_NOP};
             assign dispatch_o[id_idx].aluop = dispatch_i[id_idx].aluop;
             assign dispatch_o[id_idx].alusel = dispatch_i[id_idx].alusel;
             assign dispatch_o[id_idx].reg_write_en = dispatch_i[id_idx].reg_write_en;
             assign dispatch_o[id_idx].reg_write_addr = dispatch_i[id_idx].reg_write_addr;
             assign dispatch_o[id_idx].csr_write_en = dispatch_i[id_idx].csr_write_en;
             assign dispatch_o[id_idx].csr_addr = dispatch_i[id_idx].csr_addr;
-            assign dispatch_o[id_idx].pre_is_branch = dispatch_i[id_idx].pre_is_branch;
             assign dispatch_o[id_idx].pre_is_branch_taken = dispatch_i[id_idx].pre_is_branch_taken;
             assign dispatch_o[id_idx].pre_branch_addr = dispatch_i[id_idx].pre_branch_addr;
         end
@@ -145,10 +129,12 @@ module dispatch
                         end
                     end
 
-                    for (integer fw_idx = 0; fw_idx < ISSUE_WIDTH; fw_idx++) begin
-                        if (dispatch_i[id_idx].reg_read_en[reg_idx] && dispatch_i[id_idx].reg_read_addr[reg_idx] == 5'b0) begin
-                            dispatch_o[id_idx].reg_data[reg_idx] = 32'b0;
-                        end
+                    if (dispatch_i[id_idx].reg_read_en[reg_idx] && dispatch_i[id_idx].reg_read_addr[reg_idx] == 5'b0) begin
+                        dispatch_o[id_idx].reg_data[reg_idx] = 32'b0;
+                    end
+
+                    if (dispatch_i[id_idx].aluop == `ALU_PCADDU12I && dispatch_i[id_idx].reg_read_en[reg_idx]) begin
+                        dispatch_o[id_idx].reg_data[reg_idx] = dispatch_i[id_idx].pc;
                     end
                 end
             end

@@ -91,7 +91,6 @@ module csr
     bus32_t ticlr;
     bus32_t llbctl;
     bus32_t tlbrentry;
-    bus32_t ctag;
     bus32_t dmw0;
     bus32_t dmw1;
 
@@ -187,9 +186,10 @@ module csr
     assign ctrl_slave.crmd = crmd;
     assign ctrl_slave.eentry = eentry;
     assign ctrl_slave.era = era;
-    assign ctrl_slave.ecfg = ecfg;
-    assign ctrl_slave.estat = estat;
+    // assign ctrl_slave.ecfg = ecfg;
+    // assign ctrl_slave.estat = estat;
     assign ctrl_slave.tlbrentry = tlbrentry;
+    assign ctrl_slave.is_interrupt = ((ecfg[12:0] & estat[12:0]) != 13'b0) & crmd[2];
 
     assign tlb_master.tlbidx = tlbidx;
     assign tlb_master.tlbehi = tlbehi;

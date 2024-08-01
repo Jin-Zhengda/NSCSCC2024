@@ -16,11 +16,11 @@ module backend_top
     // from instbuffer
     input bus32_t [DECODER_WIDTH - 1:0] pc,
     input bus32_t [DECODER_WIDTH - 1:0] inst,
-    input logic [DECODER_WIDTH - 1:0] pre_is_branch,
+    input logic [DECODER_WIDTH - 1:0] valid,
     input logic [DECODER_WIDTH - 1:0] pre_is_branch_taken,
     input bus32_t [DECODER_WIDTH - 1:0] pre_branch_addr,
-    input logic [DECODER_WIDTH - 1:0][5:0] is_exception,
-    input logic [DECODER_WIDTH - 1:0][5:0][6:0] exception_cause,
+    input logic [DECODER_WIDTH - 1:0][1:0] is_exception,
+    input logic [DECODER_WIDTH - 1:0][1:0][6:0] exception_cause,
 
     input logic pause_buffer,
     input logic bpu_flush,
@@ -33,7 +33,7 @@ module backend_top
     output branch_update update_info,
 
     // to instbuffer
-    output logic [1:0] send_inst_en,
+    // output logic [1:0] send_inst_en,
     output logic pause_decoder,
 
     // with tlb
@@ -90,6 +90,8 @@ module backend_top
     assign pause_request.pause_icache = 1'b0;
     assign pause_request.pause_if = 1'b0;
 
+    // assign send_inst_en = rst ? 2'b00 : 2'b11;
+
     // regfile
     dispatch_regfile dispatch_regfile_io ();
     logic [ISSUE_WIDTH - 1:0] reg_write_en;
@@ -118,14 +120,8 @@ module backend_top
     pipeline_push_forward_t [ISSUE_WIDTH - 1:0] ex_reg_pf;
     pipeline_push_forward_t [ISSUE_WIDTH - 1:0] mem_reg_pf;
     pipeline_push_forward_t [ISSUE_WIDTH - 1:0] wb_reg_pf;
-    csr_push_forward_t ex_csr_pf;
-    csr_push_forward_t mem_csr_pf;
-    csr_push_forward_t wb_csr_pf;
     alu_op_t [ISSUE_WIDTH - 1:0] pre_ex_aluop;
-    alu_op_t [ISSUE_WIDTH - 1:0] pre_mem_aluop;
-    alu_op_t [ISSUE_WIDTH - 1:0] pre_wb_aluop;
     dispatch_ex_t [ISSUE_WIDTH - 1:0] ex_i;
-    logic [ISSUE_WIDTH - 1:0] dqueue_en;
     logic [DECODER_WIDTH - 1:0] invalid_en;
 
     // execute
@@ -152,19 +148,17 @@ module backend_top
         .rst,
 
         .flush(flush[3]),
-        .pause(pause[3]),
+        // .pause(pause[3]),
 
         .pc,
         .inst,
-        .pre_is_branch,
+        .valid,
         .pre_is_branch_taken,
         .pre_branch_addr,
         .is_exception,
         .exception_cause,
 
-        .pause_buffer,
-
-        .dqueue_en,
+        // .dqueue_en,
         .invalid_en,
 
         .pause_decoder(pause_request.pause_decoder),
@@ -187,14 +181,14 @@ module backend_top
         .wb_reg_pf,
 
         .pre_ex_aluop,
-        .pause_ex(pause_request.pause_execute),
+        .pause_ex(pause[5]),
 
         .regfile_master(dispatch_regfile_io.master),
         .csr_master(dispatch_csr_io.master),
 
         .pause_dispatch(pause_request.pause_dispatch),
 
-        .dqueue_en,
+        // .dqueue_en,
         .invalid_en,
         .ex_i
     );
@@ -221,7 +215,6 @@ module backend_top
 
         .pre_ex_aluop,
         .ex_reg_pf,
-        .ex_csr_pf,
 
         .pause_ex(pause_request.pause_execute),
         .branch_flush,
@@ -241,8 +234,6 @@ module backend_top
         .tlb_master(ex_tlb_master),
 
         .mem_reg_pf,
-        .mem_csr_pf,
-        .pre_mem_aluop,
 
         .pause_mem(pause_request.pause_mem),
 
@@ -267,12 +258,7 @@ module backend_top
         .commit_ctrl_i,
         .tlb_inst_i,
 
-        .flush(flush[6]),
-        .pause(pause[6]),
-
         .wb_reg_pf,
-        .wb_csr_pf,
-        .pre_wb_aluop,
 
         .wb_o,
         .commit_ctrl_o,
@@ -288,6 +274,8 @@ module backend_top
 
     // ctrl
     ctrl u_ctrl (
+        .rst,
+
         .pause_request,
         .branch_flush,
         .branch_target,
@@ -303,8 +291,6 @@ module backend_top
         .flush,
         .pause,
         .new_pc,
-        .is_interrupt,
-        .send_inst_en,
 
         .reg_write_en,
         .reg_write_addr,
@@ -324,22 +310,28 @@ module backend_top
         `endif 
     );
 
-    // regfile
-    regfile u_regfile (
+    // regfile u_regfile (
+    //     .clk,
+    //     .rst,
+
+    //     .reg_write_en,
+    //     .reg_write_addr,
+    //     .reg_write_data,
+
+    //     .slave(dispatch_regfile_io.slave)
+    // );
+
+    regs_file u_regs_file (
         .clk,
-        .rst,
 
-        .reg_write_en,
-        .reg_write_addr,
-        .reg_write_data,
+        .we_i(reg_write_en),
+        .waddr_i(reg_write_addr),
+        .wdata_i(reg_write_data),
 
-        .slave(dispatch_regfile_io.slave)
+        .read_valid_i({dispatch_regfile_io.reg_read_en[1], dispatch_regfile_io.reg_read_en[0]}),
+        .read_addr_i({dispatch_regfile_io.reg_read_addr[1], dispatch_regfile_io.reg_read_addr[0]}),
+        .read_data_o({dispatch_regfile_io.reg_read_data[1], dispatch_regfile_io.reg_read_data[0]})
         
-        `ifdef DIFF
-        ,
-
-        .regs_diff(regs_diff)
-        `endif 
     );
 
     //csr
@@ -362,7 +354,10 @@ module backend_top
 
         .cnt(cnt),
 
-        .ctrl_slave(ctrl_csr_io.slave),
+        .ctrl_slave(ctrl_csr_io.slave)
+        
+        `ifdef DIFF
+        ,
 
         // diff
         .csr_crmd_diff,
@@ -391,6 +386,7 @@ module backend_top
         .csr_dmw1_diff,
         .csr_pgdl_diff,
         .csr_pgdh_diff
+        `endif
     );
 
     stable_counter u_counter (

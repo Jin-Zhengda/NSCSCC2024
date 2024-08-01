@@ -23,21 +23,6 @@ module regular_alu
                             (( reg1[31] && !reg2[31]) || (!reg1[31] && !reg2[31] && sum_result[31]) || ( reg1[31] &&  reg2[31] && sum_result[31])) 
                             : ( reg1 < reg2);
 
-    // mul 
-    bus32_t mul_data1;
-    bus32_t mul_data2;
-    bus64_t mul_temp_result;
-    bus64_t mul_result;
-
-    assign mul_data1 = ((( aluop == `ALU_MULW) || ( aluop == `ALU_MULHW)) &&  reg1[31]) ? 
-                        (~reg1 + 1) :  reg1;
-    assign mul_data2 = ((( aluop == `ALU_MULW) || ( aluop == `ALU_MULHW)) &&  reg2[31]) ? 
-                        (~reg2 + 1) :  reg2;
-    assign mul_temp_result = mul_data1 * mul_data2;
-
-    assign mul_result = ((( aluop == `ALU_MULW) || ( aluop == `ALU_MULHW)) 
-                        && ( reg1[31] ^  reg2[31])) ? (~mul_temp_result + 1) : mul_temp_result;
-
     always_comb begin : result_assign
         case (aluop)
             `ALU_OR, `ALU_ORI, `ALU_LU12I: begin
@@ -66,12 +51,6 @@ module regular_alu
             end
             `ALU_SLT, `ALU_SLTU, `ALU_SLTI, `ALU_SLTUI: begin
                 result = {31'b0, reg1_lt_reg2};
-            end
-            `ALU_MULW: begin
-                result = mul_result[31:0];
-            end
-            `ALU_MULHW, `ALU_MULHWU: begin
-                result = mul_result[63:32];
             end
             default: begin
                 result = 32'b0;

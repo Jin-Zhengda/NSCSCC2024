@@ -20,8 +20,10 @@ module decoder_2RI15
     assign rj = inst[9:5];
     assign rd = inst[4:0];
 
-    assign id_o.is_exception = 6'b0;
-    assign id_o.exception_cause = {6{`EXCEPTION_INE}};
+    assign id_o.pc = pc;
+    assign id_o.inst = inst;
+    assign id_o.is_exception = 3'b0;
+    assign id_o.exception_cause = {3{`EXCEPTION_INE}};
     assign id_o.reg_read_addr[0] = rj;
     assign id_o.reg_read_addr[1] = rd;
     assign id_o.is_privilege = 1'b0;

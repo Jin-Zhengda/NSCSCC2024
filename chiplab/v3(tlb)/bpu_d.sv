@@ -27,107 +27,85 @@ module bpu_d
     output logic bpu_flush
 
 );
+    logic [1:0][6:0] index;
+    assign index[0] = pc[0][8:2];
+    assign index[1] = pc[1][8:2];
 
+    logic [6:0] index_up;
+    assign index_up = update_info.pc_dispatch[8:2];
+    
+    logic [1:0][1:0] branch_type;
+    assign is_branch[0] = branch_type[0][1];
+    assign is_branch[1] = branch_type[1][1];
     logic [1:0] pre_taken_or_not;
-
-    logic [1:0][5:0] branch_judge;
-
-    logic[1:0] last_is_branch;
-    logic[1:0] last_pre_taken_or_not;
-
-    always_ff @(posedge clk) begin
-        last_is_branch <= is_branch;
-        last_pre_taken_or_not <= taken_sure;
-    end
-
-    logic inst_invalid;
-    assign inst_invalid = (last_is_branch[0] && last_pre_taken_or_not[0]) || (last_is_branch[1] && last_pre_taken_or_not[1])
-                            || (is_branch[0] && taken_sure[0]) || (is_branch[1] && taken_sure[1]);
-
-    bus32_t inst_1_i;
-    assign inst_1_i = (stall || inst_invalid) ? 32'b0 : inst[0]; 
-    bus32_t inst_2_i;
-    assign inst_2_i = (stall || inst_invalid) ? 32'b0 : inst[1]; 
-
-    assign branch_judge[0] = inst_1_i[31:26];
-    assign branch_judge[1] = inst_2_i[31:26];
-
-    assign bpu_flush = (is_branch[0] && taken_sure[0]) || (is_branch[1] && taken_sure[1]);
-
-    generate
-        for (genvar i = 0; i < 2; i++) begin
-            always_ff @(posedge clk) begin
-                case (branch_judge[i])
-                    6'b010011: begin
-                        is_branch[i] <= 1'b1;
-                    end
-                    6'b010100: begin
-                        is_branch[i] <= 1'b1;
-                    end
-                    6'b010101: begin
-                        is_branch[i] <= 1'b1;
-                    end
-                    6'b010110: begin
-                        is_branch[i] <= 1'b1;
-                    end
-                    6'b010111: begin
-                        is_branch[i] <= 1'b1;
-                    end
-                    6'b011000: begin
-                        is_branch[i] <= 1'b1;
-                    end
-                    6'b011001: begin
-                        is_branch[i] <= 1'b1;
-                    end
-                    6'b011010: begin
-                        is_branch[i] <= 1'b1;
-                    end
-                    6'b011011: begin
-                        is_branch[i] <= 1'b1;
-                    end
-                    default: begin
-                        is_branch[i] <= 1'b0;
-                    end
-                endcase
-            end
-        end
-    endgenerate
-
-
+    logic [1:0][31:0] prede_address;
     logic [1:0][`InstBus] prediction_addr;
     logic [1:0] btb_valid;
 
 
+    logic [1:0][31:0] inst_i;
+    assign inst_i[0] = stall ? 32'b0 : inst[0]; 
+    assign inst_i[1] = stall ? 32'b0 : inst[1]; 
+
+    assign bpu_flush = (is_branch[0] && taken_sure[0]) || (is_branch[1] && taken_sure[1]);
+
+    assign fetch_inst_en[0] = 1'b1;
+    assign fetch_inst_en[1] = (branch_type[0] == 2'b10 && inst_en_1)|((branch_type[0] == 2'b11) && pre_taken_or_not[0] && inst_en_1 && btb_valid[0]) ? 1'b0 : 1'b1;
+    assign taken_sure[0] = (branch_type[0] == 2'b10 && inst_en_1)|((branch_type[0] == 2'b11) && pre_taken_or_not[0] && inst_en_1 && btb_valid[0]) ? 1'b1 : 1'b0;
+    assign taken_sure[1] = (branch_type[1] == 2'b10 && inst_en_2)|((branch_type[1] == 2'b11) && pre_taken_or_not[1] && inst_en_2 && btb_valid[1]) ? 1'b1 : 1'b0;
+
+    logic prede_1;
+    logic prede_2;
+    logic predi_1;
+    logic predi_2;
+    
+    assign prede_1 = (branch_type[0] == 2'b10) && inst_en_1;
+    assign prede_2 = (branch_type[1] == 2'b10) && inst_en_2;
+    assign predi_1 = (branch_type[0] == 2'b11) && pre_taken_or_not[0] && inst_en_1 && btb_valid[0];
+    assign predi_2 = (branch_type[1] == 2'b11) && pre_taken_or_not[1] && inst_en_2 && btb_valid[1];
+
     always_comb begin
-        if (is_branch[0] && pre_taken_or_not[0] && inst_en_1 && btb_valid[0]) begin
-            fetch_inst_en[0] = 1'b1;
-            fetch_inst_en[1] = 1'b0;
-            pre_branch_addr = prediction_addr[0];
-            taken_sure[0] = 1'b1;
-            taken_sure[1] = 1'b0;
-        end else if (is_branch[1] && pre_taken_or_not[1] && inst_en_2 && btb_valid[1]) begin
-            fetch_inst_en[0] = 1'b1;
-            fetch_inst_en[1] = 1'b1;
-            pre_branch_addr = prediction_addr[1];
-            taken_sure[0] = 1'b0;
-            taken_sure[1] = 1'b1;
-        end else begin
-            fetch_inst_en[0] = 1'b1;
-            fetch_inst_en[1] = 1'b1;
-            pre_branch_addr = 32'b0;
-            taken_sure = 0;
-        end
+        case({prede_1,prede_2,predi_1,predi_2})
+            4'b0001: begin
+                pre_branch_addr = prediction_addr[1];
+            end
+            4'b0011,4'b0010,4'b0110: begin
+                pre_branch_addr = prediction_addr[0];
+            end
+            4'b1100,4'b1000,4'b1001: begin
+                pre_branch_addr = prede_address[0];
+            end
+            4'b0100:begin
+                pre_branch_addr = prede_address[1];
+            end
+            default: begin
+                pre_branch_addr = 32'b0;
+            end
+        endcase
     end
 
+    generate
+        for (genvar i = 0; i < 2; i++) begin
+            predecoder u_predecoder(
+                .clk(clk),
+                .rst(rst),
 
+                .inst_i(inst_i[i]),
+                .pc_i(pc[i]),
+                
+                .branch_type(branch_type[i]),
+                .target_address(prede_address[i])
+            );
+        end
+    endgenerate
 
-    bht_d u_bht (
-        .clk,
-        .rst,
+    pht_d u_pht_d (
+        .clk(clk),
+        .rst(rst),
 
-        .pc(pc),
+        .index(index),
         .update_en(update_info.update_en),
-        .pc_dispatch(update_info.pc_dispatch),
+        .index_up(index_up),
         .taken_actual(update_info.taken_or_not_actual),
 
         .taken_or_not(pre_taken_or_not)

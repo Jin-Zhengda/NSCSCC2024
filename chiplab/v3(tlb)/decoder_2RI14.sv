@@ -24,8 +24,10 @@ module decoder_2RI14
     assign si14 = inst[23:10];
     assign csr = inst[23:10];
 
-    assign id_o.is_exception = 6'b0;
-    assign id_o.exception_cause = {6{`EXCEPTION_INE}};
+    assign id_o.pc = pc;
+    assign id_o.inst = inst;
+    assign id_o.is_exception = 3'b0;
+    assign id_o.exception_cause = {3{`EXCEPTION_INE}};
     assign id_o.reg_write_addr = rd;
     assign id_o.is_cnt = 1'b0;
     assign id_o.invtlb_op = 5'b0;
@@ -67,6 +69,7 @@ module decoder_2RI14
                 id_o.is_privilege = 1'b1;
                 id_o.csr_addr = csr;
                 id_o.inst_valid = 1'b1;
+                id_o.imm = 32'b0;
                 case (rj)
                     `CSRRD_OPCODE: begin
                         id_o.reg_write_en = 1'b1;

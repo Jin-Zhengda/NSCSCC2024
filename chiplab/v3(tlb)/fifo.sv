@@ -34,33 +34,34 @@ module fifo #(
 
     //写入逻辑
     always_ff @(posedge clk) begin
-        if (rst|flush) ram <= '{default: '0};
-        else if (push) ram[write_index] <= push_data;
+        // if (rst|flush) ram <= '{default: '0};
+        // else 
+        if (push) ram[write_index] <= push_data;
     end
 
     //更新指针
     always_ff @(posedge clk) begin
-        if (rst|flush) begin
+        if (rst || flush) begin
             read_index <= 0;
             // for(integer i = 0 ; i < DEPTH ; ++i) begin
             //     ram[i] = 0;
             // end
         end
-        else if (pop & ~empty) read_index <= read_index + 5'h1;
+        else if (pop & ~empty) read_index <= read_index + 1;
     end
     always_ff @(posedge clk) begin
-        if (rst|flush) begin
+        if (rst || flush) begin
             write_index <= 0;
         end
-        else if (push & ~push_stall) write_index <= write_index + 5'h1;
+        else if (push & ~push_stall) write_index <= write_index + 1;
     end
 
     //输出
     assign pop_data = ram[read_index];
 
     //判断是否空或者满
-    assign full = read_index == PTR_WIDTH'(write_index + 5'h2);
-    assign push_stall = read_index == PTR_WIDTH'(write_index + 5'h1);
+    assign full = read_index == PTR_WIDTH'(write_index + 2);
+    assign push_stall = read_index == PTR_WIDTH'(write_index + 1);
     assign empty = read_index == write_index;
 
 endmodule

@@ -1,7 +1,6 @@
 module axi_interface(
     input                   logic                   clk,
     input                   logic                   resetn,     // 低有效
-    input                   logic                   flush,      // 给定值0，忽略该信号
     // input                   logic [5:0]             stall,
     // output                  logic                   stallreq, // Stall请求
 
@@ -86,10 +85,10 @@ module axi_interface(
 
     // AXI参数设置
     assign arid         = 4'b0000;
-    assign arlock       = 1'b0;
+    assign arlock       = 2'b0;
     assign arprot       = 3'b000;
     assign awid         = 4'b0000;
-    assign awlock       = 1'b0;
+    assign awlock       = 2'b0;
     assign awprot       = 3'b000;
     assign wid          = 4'b0000;
     assign bready       = 1'b1;
@@ -99,7 +98,7 @@ module axi_interface(
 
     // 状态机
     always_ff @(posedge clk) begin
-        if (resetn == 1'b0 || flush == 1'b1) begin
+        if (!resetn) begin
             rcurrent_state <= AXI_IDLE;
             wcurrent_state <= AXI_IDLE;
         end else begin
@@ -153,7 +152,7 @@ module axi_interface(
 
     // 输出控制
     always_ff @(posedge clk) begin
-        if (resetn == 1'b0 || flush == 1'b1) begin
+        if (!resetn) begin
             araddr        <= 32'h00000000;
             arlen         <= 8'b0000;
             arsize        <= 3'b100;
@@ -212,7 +211,7 @@ module axi_interface(
                     end else if (rvalid) begin
                         rdata_o <= rdata;
                     end else if (!rvalid && !rready && rdata_valid_o) begin
-                        wstrb  <= 4'b1111;
+                        //wstrb  <= 4'b1111;
                         arsize <= 3'b010;
                     end
                 end
