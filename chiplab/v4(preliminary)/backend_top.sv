@@ -33,14 +33,13 @@ module backend_top
     output branch_update update_info,
 
     // to instbuffer
-    output logic [1:0] send_inst_en,
+    // output logic [1:0] send_inst_en,
     output logic pause_decoder,
 
     csr_tlb csr_tlb_master,
 
     // with cache
     mem_dcache dcache_master,
-    output cache_inst_t cache_inst,
 
     // ctrl
     output logic [PIPE_WIDTH - 1:0] flush,
@@ -85,10 +84,7 @@ module backend_top
 
     assign pause_request.pause_buffer = pause_buffer;
     assign pause_decoder = pause_request.pause_decoder;
-    assign pause_request.pause_icache = 1'b0;
-    assign pause_request.pause_if = 1'b0;
 
-    assign send_inst_en = rst ? 2'b00 : 2'b11;
 
     // regfile
     dispatch_regfile dispatch_regfile_io ();
@@ -119,7 +115,6 @@ module backend_top
     pipeline_push_forward_t [ISSUE_WIDTH - 1:0] wb_reg_pf;
     alu_op_t [ISSUE_WIDTH - 1:0] pre_ex_aluop;
     dispatch_ex_t [ISSUE_WIDTH - 1:0] ex_i;
-    logic [ISSUE_WIDTH - 1:0] dqueue_en;
     logic [DECODER_WIDTH - 1:0] invalid_en;
 
     // execute
@@ -133,10 +128,15 @@ module backend_top
     commit_ctrl_t [ISSUE_WIDTH - 1:0] commit_ctrl_o;
     mem_wb_t [ISSUE_WIDTH - 1:0] wb_o;
 
+
+    // cnt
+    logic[63: 0] stable_cnt;
+
     `ifdef DIFF
     // diff
     diff_t [ISSUE_WIDTH - 1:0] wb_diff_i;
     diff_t [ISSUE_WIDTH - 1:0] wb_diff_o;
+    assign cnt = stable_cnt;
     `endif
 
     decoder u_decoder (
@@ -144,7 +144,6 @@ module backend_top
         .rst,
 
         .flush(flush[3]),
-        // .pause(pause[3]),
 
         .pc,
         .inst,
@@ -177,7 +176,7 @@ module backend_top
         .wb_reg_pf,
 
         .pre_ex_aluop,
-        .pause_ex(pause_request.pause_execute),
+        .pause_ex(pause[5]),
 
         .regfile_master(dispatch_regfile_io.master),
         .csr_master(dispatch_csr_io.master),
@@ -200,10 +199,9 @@ module backend_top
         .pause_mem(pause_request.pause_mem),
 
         .ex_i,
-        .cnt(cnt),
+        .cnt(stable_cnt),
 
         .dcache_master,
-        .cache_inst,
 
         .update_info,
 
@@ -298,17 +296,6 @@ module backend_top
         `endif 
     );
 
-    // regfile u_regfile (
-    //     .clk,
-    //     .rst,
-
-    //     .reg_write_en,
-    //     .reg_write_addr,
-    //     .reg_write_data,
-
-    //     .slave(dispatch_regfile_io.slave)
-    // );
-
     regs_file u_regs_file (
         .clk,
 
@@ -339,8 +326,6 @@ module backend_top
         .csr_write_en,
         .csr_write_addr,
         .csr_write_data,
-
-        .cnt(cnt),
 
         .ctrl_slave(ctrl_csr_io.slave)
         
@@ -381,7 +366,7 @@ module backend_top
         .clk,
         .rst,
 
-        .cnt
+        .cnt(stable_cnt)
     );
 
 

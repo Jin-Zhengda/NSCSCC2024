@@ -334,6 +334,8 @@ module core_top (
         .bpu_flush,
         .pause_decoder,
 
+        .ex_tlb_master(ex_tlb_io.master),
+
         .iuncache(iuncache)
     );
 

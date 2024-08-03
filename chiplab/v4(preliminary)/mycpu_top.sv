@@ -2,10 +2,10 @@
 `include "pipeline_types.sv"
 `include "interface.sv"
 
-module core_top (
+module mycpu_top (
     input           aclk,
     input           aresetn,
-    input    [ 7:0] intrpt, 
+    input    [ 7:0] ext_int, 
     //AXI interface 
     //read reqest
     output   [ 3:0] arid,
@@ -49,10 +49,10 @@ module core_top (
     input           bvalid,
     output          bready,
 
-    output [31:0] merged_wb_pc,
-    output [ 3:0] merged_wb_rf_wen,
-    output [ 4:0] merged_wb_rf_wnum,
-    output [31:0] merged_wb_rf_wdata
+    output [31:0] debug_wb_pc,
+    output [ 3:0] debug_wb_rf_we,
+    output [ 4:0] debug_wb_rf_wnum,
+    output [31:0] debug_wb_rf_wdata
     
     `ifdef DIFF
     ,
@@ -222,7 +222,6 @@ module core_top (
 
     logic [7:0] flush;
     logic [7:0] pause;
-    cache_inst_t cache_inst;
     logic bpu_flush;
     logic pause_decoder;
 
@@ -252,7 +251,7 @@ module core_top (
         .clk(aclk),
         .rst,
 
-        .is_hwi(intrpt),
+        .is_hwi(ext_int),
 
         .pc  (frontend_backend_io.inst_and_pc_o.pc_o),
         .inst(frontend_backend_io.inst_and_pc_o.inst_o),
@@ -271,10 +270,8 @@ module core_top (
         .new_pc(frontend_backend_io.new_pc),
 
         .update_info(frontend_backend_io.update_info),
-        .send_inst_en(frontend_backend_io.send_inst_en),
 
         .dcache_master(mem_dcache_io.master),
-        .cache_inst(cache_inst),
 
         .csr_tlb_master(csr_tlb_io.master),
 
@@ -335,11 +332,6 @@ module core_top (
         .iuncache(iuncache)
     );
 
-    logic icache_cacop;
-    logic dcache_cacop;
-    assign icache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2:0] == 3'b0);
-    assign dcache_cacop = cache_inst.is_cacop && (cache_inst.cacop_code[2:0] == 3'b1);
-
     trans_addr u_trans_addr(
         .clk(aclk),
         .rst(rst),
@@ -364,8 +356,8 @@ module core_top (
         .ret_data(icache_ret_data),
 
         .icacop_op_en(icache_cacop),
-        .icacop_op_mode(cache_inst.cacop_code[4:3]),
-        .icacop_addr(cache_inst.addr),
+        .icacop_op_mode(0),
+        .icacop_addr(0),
 
         .iucache_ren_i(iucache_ren_i),
         .iucache_addr_i(iucache_addr_i),
@@ -378,7 +370,7 @@ module core_top (
         .clk(aclk),
         .reset(rst),
         .mem2dcache(mem_dcache_io.slave),
-        .dcache_inst(cache_inst),
+        .dcache_inst(0),
         .dcache2transaddr(dcache_transaddr_io.master),
 
         .rd_req  (dcache_rd_req),
@@ -409,7 +401,7 @@ module core_top (
 
     cache_axi u_cache_axi (
         .clk(aclk),      
-        .rst(rst),      // 高有�?
+        .rst(rst),      // 高有�???
 
 
         .cache_wsel_i(ducache_strb),
@@ -417,13 +409,13 @@ module core_top (
         // ICache: Read Channel
         .inst_ren_i(icache_rd_req),         // icache_rd_req
         .inst_araddr_i(icache_rd_addr),     // icache_rd_addr
-        .inst_rvalid_o(icache_ret_valid),   // icache_ret_valid 读完8�?32位数据之后才给高有效信号
+        .inst_rvalid_o(icache_ret_valid),   // icache_ret_valid 读完8�???32位数据之后才给高有效信号
         .inst_rdata_o(icache_ret_data),     // icache_ret_data
         
         // DCache: Read Channel
         .data_ren_i(dcache_rd_req),         // dcache_rd_req
         .data_araddr_i(dcache_rd_addr),     // dcache_rd_addr
-        .data_rvalid_o(dcache_ret_valid),   // dcache_ret_valid 写完8�?32位信号之后才给高有效信号
+        .data_rvalid_o(dcache_ret_valid),   // dcache_ret_valid 写完8�???32位信号之后才给高有效信号
         .data_rdata_o(dcache_ret_data),     // dcache_ret_data
         
         // DCache: Write Channel
@@ -431,7 +423,7 @@ module core_top (
         .data_wen_i(dcache_wr_req),         // dcache_wr_req
         .data_wdata_i(dcache_wr_data),      // dcache_wr_data
         .data_awaddr_i(dcache_wr_addr),     // dcache_wr_addr
-        .data_bvalid_o(data_bvalid_o),      // 在顶层模块直接定�?     wire   data_bvalid_o; 模块内会给它赋�?�并输出
+        .data_bvalid_o(data_bvalid_o),      // 在顶层模块直接定�???     wire   data_bvalid_o; 模块内会给它赋�?�并输出
         
         //I-uncached Read channel
         .iucache_ren_i(iucache_ren_i),
@@ -477,7 +469,7 @@ module core_top (
 
     axi_interface u_axi_interface (
         .clk(aclk),
-        .resetn(aresetn),     // 低有�?
+        .resetn(aresetn),     // 低有�???
         // input                   wire [5:0]             stall,
         // output                  wire                   stallreq, // Stall请求
 
@@ -491,19 +483,19 @@ module core_top (
         .cache_wdata(axi_wdata_o),       // axi_wdata_o
         .cache_rready(axi_rready_o), // Cache读准备好      axi_rready_o
         .cache_wvalid(axi_wvalid_o), // Cache写数据准备好  axi_wvalid_o
-        .cache_wlast(axi_wlast_o),  // Cache写最后一个数�? axi_wlast_o
+        .cache_wlast(axi_wlast_o),  // Cache写最后一个数�??? axi_wlast_o
         .wdata_resp_o(wdata_resp_i), // 写响应信号，每个beat发一次，成功则可以传下一数据   wdata_resp_i
 
         // AXI接口
-        .cache_burst_type(cache_burst_type),          // 固定为增量突发（地址递增的突发）�?2'b01
+        .cache_burst_type(cache_burst_type),          // 固定为增量突发（地址递增的突发）�???2'b01
         .cache_burst_size(cache_burst_size),          // 固定为四个字节， 3'b010
-        .cacher_burst_length(axi_rlen_o),       // 固定�?8�? 8'b00000111 axi_rlen_o   单位到底是transfer还是byte啊，注意这个点，我也不太确定，大概率是transfer
-        .cachew_burst_length(axi_wlen_o),       // 固定�?8�? 8'b00000111 axi_wlen_o   A(W/R)LEN 表示传输的突发长度（burst length），其�?�为实际传输数据的数量减 1
-                                                            // wire [1:0]   cache_burst_type;            顶层模块直接给这两个值赋定�?�就�?
+        .cacher_burst_length(axi_rlen_o),       // 固定�???8�??? 8'b00000111 axi_rlen_o   单位到底是transfer还是byte啊，注意这个点，我也不太确定，大概率是transfer
+        .cachew_burst_length(axi_wlen_o),       // 固定�???8�??? 8'b00000111 axi_wlen_o   A(W/R)LEN 表示传输的突发长度（burst length），其�?�为实际传输数据的数量减 1
+                                                            // wire [1:0]   cache_burst_type;            顶层模块直接给这两个值赋定�?�就�???
                                                             // wire [2:0]    burst_size;
                                                             // assign cache_burst_type = 2'b01;
                                                             // assign burst_size = 3'b010;
-        // AXI读接�?
+        // AXI读接�???
         .arid(arid),
         .araddr(araddr),
         .arlen(arlen),
@@ -514,7 +506,7 @@ module core_top (
         .arprot(arprot),
         .arvalid(arvalid),
         .arready(arready),
-        // AXI读返回接�?
+        // AXI读返回接�???
         .rid(rid),
         .rdata(rdata),
         .rresp(rresp),
@@ -525,7 +517,7 @@ module core_top (
         .rdata_o(rdata_i),         // rdata_i
         .rdata_valid_o(rdata_valid_i),   // rdata_valid_i
 
-        // AXI写接�?
+        // AXI写接�???
         .awid(awid),
         .awaddr(awaddr),
         .awlen(awlen),
@@ -536,14 +528,14 @@ module core_top (
         .awprot(awprot),
         .awvalid(awvalid),
         .awready(awready),
-        // AXI写数据接�?
+        // AXI写数据接�???
         .wid(wid),
         .wdata(wdata),
         .wstrb(wstrb),
         .wlast(wlast),
         .wvalid(wvalid),
         .wready(wready),
-        // AXI写响应接�?
+        // AXI写响应接�???
         .bid(bid),
         .bresp(bresp),
         .bvalid(bvalid),
@@ -626,10 +618,10 @@ module core_top (
     assign debug1_wb_rf_wnum = diff[1].debug_wb_rf_wnum;
     assign debug1_wb_rf_wdata = diff[1].debug_wb_rf_wdata;
 
-    assign merged_wb_pc       = debug0_wb_pc      | debug1_wb_pc      ;
-    assign merged_wb_rf_wen   = debug0_wb_rf_wen  | debug1_wb_rf_wen  ;
-    assign merged_wb_rf_wnum  = debug0_wb_rf_wnum | debug1_wb_rf_wnum ;
-    assign merged_wb_rf_wdata = debug0_wb_rf_wdata| debug1_wb_rf_wdata;
+    assign debug_wb_pc       = debug0_wb_pc      | debug1_wb_pc      ;
+    assign debug_wb_rf_we    = debug0_wb_rf_wen  | debug1_wb_rf_wen  ;
+    assign debug_wb_rf_wnum  = debug0_wb_rf_wnum | debug1_wb_rf_wnum ;
+    assign debug_wb_rf_wdata = debug0_wb_rf_wdata| debug1_wb_rf_wdata;
 
 
 

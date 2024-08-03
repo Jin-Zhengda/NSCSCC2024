@@ -73,7 +73,7 @@ module dispatch
         for (genvar id_idx = 0; id_idx < DECODER_WIDTH; id_idx++) begin
             assign dispatch_o[id_idx].pc = dispatch_i[id_idx].pc;
             assign dispatch_o[id_idx].inst = dispatch_i[id_idx].inst;
-            assign dispatch_o[id_idx].inst_valid = dispatch_i[id_idx].inst_valid;
+            assign dispatch_o[id_idx].valid = dispatch_i[id_idx].valid;
             assign dispatch_o[id_idx].is_privilege = dispatch_i[id_idx].is_privilege;
             assign dispatch_o[id_idx].invtlb_op = dispatch_i[id_idx].invtlb_op;
             assign dispatch_o[id_idx].is_exception = {dispatch_i[id_idx].is_exception, 1'b0};
@@ -178,7 +178,6 @@ module dispatch
         end
     endgenerate
 
-    // handle tlb use inst
     assign pause_dispatch = |(reg1_load_relate | reg2_load_relate);
 
     dispatch_ex_t [DECODER_WIDTH - 1:0] ex_temp;
@@ -191,7 +190,7 @@ module dispatch
     always_ff @(posedge clk) begin
         if (rst || flush || dispatch_ex_pause) begin
             ex_i <= '{default: 0};
-        end else if (pause == 1'b0) begin
+        end else if (!pause) begin
             ex_i <= ex_temp;
         end else begin
             ex_i <= ex_i;

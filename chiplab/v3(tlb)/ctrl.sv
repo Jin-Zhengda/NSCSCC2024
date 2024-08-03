@@ -70,7 +70,7 @@ module ctrl
     // exception enable
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign is_exception[i] = !rst && (commit_ctrl_o[i].is_exception != 6'b0 || csr_master.is_interrupt);
+            assign is_exception[i] = !rst && commit_ctrl_o[i].valid && (commit_ctrl_o[i].is_exception != 6'b0 || csr_master.is_interrupt);
         end
     endgenerate
     assign csr_master.is_exception = |is_exception;
@@ -158,9 +158,13 @@ module ctrl
     exception_cause_t exception_cause_out;
     assign exception_cause_out = is_exception[0] ? exception_cause[0] : exception_cause[1];
     assign csr_master.exception_cause = exception_cause_out;
-    assign csr_master.is_tlb_exception = 1'b0;
-    assign is_tlbrefill = 1'b0;
-    assign csr_master.is_inst_tlb_exception = 1'b0;
+    logic is_tlb_exception;
+    assign is_tlb_exception = (|is_exception) ? (exception_cause_out == `EXCEPTION_PIL || exception_cause_out == `EXCEPTION_PIS
+                                || exception_cause_out == `EXCEPTION_PIF || exception_cause_out == `EXCEPTION_PME 
+                                || exception_cause_out == `EXCEPTION_PPI || exception_cause_out == `EXCEPTION_TLBR): 1'b0;
+    assign csr_master.is_tlb_exception = is_tlb_exception;
+    assign is_tlbrefill = (|is_exception) ? (exception_cause_out == `EXCEPTION_TLBR): 1'b0;
+    assign csr_master.is_inst_tlb_exception = (commit_ctrl_o[0].is_exception[4] || commit_ctrl_o[1].is_exception[4]) && is_tlb_exception;
     always_comb begin
         case (exception_cause_out)
             `EXCEPTION_INT: begin

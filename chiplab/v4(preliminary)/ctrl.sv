@@ -54,7 +54,7 @@ module ctrl
 
     // ertn inst
     logic ertn_flush;
-    assign ertn_flush = commit_ctrl_o[0].is_ertn || commit_ctrl_o[1].is_ertn;
+    assign ertn_flush = commit_ctrl_o[0].is_ertn;
     assign csr_master.is_ertn = ertn_flush;
 
     // new target
@@ -68,7 +68,7 @@ module ctrl
     // exception enable
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
-            assign is_exception[i] = !rst && (commit_ctrl_o[i].is_exception != 6'b0 || csr_master.is_interrupt);
+            assign is_exception[i] = !rst && commit_ctrl_o[i].valid && (commit_ctrl_o[i].is_exception != 6'b0 || csr_master.is_interrupt);
         end
     endgenerate
     assign csr_master.is_exception = |is_exception;
@@ -78,13 +78,13 @@ module ctrl
     // flush[4] dispatch, flush[5] ex, flush[6] mem, flush[7] wb
     assign flush = {
         1'b0,
-        |is_exception | ertn_flush | refetch_flush,
-        |is_exception | ertn_flush | refetch_flush,
-        |is_exception | ertn_flush | branch_flush | ex_excp_flush | refetch_flush,
-        |is_exception | ertn_flush | branch_flush | ex_excp_flush || refetch_flush,
-        |is_exception | ertn_flush | branch_flush | refetch_flush,
-        |is_exception | ertn_flush | branch_flush | bpu_flush | refetch_flush,
-        |is_exception | ertn_flush | branch_flush | refetch_flush
+        |is_exception || ertn_flush || refetch_flush,
+        |is_exception || ertn_flush || refetch_flush,
+        |is_exception || ertn_flush || branch_flush || ex_excp_flush || refetch_flush,
+        |is_exception || ertn_flush || branch_flush || ex_excp_flush || refetch_flush,
+        |is_exception || ertn_flush || branch_flush || refetch_flush,
+        |is_exception || ertn_flush || branch_flush || bpu_flush || refetch_flush,
+        |is_exception || ertn_flush || branch_flush || refetch_flush
     };
 
     // commit
@@ -228,7 +228,7 @@ module ctrl
 
     // pause assignment
     logic pause_idle;
-    assign pause_idle = (commit_ctrl_o[0].is_idle || commit_ctrl_o[1].is_idle) && !csr_master.is_interrupt;
+    assign pause_idle = commit_ctrl_o[0].is_idle && !csr_master.is_interrupt;
 
     // pause[0] PC, pause[1] icache, pause[2] instbuffer, pause[3] id
     // pause[4] dispatch, pause[5] ex, pause[6] mem, pause[7] wb

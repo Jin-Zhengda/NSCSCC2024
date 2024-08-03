@@ -11,6 +11,8 @@ import pipeline_types::*;
     pc_icache pi_master,
 
     input logic pause_decoder,
+
+    ex_tlb ex_tlb_master,
     
     //和后端的交互
     frontend_backend fb_master,
@@ -82,6 +84,8 @@ import pipeline_types::*;
         .pc(pi_master.pc_for_buffer),
         .is_exception(pi_master.icache_is_exception),
         .exception_cause(pi_master.icache_exception_cause),
+
+        .tlb_master(ex_tlb_master),
 
         .is_branch,
         .pre_taken_or_not(taken_sure),

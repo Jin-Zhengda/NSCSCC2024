@@ -26,8 +26,8 @@ import pipeline_types::*;
     input logic [31:0] pre_branch_addr,
 
 
-    //发射指令的使能信�?
-    input logic [1:0] send_inst_en,
+    // //发射指令的使能信�?
+    // input logic [1:0] send_inst_en,
 
     //从bpu取指令的使能信号
     input logic [1:0] icache_fetch_inst_en,
@@ -90,14 +90,10 @@ import pipeline_types::*;
                     pop_en[i] = 0;
                     {inst_and_pc_o.is_exception[i], inst_and_pc_o.exception_cause[i], inst_and_pc_o.valid[i], branch_info[i].pre_branch_addr, 
                         branch_info[i].pre_taken_or_not, branch_info[i].is_branch, inst_and_pc_o.inst_o[i], inst_and_pc_o.pc_o[i]} = 0;
-                end else if(send_inst_en[i]) begin
+                end else begin
                     pop_en[i] = 1;
                     {inst_and_pc_o.is_exception[i], inst_and_pc_o.exception_cause[i], inst_and_pc_o.valid[i], branch_info[i].pre_branch_addr, 
                         branch_info[i].pre_taken_or_not, branch_info[i].is_branch, inst_and_pc_o.inst_o[i], inst_and_pc_o.pc_o[i]} = pop_data[i];
-                end else begin
-                    pop_en[i] = 0;
-                    {inst_and_pc_o.is_exception[i], inst_and_pc_o.exception_cause[i], inst_and_pc_o.valid[i], branch_info[i].pre_branch_addr, 
-                        branch_info[i].pre_taken_or_not, branch_info[i].is_branch, inst_and_pc_o.inst_o[i], inst_and_pc_o.pc_o[i]} = 0;
                 end
             end
         end

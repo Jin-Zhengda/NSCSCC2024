@@ -25,6 +25,8 @@ import pipeline_types::*;
     input logic [1:0] pre_taken_or_not,
     input logic [31:0] pre_branch_addr,
 
+    ex_tlb tlb_master,
+
 
     // //发射指令的使能信�?
     // input logic [1:0] send_inst_en,
@@ -42,8 +44,8 @@ import pipeline_types::*;
     logic [1:0][1:0][6:0] buffer_exception_cause;
     generate
         for (genvar i = 0; i < 2; i++) begin
-            assign buffer_is_exception[i] = {is_exception[i], 1'b0};
-            assign buffer_exception_cause[i] = {exception_cause[i], 7'b1111111};
+            assign buffer_is_exception[i] = {is_exception[i], tlb_master.tlb_inst_exception[i]};
+            assign buffer_exception_cause[i] = {exception_cause[i], tlb_master.tlb_inst_exception_cause[i]};
         end
     endgenerate
 

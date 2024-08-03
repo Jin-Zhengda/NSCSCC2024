@@ -9,6 +9,7 @@ module decoder_2RI12
     input bus32_t pc,
     input bus32_t inst,
 
+    output logic inst_valid,
     output id_dispatch_t id_o
 );
 
@@ -47,7 +48,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = 5'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `SLTUI_OPCODE: begin
                 id_o.reg_write_en = 1'b1;
@@ -58,7 +59,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = 5'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `ADDIW_OPCODE: begin
                 id_o.reg_write_en = 1'b1;
@@ -69,7 +70,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = 5'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `ANDI_OPCODE: begin
                 id_o.reg_write_en = 1'b1;
@@ -80,7 +81,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = 5'b0;
                 id_o.imm = {20'b0, ui12};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `ORI_OPCODE: begin
                 id_o.reg_write_en = 1'b1;
@@ -91,7 +92,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = 5'b0;
                 id_o.imm = {20'b0, ui12};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `XORI_OPCODE: begin
                 id_o.reg_write_en = 1'b1;
@@ -102,7 +103,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = 5'b0;
                 id_o.imm = {20'b0, ui12};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `LDB_OPCODE: begin
                 id_o.reg_write_en = 1'b1;
@@ -113,7 +114,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = 5'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `LDH_OPCODE: begin
                 id_o.reg_write_en = 1'b1;
@@ -124,7 +125,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = 5'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `LDW_OPCODE: begin
                 id_o.reg_write_en = 1'b1;
@@ -135,7 +136,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = 5'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `LDBU_OPCODE: begin
                 id_o.reg_write_en = 1'b1;
@@ -146,7 +147,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = 5'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `LDHU_OPCODE: begin
                 id_o.reg_write_en = 1'b1;
@@ -157,7 +158,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = 5'b0;
                 id_o.imm = {{20{si12[11]}}, si12};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `STB_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
@@ -168,7 +169,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = rd;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `STH_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
@@ -179,7 +180,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = rd;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `STW_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
@@ -190,7 +191,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = rj;
                 id_o.reg_read_addr[1] = rd;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             default: begin
                 id_o.aluop = `ALU_NOP;
@@ -201,7 +202,7 @@ module decoder_2RI12
                 id_o.reg_read_addr[0] = 5'b0;
                 id_o.reg_read_addr[1] = 5'b0;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b0;
+                inst_valid = 1'b0;
             end
         endcase
 

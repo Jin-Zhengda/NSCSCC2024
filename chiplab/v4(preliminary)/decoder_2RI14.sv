@@ -9,6 +9,7 @@ module decoder_2RI14
     input bus32_t pc,
     input bus32_t inst,
 
+    output logic inst_valid,
     output id_dispatch_t id_o
 );
 
@@ -48,7 +49,7 @@ module decoder_2RI14
                 id_o.csr_write_en = 1'b0;
                 id_o.csr_addr = `CSR_LLBCTL;
                 id_o.imm = {{16{si14[13]}}, si14, 2'b00};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `SCW_OPCODE: begin
                 id_o.is_privilege = 1'b0;
@@ -63,12 +64,12 @@ module decoder_2RI14
                 id_o.csr_write_en = 1'b0;
                 id_o.csr_addr = `CSR_LLBCTL;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `CSR_OPCODE: begin
                 id_o.is_privilege = 1'b1;
                 id_o.csr_addr = csr;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.imm = 32'b0;
                 case (rj)
                     `CSRRD_OPCODE: begin
@@ -119,7 +120,7 @@ module decoder_2RI14
                 id_o.csr_write_en = 1'b0;
                 id_o.csr_addr = 14'b0;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b0;
+                inst_valid = 1'b0;
             end
         endcase
     end

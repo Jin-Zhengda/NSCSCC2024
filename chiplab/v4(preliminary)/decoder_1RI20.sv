@@ -9,6 +9,7 @@ module decoder_1RI20
     input bus32_t pc,
     input bus32_t inst,
 
+    output logic inst_valid,
     output id_dispatch_t id_o
 );
 
@@ -44,7 +45,7 @@ module decoder_1RI20
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {si20, 12'b0};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `PCADDU12I_OPCODE: begin
                 id_o.reg_write_en = 1'b1;
@@ -53,7 +54,7 @@ module decoder_1RI20
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {si20, 12'b0};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             default: begin
                 id_o.reg_write_en = 1'b0;
@@ -62,7 +63,7 @@ module decoder_1RI20
                 id_o.reg_read_en[0] = 1'b0;
                 id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b0;
+                inst_valid = 1'b0;
             end
         endcase
     end

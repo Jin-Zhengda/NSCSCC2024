@@ -66,11 +66,13 @@ module alu
     assign ex_o.aluop = ex_i.aluop;
     assign ex_o.is_ertn = (ex_i.aluop == `ALU_ERTN);
     assign ex_o.is_idle = (ex_i.aluop == `ALU_IDLE);
+    assign ex_o.valid = ex_i.valid;
 
     logic ex_mem_exception;
+    logic tlb_op_exception;
 
-    assign ex_o.is_exception = {ex_i.is_exception, ex_mem_exception};
-    assign ex_o.exception_cause = {ex_i.exception_cause, `EXCEPTION_ALE};
+    assign ex_o.is_exception = {ex_i.is_exception, ex_mem_exception | tlb_op_exception};
+    assign ex_o.exception_cause = {ex_i.exception_cause, ex_mem_exception ? `EXCEPTION_ALE: `EXCEPTION_INE};
 
     assign pre_ex_aluop = ex_i.aluop;
 
@@ -461,7 +463,6 @@ module alu
         invtlb_op = 5'b0;
         rand_index = 5'b0;
         tlb_op_exception = 1'b0;
-        tlb_op_exception_cause = `EXCEPTION_NOP;
 
         case(ex_i.aluop)
             `ALU_TLBRD: begin
@@ -483,7 +484,6 @@ module alu
                 invtlb_vpn = (ex_i.invtlb_op < 5'h5)? 19'b0: reg_data2[31:13];
                 invtlb_op = ex_i.invtlb_op;
                 tlb_op_exception = (ex_i.invtlb_op > 5'h6);
-                tlb_op_exception_cause = (ex_i.invtlb_op > 5'h6)? `EXCEPTION_INE: `EXCEPTION_NOP;
             end
         endcase
     end

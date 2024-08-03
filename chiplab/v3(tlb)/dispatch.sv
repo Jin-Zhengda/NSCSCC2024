@@ -86,6 +86,7 @@ module dispatch
             assign dispatch_o[id_idx].csr_addr = dispatch_i[id_idx].csr_addr;
             assign dispatch_o[id_idx].pre_is_branch_taken = dispatch_i[id_idx].pre_is_branch_taken;
             assign dispatch_o[id_idx].pre_branch_addr = dispatch_i[id_idx].pre_branch_addr;
+            assign dispatch_o[id_idx].valid = dispatch_i[id_idx].valid;
         end
     endgenerate
 

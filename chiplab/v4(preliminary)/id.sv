@@ -18,52 +18,55 @@ module id
 );
 
     id_dispatch_t [5:0] part_id_o; 
+    logic [5:0] id_valid_vec;
      
     decoder_1R decoder_1R_inst (
         .pc(pc),
         .inst(inst),
+
+        .inst_valid(id_valid_vec[0]),
         .id_o(part_id_o[0])
     );
 
     decoder_1RI20 decoder_1RI20_inst (
         .pc(pc),
         .inst(inst),
+
+        .inst_valid(id_valid_vec[1]),
         .id_o(part_id_o[1])
     );
 
     decoder_2RI12 decoder_2RI12_inst (
         .pc(pc),
         .inst(inst),
+
+        .inst_valid(id_valid_vec[2]),
         .id_o(part_id_o[2])
     );
 
     decoder_2RI14 decoder_2RI14_inst (
         .pc(pc),
         .inst(inst),
+
+        .inst_valid(id_valid_vec[3]),
         .id_o(part_id_o[3])
     );
 
     decoder_2RI15 decoder_2RI15_inst (
         .pc(pc),
         .inst(inst),
+
+        .inst_valid(id_valid_vec[4]),
         .id_o(part_id_o[4])
     );
 
     decoder_3R decoder_3R_inst (
         .pc(pc),
         .inst(inst),
+
+        .inst_valid(id_valid_vec[5]),
         .id_o(part_id_o[5])
     );  
-
-    logic [5:0] id_valid_vec;
-    assign id_valid_vec = {
-        part_id_o[5].inst_valid,
-        part_id_o[4].inst_valid,
-        part_id_o[3].inst_valid,
-        part_id_o[2].inst_valid,
-        part_id_o[1].inst_valid,
-        part_id_o[0].inst_valid
-    };
 
 
     logic sys_exception;
@@ -105,7 +108,7 @@ module id
                 id_o = 0;
                 id_o.pc = pc;
                 id_o.is_exception = {is_exception, 1'b1};
-                id_o.exception_cause = {exception_cause, id_exception_cause};
+                id_o.exception_cause = {exception_cause, `EXCEPTION_INE};
             end
         endcase
 

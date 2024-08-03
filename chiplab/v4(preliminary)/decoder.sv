@@ -8,7 +8,6 @@ module decoder
 
     // from ctrl
     input logic flush,
-    // input logic pause,
 
     // from front
     input bus32_t [DECODER_WIDTH - 1:0] pc,

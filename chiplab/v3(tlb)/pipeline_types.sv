@@ -125,6 +125,7 @@ package pipeline_types;
         logic [3:0][EXC_CAUSE_WIDTH - 1:0] exception_cause;
         logic inst_valid;
         logic is_privilege;
+        logic valid;
 
         alu_op_t  aluop;
         alu_sel_t alusel;
@@ -155,6 +156,7 @@ package pipeline_types;
         logic is_privilege;
         logic is_ertn;
         logic is_idle;
+        logic valid;
 
         logic reg_write_en;
         reg_addr_t reg_write_addr;
@@ -194,6 +196,7 @@ package pipeline_types;
         alu_op_t aluop;
         logic is_idle;
         logic is_ertn;
+        logic valid;
 
         logic is_privilege;
     } commit_ctrl_t;

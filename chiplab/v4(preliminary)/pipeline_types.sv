@@ -1,6 +1,6 @@
 `ifndef PIPELINE_TYPES_SV
 `define PIPELINE_TYPES_SV
-//`define DIFF
+`define DIFF
 
 package pipeline_types;
 
@@ -29,8 +29,6 @@ package pipeline_types;
     typedef logic [EXC_CAUSE_WIDTH - 1:0] exception_cause_t;
 
     typedef struct packed {
-        logic pause_if;
-        logic pause_icache;
         logic pause_buffer;
         logic pause_decoder;
         logic pause_dispatch;
@@ -64,19 +62,6 @@ package pipeline_types;
         bus32_t branch_actual_addr;
         bus32_t pc_dispatch;
     } branch_update;
-
-    // pc and id
-    typedef struct packed {
-        bus32_t pc;
-        bus32_t inst;
-
-        logic [5:0] is_exception;
-        logic [5:0][EXC_CAUSE_WIDTH - 1 : 0] exception_cause;
-
-        logic   pre_is_branch;
-        logic   pre_is_branch_taken;
-        bus32_t pre_branch_addr;
-    } pc_id_t;
 
     // id and dispatch
     typedef struct packed {
@@ -123,8 +108,8 @@ package pipeline_types;
 
         logic [3:0] is_exception;
         logic [3:0][EXC_CAUSE_WIDTH - 1:0] exception_cause;
-        logic inst_valid;
         logic is_privilege;
+        logic valid;
 
         alu_op_t  aluop;
         alu_sel_t alusel;
@@ -151,10 +136,10 @@ package pipeline_types;
 
         logic [4:0] is_exception;
         logic [4:0][EXC_CAUSE_WIDTH-1:0] exception_cause;
-        logic inst_valid;
         logic is_privilege;
         logic is_ertn;
         logic is_idle;
+        logic valid;
 
         logic reg_write_en;
         reg_addr_t reg_write_addr;
@@ -196,6 +181,7 @@ package pipeline_types;
         logic is_ertn;
 
         logic is_privilege;
+        logic valid;
     } commit_ctrl_t;
 
     typedef struct packed {

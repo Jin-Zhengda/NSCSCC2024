@@ -87,7 +87,7 @@ import pipeline_types::*;
         .pre_taken_or_not(taken_sure),
         .pre_branch_addr,
 
-        .send_inst_en(fb_master.send_inst_en),
+        // .send_inst_en(fb_master.send_inst_en),
 
         .icache_fetch_inst_en(pi_master.icache_fetch_inst_en),
 

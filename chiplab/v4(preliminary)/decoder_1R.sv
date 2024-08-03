@@ -9,6 +9,7 @@ module decoder_1R
     input bus32_t pc,
     input bus32_t inst,
 
+    output logic inst_valid,
     output id_dispatch_t id_o
 );
 
@@ -42,7 +43,7 @@ module decoder_1R
                 id_o.reg_write_addr = 5'b0;
                 id_o.aluop = `ALU_ERTN;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.csr_read_en = 1'b0;
             end
             `RDCNTID_OPCDOE: begin
@@ -50,7 +51,7 @@ module decoder_1R
                 id_o.is_privilege = 1'b0;
                 id_o.reg_write_en = 1'b1;
                 id_o.alusel = `ALU_SEL_CSR;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 if (rj == 5'b0) begin
                     id_o.reg_write_addr = rd;
                     id_o.aluop = `ALU_RDCNTVLW;
@@ -68,7 +69,7 @@ module decoder_1R
                 id_o.reg_write_addr = rd;
                 id_o.aluop = `ALU_RDCNTVHW;
                 id_o.alusel = `ALU_SEL_CSR;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.csr_read_en = 1'b0;
             end
             `TLBSRCH_OPCODE: begin
@@ -78,7 +79,7 @@ module decoder_1R
                 id_o.reg_write_addr = 5'b0;
                 id_o.aluop = `ALU_TLBSRCH;
                 id_o.alusel = `ALU_SEL_CSR;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.csr_read_en = 1'b0;
             end
             `TLBRD_OPCODE: begin
@@ -88,7 +89,7 @@ module decoder_1R
                 id_o.reg_write_addr = 5'b0;
                 id_o.aluop = `ALU_TLBRD;
                 id_o.alusel = `ALU_SEL_CSR;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.csr_read_en = 1'b0;
             end
             `TLBWR_OPCODE: begin
@@ -98,7 +99,7 @@ module decoder_1R
                 id_o.reg_write_addr = 5'b0;
                 id_o.aluop = `ALU_TLBWR;
                 id_o.alusel = `ALU_SEL_CSR;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.csr_read_en = 1'b0;
             end
             `TLBFILL_OPCODE: begin
@@ -108,7 +109,7 @@ module decoder_1R
                 id_o.reg_write_addr = 5'b0;
                 id_o.aluop = `ALU_TLBFILL;
                 id_o.alusel = `ALU_SEL_CSR;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.csr_read_en = 1'b0;
             end
             default: begin
@@ -118,7 +119,7 @@ module decoder_1R
                 id_o.reg_write_en = 1'b0;
                 id_o.aluop = `ALU_NOP;
                 id_o.alusel = `ALU_SEL_NOP;
-                id_o.inst_valid = 1'b0;
+                inst_valid = 1'b0;
                 id_o.csr_read_en = 1'b0;
             end
         endcase

@@ -23,7 +23,6 @@ module execute
 
     // with dcache
     mem_dcache dcache_master,
-    output cache_inst_t cache_inst,
 
     // to bpu
     output branch_update update_info,
@@ -36,14 +35,12 @@ module execute
     output logic   pause_ex,
     output logic   branch_flush,
     output logic   ex_excp_flush,
-    // output logic   ertn_flush,
-    // output logic   refetch_flush,
-    // output bus32_t refetch_target,
     output bus32_t branch_target,
 
     // to mem
     output ex_mem_t [ISSUE_WIDTH - 1:0] mem_i
 );
+
 
     logic [1:0] pause_alu;
     logic [1:0] branch_flush_alu;
@@ -92,8 +89,6 @@ module execute
                 .update_info(update_info_alu[i]),
                 .branch_flush(branch_flush_alu[i]),
                 .branch_target_alu(branch_target_alu[i]),
-
-                .cache_inst(cache_inst_alu[i]),
 
                 .ex_o(ex_o[i])
             );

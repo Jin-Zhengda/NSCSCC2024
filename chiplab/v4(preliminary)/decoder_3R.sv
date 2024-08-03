@@ -9,6 +9,7 @@ module decoder_3R
     input bus32_t pc,
     input bus32_t inst,
 
+    output logic inst_valid,
     output id_dispatch_t id_o
 );
 
@@ -48,7 +49,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `SUBW_OPCODE: begin
@@ -59,7 +60,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `SLT_OPCODE: begin
@@ -70,7 +71,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `SLTU_OPCODE: begin
@@ -81,7 +82,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `NOR_OPCODE: begin
@@ -92,7 +93,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `AND_OPCODE: begin
@@ -103,7 +104,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `OR_OPCODE: begin
@@ -114,7 +115,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `XOR_OPCODE: begin
@@ -125,7 +126,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `SLLW_OPCODE: begin
@@ -136,7 +137,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `SRLW_OPCODE: begin
@@ -147,7 +148,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `SRAW_OPCODE: begin
@@ -158,7 +159,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `MULW_OPCODE: begin
@@ -169,7 +170,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `MULHW_OPCODE: begin
@@ -180,7 +181,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `MULHWU_OPCODE: begin
@@ -191,7 +192,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `DIVW_OPCODE: begin
@@ -202,7 +203,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `MODW_OPCODE: begin
@@ -213,7 +214,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `DIVWU_OPCODE: begin
@@ -224,7 +225,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `MODWU_OPCODE: begin
@@ -235,7 +236,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `SLLIW_OPCODE: begin
@@ -246,7 +247,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {27'b0, ui5};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `SRLIW_OPCODE: begin
@@ -257,7 +258,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {27'b0, ui5};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `SRAIW_OPCODE: begin
@@ -268,7 +269,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = {27'b0, ui5};
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `BREAK_OPCODE: begin
@@ -279,7 +280,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b0;
                 id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `SYSCALL_OPCODE: begin
@@ -290,7 +291,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b0;
                 id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `IDLE_OPCODE: begin
@@ -301,7 +302,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b0;
                 id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `INVTLB_OPCODE: begin
@@ -313,7 +314,7 @@ module decoder_3R
                 id_o.reg_read_en[1] = 1'b1;
                 id_o.imm = 32'b0;
                 id_o.invtlb_op = rd;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `DBAR_OPCODE: begin
                 id_o.is_privilege = 1'b0;
@@ -323,7 +324,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b0;
                 id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             `IBAR_OPCODE: begin
@@ -334,7 +335,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b0;
                 id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
                 id_o.invtlb_op = 5'b0;
             end
             default: begin
@@ -345,7 +346,7 @@ module decoder_3R
                 id_o.reg_read_en[0] = 1'b0;
                 id_o.reg_read_en[1] = 1'b0;
                 id_o.imm = 32'b0;
-                id_o.inst_valid = 1'b0;
+                inst_valid = 1'b0;
                 id_o.invtlb_op = 5'b0;
             end
         endcase

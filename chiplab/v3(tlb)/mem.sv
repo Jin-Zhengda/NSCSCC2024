@@ -55,8 +55,7 @@ module mem
     generate
         for (genvar i = 0; i < ISSUE_WIDTH; i++) begin
             assign mem_o[i].reg_write_en = mem_i[i].reg_write_en;
-            assign mem_o[i].reg_write_addr = mem_i[i].reg_write_addr;
-
+            assign mem_o[i].reg_write_addr = mem_i[i].reg_write_addr; 
             assign mem_o[i].is_llw_scw = mem_i[i].is_llw_scw;
             assign mem_o[i].csr_write_en = mem_i[i].csr_write_en;
             assign mem_o[i].csr_write_addr = mem_i[i].csr_addr;
@@ -86,6 +85,7 @@ module mem
             assign commit_ctrl_i[i].is_ertn = mem_i[0].is_ertn || mem_i[1].is_ertn;
             assign commit_ctrl_i[i].is_idle = mem_i[0].is_idle || mem_i[1].is_idle;
             assign commit_ctrl_i[i].aluop = mem_i[i].aluop;
+            assign commit_ctrl_i[i].valid = mem_i[i].valid;
         end
     endgenerate
 
@@ -243,7 +243,7 @@ module mem
             assign diff_o[i].debug_wb_rf_wen = 4'b0;
             assign diff_o[i].debug_wb_rf_wnum = 5'b0;
             assign diff_o[i].debug_wb_rf_wdata = 32'b0;
-            assign diff_o[i].inst_valid = mem_i[i].inst_valid;
+            assign diff_o[i].inst_valid = mem_i[i].valid;
             assign diff_o[i].cnt_inst = (mem_i[i].aluop == `ALU_RDCNTID || mem_i[i].aluop == `ALU_RDCNTVLW || mem_i[i].aluop == `ALU_RDCNTVHW);
             // estat 不进行比对
             assign diff_o[i].csr_rstat_en = 1'b0;

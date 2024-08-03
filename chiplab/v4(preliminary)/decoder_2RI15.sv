@@ -9,6 +9,7 @@ module decoder_2RI15
     input bus32_t pc,
     input bus32_t inst,
 
+    output logic inst_valid,
     output id_dispatch_t id_o
 );
 
@@ -43,7 +44,7 @@ module decoder_2RI15
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `BNE_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
@@ -52,7 +53,7 @@ module decoder_2RI15
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `BLT_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
@@ -61,7 +62,7 @@ module decoder_2RI15
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `BGE_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
@@ -70,7 +71,7 @@ module decoder_2RI15
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `BLTU_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
@@ -79,7 +80,7 @@ module decoder_2RI15
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `BGEU_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
@@ -88,7 +89,7 @@ module decoder_2RI15
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b1;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `B_OPCODE: begin
                 id_o.reg_write_en = 1'b0;
@@ -97,7 +98,7 @@ module decoder_2RI15
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
                 id_o.reg_read_en[0] = 1'b0;
                 id_o.reg_read_en[1] = 1'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `BL_OPCODE: begin
                 id_o.reg_write_en = 1'b1;
@@ -106,7 +107,7 @@ module decoder_2RI15
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
                 id_o.reg_read_en[0] = 1'b0;
                 id_o.reg_read_en[1] = 1'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             `JIRL_OPCODE: begin
                 id_o.reg_write_en = 1'b1;
@@ -115,7 +116,7 @@ module decoder_2RI15
                 id_o.alusel = `ALU_SEL_JUMP_BRANCH;
                 id_o.reg_read_en[0] = 1'b1;
                 id_o.reg_read_en[1] = 1'b0;
-                id_o.inst_valid = 1'b1;
+                inst_valid = 1'b1;
             end
             default: begin
                 id_o.reg_write_addr = 5'b0;
@@ -124,7 +125,7 @@ module decoder_2RI15
                 id_o.alusel = `ALU_SEL_NOP;
                 id_o.reg_read_en[0] = 1'b0;
                 id_o.reg_read_en[1] = 1'b0;
-                id_o.inst_valid = 1'b0;
+                inst_valid = 1'b0;
             end
         endcase
 

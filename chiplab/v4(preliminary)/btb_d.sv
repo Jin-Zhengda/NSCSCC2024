@@ -15,14 +15,14 @@ module btb_d (
 );
 
     // ?44位为valid_bit ?43-32位为tag ?31-0位为BTA
-    logic [43:0] btb[127: 0];
+    logic [32:0] btb[127: 0];
 
-    logic [1:0][10: 0] pc_tag;
+    // logic [1:0][10: 0] pc_tag;
     logic [1:0][6: 0] pc_index;
 
     generate
         for (genvar i = 0; i < 2; i++) begin
-            assign pc_tag[i]   = pc[i][14:4];
+            // assign pc_tag[i]   = pc[i][14:4];
             assign pc_index[i] = pc[i][8:2];
         end
     endgenerate
@@ -43,7 +43,7 @@ module btb_d (
         if (rst) begin
             btb <= '{default: 0};
         end else if (update_en) begin
-            btb[pc_dispatch[8:2]] <= {1'b1, pc_dispatch[14:4], pc_actual};
+            btb[pc_dispatch[8:2]] <= {1'b1, pc_actual};
         end
     end
 

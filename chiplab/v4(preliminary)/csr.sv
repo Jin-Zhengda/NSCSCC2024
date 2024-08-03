@@ -22,9 +22,6 @@ module csr
 
     input tlb_inst_t tlb_inst,
 
-    // from stable counter
-    bus64_t cnt,
-
     // from outer
     input logic is_ipi,
     input logic [7:0] is_hwi,

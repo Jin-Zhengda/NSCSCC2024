@@ -119,6 +119,16 @@ module execute
 
                 .cache_inst(cache_inst_alu[i]),
 
+                .tlbrd_en(tlbrd_en[i]),
+                .tlbsrch_en(tlbsrch_en[i]),
+                .tlbfill_en(tlbfill_en[i]),
+                .tlbwr_en(tlbwr_en[i]),
+                .invtlb_en(invtlb_en[i]),
+                .invtlb_asid(invtlb_asid[i]),
+                .invtlb_vpn(invtlb_vpn[i]),
+                .invtlb_op(invtlb_op[i]),
+                .rand_index(rand_index[i]),
+
                 .ex_o(ex_o[i])
             );
         end

@@ -50,7 +50,7 @@ module alu
     // basic assignmnet 
     assign ex_o.pc = ex_i.pc;
     assign ex_o.inst = ex_i.inst;
-    assign ex_o.inst_valid = ex_i.inst_valid;
+    assign ex_o.valid = ex_i.valid;
     assign ex_o.is_privilege = ex_i.is_privilege;
     assign ex_o.aluop = ex_i.aluop;
     assign ex_o.is_ertn = (ex_i.aluop == `ALU_ERTN);
@@ -83,6 +83,8 @@ module alu
     logic signed_mul;
     logic mul_done;
     bus64_t mul_result;
+    bus32_t mul_data1;
+    bus32_t mul_data2;
 
     assign is_mul = (ex_i.aluop == `ALU_MULW || ex_i.aluop == `ALU_MULHW || ex_i.aluop == `ALU_MULHWU ) && !mul_done;
     assign pause_ex_mul = is_mul && !mul_done;
@@ -91,6 +93,8 @@ module alu
             start_mul <= 1'b0;
         end else if (is_mul) begin
             start_mul <= 1'b1;
+            mul_data1 <= reg_data1;
+            mul_data2 <= reg_data2;
         end else begin
             start_mul <= 1'b0;
         end
@@ -106,8 +110,8 @@ module alu
         .rst,
 
         .start(start_mul),
-        .reg1(reg_data1),
-        .reg2(reg_data2),
+        .reg1(mul_data1),
+        .reg2(mul_data2),
         .signed_op(signed_mul),
 
         .done(mul_done),
@@ -137,10 +141,10 @@ module alu
     logic signed_div;
     logic div_done;
     logic is_running;
-
     bus32_t remainder;
     bus32_t quotient;
-
+    bus32_t div_data1;
+    bus32_t div_data2;
 
     assign is_div = (ex_i.aluop == `ALU_DIVW || ex_i.aluop == `ALU_MODW || ex_i.aluop == `ALU_DIVWU 
                         || ex_i.aluop == `ALU_MODWU) && !div_done;
@@ -150,6 +154,8 @@ module alu
             start_div <= 1'b0;
         end else if (is_div && !is_running) begin
             start_div <= 1'b1;
+            div_data1 <= reg_data1;
+            div_data2 <= reg_data2;
         end else begin
             start_div <= 1'b0;
         end
@@ -165,8 +171,8 @@ module alu
         .rst,
 
         .op(signed_div),
-        .dividend(reg_data1),
-        .divisor(reg_data2),
+        .dividend(div_data1),
+        .divisor(div_data2),
         .start(start_div),
 
         .is_running(is_running),
@@ -247,17 +253,10 @@ module alu
         endcase
     end
 
-    assign virtual_addr = ex_o.mem_addr;
+    assign virtual_addr = ex_o.mem_addr;    
     logic mem_is_valid;
 
-    always_comb begin
-        if (ex_o.is_exception == 0) begin
-            valid = mem_is_valid && !flush && !pause_mem;
-        end
-        else begin
-            valid = 1'b0;
-        end
-    end
+    assign valid = mem_is_valid && !flush && !ex_o.is_exception && !pause_mem; 
 
     always_comb begin: to_dcache
         case (ex_i.aluop) 
@@ -367,30 +366,6 @@ module alu
         endcase
     end
 
-    // always_comb begin
-    //     case (ex_i.aluop)
-    //         `ALU_PRELD: begin
-    //             cache_inst.is_cacop = 1'b0;
-    //             cache_inst.cacop_code = 5'b0;
-    //             cache_inst.is_preld = 1'b1;
-    //             cache_inst.addr = ex_o.mem_addr;  
-    //         end
-    //         `ALU_CACOP: begin
-    //             cache_inst.is_cacop = 1'b1;
-    //             cache_inst.cacop_code = ex_i.cacop_code;
-    //             cache_inst.is_preld = 1'b0;
-    //             cache_inst.addr = ex_o.mem_addr;
-    //         end
-    //         default: begin
-    //             cache_inst.is_cacop = 1'b0;
-    //             cache_inst.cacop_code = 5'b0;
-    //             cache_inst.is_preld = 1'b0;
-    //             cache_inst.addr = 32'b0;
-    //         end
-    //     endcase
-    // end
-    assign cache_inst = 0;
-
     // csr && privilege alu
     bus32_t csr_alu_res;
     bus32_t mask_data;
@@ -417,8 +392,8 @@ module alu
         end
     end
 
-    bus64_t cnt_real;
-    assign cnt_real = cnt + 64'h2;
+    // bus64_t cnt_real;
+    // assign cnt_real = cnt + 64'h2;
     always_comb begin
         case(ex_i.aluop) 
             `ALU_CSRRD, `ALU_CSRWR, `ALU_CSRXCHG: begin
@@ -428,10 +403,10 @@ module alu
                 csr_alu_res = ex_i.csr_read_data;
             end
             `ALU_RDCNTVLW: begin
-                csr_alu_res = cnt_real[31:0];
+                csr_alu_res = cnt[31:0];
             end
             `ALU_RDCNTVHW: begin
-                csr_alu_res = cnt_real[63:32];
+                csr_alu_res = cnt[63:32];
             end
             default: begin
                 csr_alu_res = 32'b0;
