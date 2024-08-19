@@ -13,14 +13,14 @@ Cache（I-Cache、D-Cache、TLB）：董佳鹏
 2. 一定要看《龙芯架构32位精简版参考手册》相关部分
 3. 多查阅相关资料（前人的设计文档、源码、博客，相关的论文）
 4. 有问题可以直接 QQ 联系老师
-5. 一周提交更新两次远程仓库
+5. 一周提交更新两次远程仓库 
 
 ## 更新远程仓库
 
 首先拉取仓库至本地  
 `git clone https://github.com/<your name>/NSCSCC2024.git .`  
 
-添加上游代码库，上游代码库名称为 upstream  
+添加上游代码库，设置上游代码库名称为 upstream  
 `git remote add upstream https://github.com/Jin-Zhengda/NSCSCC2024.git`  
 
 开发时自己创建分支  
@@ -35,5 +35,5 @@ Cache（I-Cache、D-Cache、TLB）：董佳鹏
 合并冲突时，先更新上游代码：  
 `git fetch upstream`  
 再合并上游代码至本地：  
-`git merge upstream/main`  
+`git merge upstream/master`  
 无冲突再进行 push 和 pull request 操作  
