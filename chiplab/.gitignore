@@ -1,0 +1,16 @@
+.vscode
+.idea
+cmake-build-debug
+CMakeLists.txt
+toolchains/*
+!toolchains/README.md
+software/random_res
+sims/verilator/run_prog/single.log
+*.o
+*.d
+~*
+chip/soc_demo/nscscc-team/xilinx_ip/*/gen
+fpga/nscscc-team/run_vivado/*.dmp
+fpga/nscscc-team/run_vivado/*.log
+fpga/nscscc-team/run_vivado/project
+fpga/nscscc-team/software/perf/bench/*/*.a
